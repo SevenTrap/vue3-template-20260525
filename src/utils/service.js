@@ -2,23 +2,23 @@ import axios from "axios";
 
 const instance = axios.create({
   timeout: 60 * 1000,
-  headers: {
-    common: {
-      "Content-Type": "application/json; charset=UTF-8",
-    },
-    get: {
-      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-    },
-    post: {
-      "Content-Type": "application/json; charset=UTF-8",
-    },
-    put: {
-      "Content-Type": "application/json; charset=UTF-8",
-    },
-    delete: {
-      "Content-Type": "application/json; charset=UTF-8",
-    },
-  },
+  // headers: {
+  //   common: {
+  //     "Content-Type": "application/json; charset=UTF-8",
+  //   },
+  //   get: {
+  //     "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+  //   },
+  //   post: {
+  //     "Content-Type": "application/json; charset=UTF-8",
+  //   },
+  //   put: {
+  //     "Content-Type": "application/json; charset=UTF-8",
+  //   },
+  //   delete: {
+  //     "Content-Type": "application/json; charset=UTF-8",
+  //   },
+  // },
 });
 
 const httpCode = {

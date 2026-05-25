@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 export const useGeoserverStore = defineStore("geoserver", {
   state: () => ({
     geoserverPlugin: false,
+    managerLayersPlugin: false,
   }),
   getters: {
     getMenuBarVisible: (state) => {

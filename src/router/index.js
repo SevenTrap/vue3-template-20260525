@@ -13,6 +13,7 @@ import openlayersRouter from "./modules/openlayersRouter";
 import leoRouter from "./modules/leoRouter";
 import elementRouter from "./modules/elementRouter";
 import templateRouter from "./modules/templateRouter";
+import geoserverRouter from "./modules/geoserver";
 
 const routes = [
   {
@@ -28,7 +29,7 @@ const routes = [
     path: "/layout",
     redirect: "/layout/homePage",
     component: LayoutPage,
-    children: [...homeRouter, ...elementRouter, ...templateRouter],
+    children: [...homeRouter, ...elementRouter, ...templateRouter, ...geoserverRouter],
   },
 
   {

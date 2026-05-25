@@ -1,4 +1,6 @@
 <template>
+  <div class="layout-header-placeholder"></div>
+
   <div class="page-list-container">
     <div class="page-item aircas-card" v-for="(route, index) in routes" :key="index" @click="handleJumpPage(route)">
       <h3>{{ route.meta.title }}</h3>

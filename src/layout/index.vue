@@ -1,6 +1,6 @@
 <template>
   <main>
-    <div class="layout-header-placeholder"></div>
+    <!-- <div class="layout-header-placeholder"></div> -->
 
     <TitleBar></TitleBar>
     <SystemFunc></SystemFunc>
@@ -31,7 +31,7 @@ main {
   .layout-page {
     position: relative;
     width: 100%;
-    height: calc(100% - 85px);
+    height: 100%;
   }
 }
 </style>

@@ -5,7 +5,7 @@
       <div class="title-menu">
         <div
           class="title-menu-item menu-left"
-          :class="{ 'menu-left-active': item.name === curPageName }"
+          :class="{ 'menu-left-active': item.name === curPageName, 'small-size': item.label.length > 6 }"
           @click="handleJumpPage(item)"
           v-for="(item, index) in menuListLeft"
           :key="index"
@@ -199,6 +199,9 @@ export default {
         text-align: center;
         color: var(--aircas-color-text);
         transition: all 0.3s;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
 
         &.menu-left {
           background-image: url("./assets/menu-left.png");
@@ -206,6 +209,7 @@ export default {
 
           &:hover {
             color: var(--aircas-color-white);
+            background-image: url("./assets/menu-left-active.png");
           }
 
           &.menu-left-active {
@@ -220,6 +224,7 @@ export default {
 
           &:hover {
             color: var(--aircas-color-white);
+            background-image: url("./assets/menu-right-active.png");
           }
 
           &.menu-right-active {
@@ -227,6 +232,10 @@ export default {
             background-image: url("./assets/menu-right-active.png");
           }
         }
+      }
+
+      .small-size {
+        font-size: 14px;
       }
     }
 
