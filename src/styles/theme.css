@@ -1,0 +1,25 @@
+:root[theme="dark"] {
+  --aircas-color-white: #ffffff;
+  --aircas-color-success: #7ec44d;
+  --aircas-color-warning: #f7b500;
+  --aircas-color-danger: #e81123;
+
+  /* 常规文本颜色 */
+  --aircas-color-text: #f7f7f7;
+  --aircas-color-text-hover: #0a95ab;
+  --aircas-color-text-active: #0a95ab;
+
+  /* 常规按钮背景颜色 */
+  --aircas-color-background-button: #0a95ab;
+  --aircas-color-background-button-hover: #ad5a18;
+  --aircas-color-background-button-active: #ad5a18;
+
+  /* 边框颜色 */
+  --aircas-color-border: #07eaff;
+  --aircas-color-border-hover: #0a95ab;
+
+  /* 常规背景颜色 */
+  --aircas-color-background: rgba(0, 0, 0, 0.7);
+  --aircas-color-background-hover: #0a95ab;
+  --aircas-color-background-active: #ad5a18;
+}

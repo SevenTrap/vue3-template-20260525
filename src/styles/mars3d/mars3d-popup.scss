@@ -1,0 +1,26 @@
+.mars3d-popup {
+  .mars3d-popup-close-button {
+    padding: 0;
+    margin: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    font-size: 16px;
+    line-height: 16px;
+    color: #f7f7f7;
+    transition: all 0.3s;
+
+    &:hover {
+      background: red;
+    }
+  }
+  .mars3d-popup-content-wrapper {
+    padding: 10px 20px;
+
+    .mars3d-popup-content {
+      margin: 0;
+      min-width: 80px;
+    }
+  }
+}

@@ -1,0 +1,75 @@
+// 设置导航栏时间字体样式
+@use "./font/index.scss" as *;
+@use "./mars3d/index.scss" as *;
+@use "./elementPlus/index.scss" as *;
+@use "./aircas/index.scss" as *;
+
+:root {
+  font-family:
+    Microsoft YaHei,
+    Helvetica,
+    Arial,
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+  font-size: 10px; // 字体基准大小
+  overflow: hidden;
+  position: relative;
+}
+
+.layout-header-placeholder {
+  width: 100vw;
+  height: 85px;
+}
+
+.geo-header-placeholder,
+.leo-header-placeholder {
+  width: 100vw;
+  height: 55px;
+}
+
+// 自定义全局滚动条样式设置
+/*定义滚动条高宽及背景 高宽分别对应横竖滚动条的尺寸*/
+::-webkit-scrollbar {
+  width: 5px;
+  height: 8px;
+  background-color: transparent !important;
+  cursor: pointer;
+}
+
+/*定义滚动条轨道 内阴影+圆角*/
+::-webkit-scrollbar-track {
+  box-shadow: inset 0 0 6px transparent;
+  -webkit-box-shadow: inset 0 0 6px transparent;
+  background-color: #101e30 !important;
+}
+
+/*定义滑块 内阴影+圆角*/
+::-webkit-scrollbar-thumb {
+  border-radius: 1px;
+  box-shadow: inset 0 0 6px #fff;
+  background-color: rgba($color: #000000, $alpha: 0.5);
+  -webkit-box-shadow: inset 0 0 6px #0ff;
+}
+
+::-webkit-scrollbar-corner {
+  width: 7px;
+  height: 5px;
+  background-color: transparent;
+  cursor: pointer;
+}

@@ -1,0 +1,41 @@
+---
+description: Mars3D/Cesium 地球与卫星可视化约定
+globs: "src/utils/mars3d/**/*,src/utils/initEarth.js,src/views/GeoMap/**/*,src/views/CesiumDemo/**/*,src/models/**/*"
+alwaysApply: false
+---
+
+# GIS / Mars3D 约定
+
+## 初始化
+
+- 统一通过 `@/utils/initEarth` 的 `initViewer(container, mapConfig)` 创建 viewer
+- 地图配置来自 `public/configs/`（如 `MAP_CONFIG_Satellite`），修改场景前先改配置对象而非硬编码
+- 共享实例使用导出的 `globalViewer`
+
+## 卫星与轨道
+
+- 轨道/卫星逻辑放在 `src/models/`（如 `SatelliteClass`、`SatellitePropagator`、`satelliteOrbitPredictor`）
+- Mars3D 图层样式与工具函数放在 `src/utils/mars3d/` 或视图下的 `utils/`
+- TLE、LLA 等数据放 `public/data/`，大文件避免打进 bundle
+
+## 生命周期
+
+```javascript
+mounted() {
+  initViewer(this.$refs.geoEarthContainer, MAP_CONFIG_Satellite);
+  addGeoCirclePositions(globalViewer);
+},
+beforeUnmount() {
+  // 移除图层、graphic、定时器，避免 WebGL 泄漏
+},
+```
+
+## 样式
+
+- Mars3D 弹窗等全局样式：`src/styles/mars3d/`
+- 勿在组件内重复 import mars3d CSS；构建由 `vite-plugin-mars3d` 处理
+
+## 依赖
+
+- 核心：`mars3d`、`mars3d-cesium`；扩展包按功能引入（heatmap、space、wind 等）
+- 地理计算可用 `@turf/turf`、`h3-js`、`satellite.js`，与现有 `src/utils/gis.js` 对齐

@@ -1,0 +1,361 @@
+{
+  "materials": [
+    {
+      "name": "19_-_Default2_fromVray48.bmp",
+      "occlusionTexture": {
+        "index": 0,
+        "texCoord": 1
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 1,
+          "texCoord": 0
+        },
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "alphaMode": "OPAQUE"
+    },
+    {
+      "name": "4_fromVray_alpha",
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 2,
+          "texCoord": 0
+        },
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "alphaMode": "BLEND"
+    }
+  ],
+  "images": [
+    {
+      "uri": "B6626277DD53A1DA1E0C0958AD5E7921.jpg"
+    },
+    {
+      "uri": "AE16965E4B99812E93D1495632082485.jpg"
+    },
+    {
+      "uri": "AA8D15334BAD17A977D7BDF52D7BA842.png"
+    }
+  ],
+  "textures": [
+    {
+      "name": "48_f_bmp.jpg",
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "name": "Archmodels62_40.jpg",
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "name": "Archmodels62_40_Railing.png",
+      "sampler": 0,
+      "source": 2
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Object02",
+      "primitives": [
+        {
+          "material": 0,
+          "mode": 4,
+          "indices": 0,
+          "attributes": {
+            "COLOR_0": 3,
+            "NORMAL": 2,
+            "POSITION": 1,
+            "TEXCOORD_0": 4,
+            "TEXCOORD_1": 5
+          }
+        }
+      ]
+    },
+    {
+      "name": "Object01",
+      "primitives": [
+        {
+          "material": 1,
+          "mode": 4,
+          "indices": 6,
+          "attributes": {
+            "NORMAL": 8,
+            "POSITION": 7,
+            "TEXCOORD_0": 9,
+            "TEXCOORD_1": 10
+          }
+        }
+      ]
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 74728,
+      "uri": "071231B1B7AC0F48C32286B49B0921F3.bin"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "target": 34963,
+      "byteLength": 3726,
+      "byteOffset": 0
+    },
+    {
+      "buffer": 0,
+      "target": 34962,
+      "byteLength": 13740,
+      "byteOffset": 3728
+    },
+    {
+      "buffer": 0,
+      "target": 34962,
+      "byteLength": 13740,
+      "byteOffset": 17468
+    },
+    {
+      "buffer": 0,
+      "target": 34962,
+      "byteLength": 18320,
+      "byteOffset": 31208
+    },
+    {
+      "buffer": 0,
+      "target": 34962,
+      "byteLength": 9160,
+      "byteOffset": 49528
+    },
+    {
+      "buffer": 0,
+      "target": 34962,
+      "byteLength": 9160,
+      "byteOffset": 58688
+    },
+    {
+      "buffer": 0,
+      "target": 34963,
+      "byteLength": 480,
+      "byteOffset": 67848
+    },
+    {
+      "buffer": 0,
+      "target": 34962,
+      "byteLength": 1920,
+      "byteOffset": 68328
+    },
+    {
+      "buffer": 0,
+      "target": 34962,
+      "byteLength": 1920,
+      "byteOffset": 70248
+    },
+    {
+      "buffer": 0,
+      "target": 34962,
+      "byteLength": 1280,
+      "byteOffset": 72168
+    },
+    {
+      "buffer": 0,
+      "target": 34962,
+      "byteLength": 1280,
+      "byteOffset": 73448
+    }
+  ],
+  "accessors": [
+    {
+      "componentType": 5123,
+      "type": "SCALAR",
+      "bufferView": 0,
+      "byteOffset": 0,
+      "count": 1863
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC3",
+      "bufferView": 1,
+      "byteOffset": 0,
+      "count": 1145,
+      "min": [
+        -8.3806791305542,
+        -13.2841320037842,
+        -14.7167472839355
+      ],
+      "max": [
+        8.3806791305542,
+        13.2841310501099,
+        14.7167472839355
+      ]
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC3",
+      "bufferView": 2,
+      "byteOffset": 0,
+      "count": 1145
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC4",
+      "bufferView": 3,
+      "byteOffset": 0,
+      "count": 1145
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC2",
+      "bufferView": 4,
+      "byteOffset": 0,
+      "count": 1145
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC2",
+      "bufferView": 5,
+      "byteOffset": 0,
+      "count": 1145
+    },
+    {
+      "componentType": 5123,
+      "type": "SCALAR",
+      "bufferView": 6,
+      "byteOffset": 0,
+      "count": 240
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC3",
+      "bufferView": 7,
+      "byteOffset": 0,
+      "count": 160,
+      "min": [
+        -6.70226716995239,
+        -13.2454853057861,
+        -12.2015151977539
+      ],
+      "max": [
+        6.70226716995239,
+        13.2454853057861,
+        12.2015151977539
+      ]
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC3",
+      "bufferView": 8,
+      "byteOffset": 0,
+      "count": 160
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC2",
+      "bufferView": 9,
+      "byteOffset": 0,
+      "count": 160
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC2",
+      "bufferView": 10,
+      "byteOffset": 0,
+      "count": 160
+    }
+  ],
+  "nodes": [
+    {
+      "name": "RootNode",
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "children": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "Object02",
+      "translation": [
+        -0.599984288215637,
+        14.7161264419556,
+        -0.255123138427734
+      ],
+      "rotation": [
+        -0.70710676908493,
+        0.0,
+        0.0,
+        0.70710676908493
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mesh": 0
+    },
+    {
+      "name": "Object01",
+      "translation": [
+        1.04118382930756,
+        15.4650812149048,
+        -0.255370140075684
+      ],
+      "rotation": [
+        -0.70710676908493,
+        0.0,
+        0.0,
+        0.70710676908493
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mesh": 1
+    }
+  ],
+  "asset": {
+    "generator": "FBX2glTF",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Root Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "samplers": [
+    {}
+  ]
+}

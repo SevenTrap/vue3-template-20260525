@@ -1,0 +1,27 @@
+@use "./mars3d-popup.scss" as *;
+
+// 修改cesium原生按钮的位置
+// .cesium-viewer-toolbar {
+//   position: absolute !important;
+//   bottom: 60px;
+//   top: auto !important;
+//   left: auto !important;
+//   right: 10px !important;
+
+//   .cesium-baseLayerPicker-dropDown {
+//     right: 45px;
+//     bottom: 70px;
+//     z-index: 99;
+//     left: auto !important;
+//     right: 40px !important;
+//   }
+// }
+
+.mars3d-clockAnimate {
+  #txt-clockAnimate-time {
+    color: #ffffff;
+  }
+  #txt-clockAnimate-speed {
+    outline: none;
+  }
+}

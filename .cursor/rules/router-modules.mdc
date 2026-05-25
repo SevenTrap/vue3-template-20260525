@@ -1,0 +1,36 @@
+---
+description: Vue Router 模块化路由约定
+globs: "src/router/**/*"
+alwaysApply: false
+---
+
+# 路由约定
+
+- 入口：`src/router/index.js`（`createWebHashHistory`）
+- 按业务拆分：`src/router/modules/<name>Router.js`，导出路由数组
+
+## 单条路由模板
+
+```javascript
+{
+  path: "/layoutGeo/geoMap",
+  name: "GeoMap",
+  component: () => import("@/views/GeoMap/index.vue"),
+  meta: {
+    title: "页面标题",      // 用于 document.title
+    desc: "简短说明",
+    roles: [],
+  },
+},
+```
+
+## 新增路由步骤
+
+1. 在对应 `*Router.js` 追加路由对象
+2. 确认已挂到 `index.js` 中正确的 layout（`LayoutPage` / `LayoutGeo` / `LayoutLeo`）
+3. 若需菜单入口，同步更新 `public/configs/systemConfig.js` 的 `menuListLeft` / `menuListRight`
+
+## 导航守卫
+
+- `beforeEach` 中设置 `document.title = to.meta.title || SYSTEM_CONFIG.systemTitle`
+- 登录校验逻辑已注释，启用时需与 `getStorage("token")` 保持一致
