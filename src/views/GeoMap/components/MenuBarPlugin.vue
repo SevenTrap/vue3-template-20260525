@@ -8,25 +8,41 @@
 <template>
   <div class="menu-bar">
     <el-tooltip content="图层管理" placement="right">
-      <div class="menu-item" :class="{ active: aircasManagerLayersPluginVisiable }" @click="handleToggleAircasPlugin('aircasManagerLayersPluginVisiable')">
+      <div
+        class="menu-item"
+        :class="{ active: aircasManagerLayersPlugin }"
+        @click="handleToggleAircasPlugin('aircasManagerLayersPlugin')"
+      >
         <img src="/assets/menuBar/icon10.svg" />
       </div>
     </el-tooltip>
 
     <el-tooltip content="卫星可视化插件" placement="right">
-      <div class="menu-item" :class="{ active: satelliteTreePluginVisiable }" @click="handleToggleGeoMap('satelliteTreePluginVisiable')">
+      <div
+        class="menu-item"
+        :class="{ active: satelliteTreePlugin }"
+        @click="handleToggleGeoMap('satelliteTreePlugin')"
+      >
         <img src="/assets/menuBar/icon2.svg" />
       </div>
     </el-tooltip>
 
     <el-tooltip content="图层控制" placement="right">
-      <div class="menu-item" :class="{ active: aircasGraphicLayersPluginVisiable }" @click="handleToggleAircasPlugin('aircasGraphicLayersPluginVisiable')">
+      <div
+        class="menu-item"
+        :class="{ active: aircasGraphicLayersPlugin }"
+        @click="handleToggleAircasPlugin('aircasGraphicLayersPlugin')"
+      >
         <img src="/assets/menuBar/icon3.svg" />
       </div>
     </el-tooltip>
 
     <el-tooltip content="卫星热力图插件" placement="right">
-      <div class="menu-item" :class="{ active: satelliteHeatH3PluginVisiable }" @click="handleToggleGeoMap('satelliteHeatH3PluginVisiable')">
+      <div
+        class="menu-item"
+        :class="{ active: satelliteHeatH3Plugin }"
+        @click="handleToggleGeoMap('satelliteHeatH3Plugin')"
+      >
         <img src="/assets/menuBar/icon4.svg" />
       </div>
     </el-tooltip>
@@ -34,8 +50,8 @@
     <el-tooltip content="GEO相对距离与光照角" placement="right">
       <div
         class="menu-item"
-        :class="{ active: geoSatRelativeEchartsPluginVisiable }"
-        @click="handleToggleGeoMap('geoSatRelativeEchartsPluginVisiable')"
+        :class="{ active: geoSatRelativeEchartsPlugin }"
+        @click="handleToggleGeoMap('geoSatRelativeEchartsPlugin')"
       >
         <img src="/assets/menuBar/icon3.svg" />
       </div>
@@ -52,8 +68,15 @@ export default {
   name: "MenuBar",
 
   computed: {
-    ...mapState(useGeoMapStore, ["satelliteTreePluginVisiable", "satelliteHeatH3PluginVisiable", "geoSatRelativeEchartsPluginVisiable"]),
-    ...mapState(useAircasPluginStore, ["aircasManagerLayersPluginVisiable", "aircasGraphicLayersPluginVisiable"]),
+    ...mapState(useGeoMapStore, [
+      "satelliteTreePlugin",
+      "satelliteHeatH3Plugin",
+      "geoSatRelativeEchartsPlugin",
+    ]),
+    ...mapState(useAircasPluginStore, [
+      "aircasManagerLayersPlugin",
+      "aircasGraphicLayersPlugin",
+    ]),
   },
 
   methods: {

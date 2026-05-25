@@ -1,6 +1,12 @@
 const MAP_CONFIG_Satellite = {
   scene: {
-    center: { lat: 27.227714, lng: 89.713518, alt: 24669558.8, heading: 360, pitch: -90 },
+    center: {
+      lat: 27.227714,
+      lng: 89.713518,
+      alt: 24669558.8,
+      heading: 360,
+      pitch: -90,
+    },
     fog: false,
     fxaa: true,
     showSun: true,
@@ -76,7 +82,7 @@ const MAP_CONFIG_Satellite = {
     {
       name: "基础影像(底图)",
       icon: "/assets/mapConfig/yingxiang_img.png",
-      url: `${DOMAIN_CONFIG.MAP_SERVER_URI}/tilecache/service/wmts`,
+      url: `${DOMAIN_CONFIG.map_server_uri}/tilecache/service/wmts`,
       show: true,
       type: "wmts",
       layer: ["Global_Image_4326"],
@@ -115,6 +121,6 @@ const MAP_CONFIG_Satellite = {
   terrain: {
     name: "全球高程",
     show: false,
-    url: `${DOMAIN_CONFIG.MAP_SERVER_URI}/tilecache/service/terrain/Global_DEM-TINXIN-4326`,
+    url: `${DOMAIN_CONFIG.map_server_uri}/tilecache/service/terrain/Global_DEM-TINXIN-4326`,
   },
 };

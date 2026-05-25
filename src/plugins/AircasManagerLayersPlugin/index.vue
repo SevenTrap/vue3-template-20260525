@@ -1,5 +1,9 @@
 <template>
-  <aircasPanel v-show="aircasManagerLayersPluginVisiable" title="图层管理" @close="handlePanelClose">
+  <aircasPanel
+    v-show="aircasManagerLayersPlugin"
+    title="图层管理"
+    @close="handlePanelClose"
+  >
     <div class="layer-manager">
       <header>
         <el-input class="search-input" type="text" />
@@ -55,13 +59,15 @@ export default {
   },
 
   computed: {
-    ...mapState(useAircasPluginStore, ["aircasManagerLayersPluginVisiable"]),
+    ...mapState(useAircasPluginStore, ["aircasManagerLayersPlugin"]),
   },
 
   methods: {
     handlePanelClose() {
       const aircasPluginStore = useAircasPluginStore();
-      aircasPluginStore.SET_COMPONENT_VISIBLE_FALSE("aircasManagerLayersPluginVisiable");
+      aircasPluginStore.SET_COMPONENT_VISIBLE_FALSE(
+        "aircasManagerLayersPlugin",
+      );
     },
 
     handleCheckChange(data, checked, indeterminate) {
@@ -116,7 +122,11 @@ export default {
       globalViewer.addLayer(layerOption);
 
       if (layer.center) {
-        const position = new mars3d.LngLatPoint(layer.center.longitude, layer.center.latitude, layer.center.height);
+        const position = new mars3d.LngLatPoint(
+          layer.center.longitude,
+          layer.center.latitude,
+          layer.center.height,
+        );
 
         globalViewer.flyToPoint(position, {
           radius: 100,

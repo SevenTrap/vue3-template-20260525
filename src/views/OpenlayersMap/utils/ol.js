@@ -5,7 +5,14 @@ import { get as getProjection } from "ol/proj";
 import { WMTS, Vector as VectorSource } from "ol/source";
 import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
 import { Point, LineString, MultiLineString } from "ol/geom";
-import { Style, Fill, Stroke, Text, Circle as CircleStyle, Icon } from "ol/style";
+import {
+  Style,
+  Fill,
+  Stroke,
+  Text,
+  Circle as CircleStyle,
+  Icon,
+} from "ol/style";
 import { getWidth } from "ol/extent";
 
 let olMapInstance = null;

@@ -1,0 +1,16 @@
+<svg width="240" height="120" xmlns="http://www.w3.org/2000/svg" version="1.1">
+    <title>8</title>
+
+    <g>
+        <title>Layer 1</title>
+        <g fill-rule="evenodd" fill="none" id="8">
+            <path fill-rule="nonzero" fill="rgb(0,0,255)" stroke="rgb(0,0,255)" stroke-width="6" id="椭圆形"
+                d="m182,20c-23.19596,0 -42,18.80404 -42,42c0,23.19596 18.80404,42 42,42c23.19596,0 42,-18.80404 42,-42c0,-23.19596 -18.80404,-42 -42,-42zm0,4c20.98682,0 38,17.01318 38,38c0,20.98682 -17.01318,38 -38,38c-20.98682,0 -38,-17.01318 -38,-38c0,-20.98682 17.01318,-38 38,-38z" />
+            <path fill-rule="nonzero" fill="rgb(0,0,255)" stroke="rgb(0,0,255)" stroke-width="6" id="椭圆形"
+                d="m182,42c-11.04569,0 -20,8.95431 -20,20c0,11.04569 8.95431,20 20,20c11.04569,0 20,-8.95431 20,-20c0,-11.04569 -8.95431,-20 -20,-20zm0,4c8.83656,0 16,7.16344 16,16c0,8.83656 -7.16344,16 -16,16c-8.83656,0 -16,-7.16344 -16,-16c0,-8.83656 7.16344,-16 16,-16z" />
+            <rect height="4" width="124" y="60" x="16" fill="rgb(0,0,255)" stroke="rgb(0,0,255)" stroke-width="6" id="矩形" />
+            <rect height="4" width="124" y="20" x="58" fill="rgb(0,0,255)" stroke="rgb(0,0,255)" stroke-width="6" id="矩形备份" />
+            <rect height="4" width="124" y="100" x="58" fill="rgb(0,0,255)" stroke="rgb(0,0,255)" stroke-width="6" id="矩形备份-2" />
+        </g>
+    </g>
+</svg>

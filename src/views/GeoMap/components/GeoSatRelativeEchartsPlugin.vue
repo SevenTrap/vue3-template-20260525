@@ -1,6 +1,6 @@
 <template>
   <aircas-panel
-    v-show="geoSatRelativeEchartsPluginVisiable"
+    v-show="geoSatRelativeEchartsPlugin"
     title="GEO相对距离与光照角"
     width="900"
     height="500"
@@ -28,7 +28,7 @@ export default {
     return {};
   },
   computed: {
-    ...mapState(useGeoMapStore, ["geoSatRelativeEchartsPluginVisiable"]),
+    ...mapState(useGeoMapStore, ["geoSatRelativeEchartsPlugin"]),
   },
   mounted() {
     this.chartInstance = echarts.init(this.$refs.chartContainer);
@@ -38,7 +38,7 @@ export default {
 
   methods: {
     handlePanelClose() {
-      geoMapStore.SET_COMPONENT_VISIBLE_FALSE("geoSatRelativeEchartsPluginVisiable");
+      geoMapStore.SET_COMPONENT_VISIBLE_FALSE("geoSatRelativeEchartsPlugin");
     },
 
     initChart() {
@@ -99,7 +99,11 @@ export default {
         ],
       };
 
-      this.chartInstance && this.chartInstance.setOption(option, { notMerge: true, lazyUpdate: false });
+      this.chartInstance &&
+        this.chartInstance.setOption(option, {
+          notMerge: true,
+          lazyUpdate: false,
+        });
       this.chartInstance.resize();
     },
     computeSeries() {
@@ -129,7 +133,8 @@ export default {
         const posA = satA.getEciPosition(currentDate);
         const posB = satB.getEciPosition(currentDate);
 
-        const isValidVec = (p) => p && [p.x, p.y, p.z].every((v) => Number.isFinite(v));
+        const isValidVec = (p) =>
+          p && [p.x, p.y, p.z].every((v) => Number.isFinite(v));
         if (isValidVec(posA) && isValidVec(posB)) {
           const dx = posB.x - posA.x;
           const dy = posB.y - posA.y;
@@ -158,7 +163,9 @@ export default {
           const angleDeg = this.computeAngleDeg(satToB, satToSun);
 
           times.push(current.format("MM-DD HH:mm"));
-          distances.push(Number.isFinite(distanceKm) ? Math.round(distanceKm) : 0);
+          distances.push(
+            Number.isFinite(distanceKm) ? Math.round(distanceKm) : 0,
+          );
           sunAngles.push(Number.isFinite(angleDeg) ? Math.round(angleDeg) : 0);
         }
 

@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 export const useCesiumDemoStore = defineStore("CesiumDemo", {
   state: () => ({
     layerManager: false, // 图层管理插件
-    sstLayer: true,
+    sstLayer: fasle,
   }),
   getters: {
     getMenuBarVisible: (state) => {

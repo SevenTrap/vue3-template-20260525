@@ -1,6 +1,12 @@
 const MAP_CONFIG = {
   scene: {
-    center: { lat: 27.227714, lng: 89.713518, alt: 24669558.8, heading: 360, pitch: -90 },
+    center: {
+      lat: 27.227714,
+      lng: 89.713518,
+      alt: 24669558.8,
+      heading: 360,
+      pitch: -90,
+    },
     fog: false,
     fxaa: false,
     showSun: true,
@@ -68,7 +74,7 @@ const MAP_CONFIG = {
       name: "矢量底图",
       show: true,
       icon: "/assets/mapConfig/shiliang_img.png",
-      url: `${DOMAIN_CONFIG.MAP_SERVER_URI}/tilecache/service/wmts`,
+      url: `${DOMAIN_CONFIG.map_server_uri}/tilecache/service/wmts`,
       type: "wmts",
       layer: ["Global_Image_4326"],
       style: "",
@@ -101,7 +107,7 @@ const MAP_CONFIG = {
     },
   ],
   terrain: {
-    url: `${DOMAIN_CONFIG.MAP_SERVER_URI}/tilecache/service/terrain/Global_DEM-TINXIN-4326`,
+    url: `${DOMAIN_CONFIG.map_server_uri}/tilecache/service/terrain/Global_DEM-TINXIN-4326`,
     show: false,
   },
 };

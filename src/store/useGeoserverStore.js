@@ -1,9 +1,8 @@
 import { defineStore } from "pinia";
 
-export const useAircasPluginStore = defineStore("aircasPlugin", {
+export const useGeoserverStore = defineStore("geoserver", {
   state: () => ({
-    aircasManagerLayersPlugin: false,
-    aircasGraphicLayersPlugin: false,
+    geoserverPlugin: false,
   }),
   getters: {
     getMenuBarVisible: (state) => {
@@ -11,26 +10,14 @@ export const useAircasPluginStore = defineStore("aircasPlugin", {
     },
   },
   actions: {
-    /**
-     * @description 更新菜单栏组件
-     * @param {string} menuItem
-     */
     UPDATE_COMPONENT_VISIBLE(menuItem) {
       this[menuItem] = !this[menuItem];
     },
 
-    /**
-     * @description 设置菜单栏组件为true
-     * @param {string} menuItem
-     */
     SET_COMPONENT_VISIBLE_TRUE(menuItem) {
       this[menuItem] = true;
     },
 
-    /**
-     * @description 设置菜单栏组件为false
-     * @param {string} menuItem
-     */
     SET_COMPONENT_VISIBLE_FALSE(menuItem) {
       this[menuItem] = false;
     },

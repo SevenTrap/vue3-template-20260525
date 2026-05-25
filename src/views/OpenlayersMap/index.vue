@@ -4,9 +4,15 @@
 
     <div class="openlayers-map-control">
       <el-button type="primary" @click="addSatellite">添加卫星轨道</el-button>
-      <el-button type="primary" @click="handleRemoveSatelliteOrbit">移除卫星轨道</el-button>
-      <el-button type="primary" @click="handleRemoveSatellite">移除卫星</el-button>
-      <el-button type="primary" @click="isShowTimeline = !isShowTimeline">切换时间轴</el-button>
+      <el-button type="primary" @click="handleRemoveSatelliteOrbit">
+        移除卫星轨道
+      </el-button>
+      <el-button type="primary" @click="handleRemoveSatellite">
+        移除卫星
+      </el-button>
+      <el-button type="primary" @click="isShowTimeline = !isShowTimeline">
+        切换时间轴
+      </el-button>
 
       <TimeLine v-if="isShowTimeline"></TimeLine>
     </div>
@@ -14,13 +20,17 @@
 </template>
 
 <script>
-import dayjs from "dayjs";
-
-import { olMapInstance, initOpenlayersMap, addSatelliteOrbit, addSatellitePoint, removeFeatureById } from "./utils/ol";
+import {
+  olMapInstance,
+  initOpenlayersMap,
+  addSatelliteOrbit,
+  addSatellitePoint,
+  removeFeatureById,
+} from "./utils/ol";
 import SatelliteClass from "@/models/SatelliteClass";
 
 import TimeLine from "./components/TimeLine.vue";
-import { timeEngineInstance } from "@/utils/initTimeEngine";
+import { initTimeEngine, timeEngineInstance } from "@/utils/initTimeEngine";
 
 export default {
   name: "OpenlayersMap",
@@ -33,6 +43,9 @@ export default {
       satelliteModel: null,
       satelliteModels: new Map(),
     };
+  },
+  created() {
+    initTimeEngine();
   },
   mounted() {
     console.log("OpenLayersMap mounted");

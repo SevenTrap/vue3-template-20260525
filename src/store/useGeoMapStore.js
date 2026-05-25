@@ -2,9 +2,9 @@ import { defineStore } from "pinia";
 
 export const useGeoMapStore = defineStore("geoMap", {
   state: () => ({
-    satelliteTreePluginVisiable: false, // 卫星插件
-    satelliteHeatH3PluginVisiable: false, // 卫星热力图H3插件
-    geoSatRelativeEchartsPluginVisiable: true, // GEO卫星相对距离与光照角插件
+    satelliteTreePlugin: false, // 卫星插件
+    satelliteHeatH3Plugin: false, // 卫星热力图H3插件
+    geoSatRelativeEchartsPlugin: true, // GEO卫星相对距离与光照角插件
 
     coordinate: "ECEF", // ECEF: 地固坐标系、ECI: 惯性坐标系
     lookAt: "", // 视角

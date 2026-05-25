@@ -1,5 +1,13 @@
 <template>
-  <aircas-panel v-show="satelliteHeatH3PluginVisiable" title="卫星热力图H3" width="300" height="700" top="120" left="100" @close="handlePanelClose">
+  <aircas-panel
+    v-show="satelliteHeatH3Plugin"
+    title="卫星热力图H3"
+    width="300"
+    height="700"
+    top="120"
+    left="100"
+    @close="handlePanelClose"
+  >
     <div class="satellite-heat-h3">
       <div @click="handleShow(1)">1月1日</div>
       <div @click="handleShow(2)">1月2日</div>
@@ -22,7 +30,7 @@ const geoMapStore = useGeoMapStore();
 export default {
   name: "SatelliteHeatH3Plugin",
   computed: {
-    ...mapState(useGeoMapStore, ["satelliteHeatH3PluginVisiable"]),
+    ...mapState(useGeoMapStore, ["satelliteHeatH3Plugin"]),
   },
   data() {
     return {
@@ -85,7 +93,7 @@ export default {
       globalViewer.addLayer(this.h3Layer);
     },
     handlePanelClose() {
-      geoMapStore.SET_COMPONENT_VISIBLE_FALSE("satelliteHeatH3PluginVisiable");
+      geoMapStore.SET_COMPONENT_VISIBLE_FALSE("satelliteHeatH3Plugin");
     },
 
     handleShow(day) {
@@ -121,7 +129,10 @@ export default {
     addH3Boundary(positions, center, value) {
       const numStr = String(value);
       const numNum = Number(numStr);
-      const colorScale = d3.scaleLinear().domain([200, 300, 600]).range(["blue", "red", "green"]);
+      const colorScale = d3
+        .scaleLinear()
+        .domain([200, 300, 600])
+        .range(["blue", "red", "green"]);
 
       const color = colorScale(numNum);
 

@@ -16,7 +16,7 @@ import { defineStore } from "pinia";
 
 export const useGeoMapStore = defineStore("geoMap", {
   state: () => ({
-    somePluginVisiable: false,  // 沿用项目拼写 visiable
+    somePlugin: false, // 沿用项目拼写 visiable
   }),
   getters: {},
   actions: {

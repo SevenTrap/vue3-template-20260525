@@ -1,6 +1,19 @@
 <template>
-  <aircas-panel v-show="satelliteTreePluginVisiable" title="卫星列表" width="300" height="700" top="120" left="100" @close="handlePanelClose">
-    <el-input v-model="filterText" placeholder="请输入卫星名称" style="margin-bottom: 5px" @keyup.enter="handleSearch" />
+  <aircas-panel
+    v-show="satelliteTreePlugin"
+    title="卫星列表"
+    width="300"
+    height="700"
+    top="120"
+    left="100"
+    @close="handlePanelClose"
+  >
+    <el-input
+      v-model="filterText"
+      placeholder="请输入卫星名称"
+      style="margin-bottom: 5px"
+      @keyup.enter="handleSearch"
+    />
     <el-tree-v2
       ref="satelliteTree"
       class="aircas-el-tree-v2"
@@ -63,15 +76,19 @@ export default {
     });
   },
   computed: {
-    ...mapState(useGeoMapStore, ["satelliteTreePluginVisiable"]),
+    ...mapState(useGeoMapStore, ["satelliteTreePlugin"]),
   },
   methods: {
     handleCheckChange(data, info) {
       const currentCheckedNorads = info.checkedKeys;
       const oldCheckedNorads = this.checkedNorads.slice();
 
-      const addedNorads = currentCheckedNorads.filter((norad) => !oldCheckedNorads.includes(norad));
-      const removeNorads = oldCheckedNorads.filter((norad) => !currentCheckedNorads.includes(norad));
+      const addedNorads = currentCheckedNorads.filter(
+        (norad) => !oldCheckedNorads.includes(norad),
+      );
+      const removeNorads = oldCheckedNorads.filter(
+        (norad) => !currentCheckedNorads.includes(norad),
+      );
 
       for (let i = 0, len = addedNorads.length; i < len; i++) {
         try {
@@ -116,7 +133,9 @@ export default {
 
     initLayer() {
       satelliteLayer = new mars3d.layer.GraphicLayer({ name: "卫星图层" });
-      satellitePathLayer = new mars3d.layer.GraphicLayer({ name: "卫星路径图层" });
+      satellitePathLayer = new mars3d.layer.GraphicLayer({
+        name: "卫星路径图层",
+      });
       dmzLayer = new mars3d.layer.GraphicLayer({ name: "地面站图层" });
 
       globalViewer.addLayer(satelliteLayer);
@@ -174,7 +193,8 @@ export default {
             timeField: "currTime",
             pauseTime: 12 * 60 * 60,
             interpolation: true,
-            interpolationAlgorithm: mars3d.Cesium.LagrangePolynomialApproximation,
+            interpolationAlgorithm:
+              mars3d.Cesium.LagrangePolynomialApproximation,
             interpolationDegree: 3,
             forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
           },
@@ -290,9 +310,14 @@ export default {
             if (!satPosition) {
               return [];
             }
-            const cartographic = mars3d.Cesium.Cartographic.fromCartesian(satPosition);
+            const cartographic =
+              mars3d.Cesium.Cartographic.fromCartesian(satPosition);
 
-            const groundPosition = mars3d.Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, cartographic.height - 1000);
+            const groundPosition = mars3d.Cesium.Cartesian3.fromRadians(
+              cartographic.longitude,
+              cartographic.latitude,
+              cartographic.height - 1000,
+            );
 
             return [satPosition, groundPosition];
           }, false),
@@ -313,8 +338,16 @@ export default {
 
     initDmzLayer() {
       const arr = [
-        { name: "西安", radius: 1500000, point: [108.938314, 34.345614, 342.9] },
-        { name: "喀什", radius: 1800000, point: [75.990372, 39.463507, 1249.5] },
+        {
+          name: "西安",
+          radius: 1500000,
+          point: [108.938314, 34.345614, 342.9],
+        },
+        {
+          name: "喀什",
+          radius: 1800000,
+          point: [75.990372, 39.463507, 1249.5],
+        },
         { name: "文昌", radius: 1200000, point: [110.755151, 19.606573, 21.1] },
       ];
 
@@ -367,7 +400,8 @@ export default {
           return;
         }
 
-        dmzGraphic._lastInPoly[graphic.id] = dmzGraphic._lastInPoly[graphic.id] || {};
+        dmzGraphic._lastInPoly[graphic.id] =
+          dmzGraphic._lastInPoly[graphic.id] || {};
         const lastState = dmzGraphic._lastInPoly[graphic.id];
 
         const thisIsInPoly = dmzGraphic.isInPoly(position);
@@ -422,11 +456,16 @@ export default {
 
       // TODO 处理卫星间链路
       satelliteLayer.eachGraphic((otherGraphic) => {
-        if (otherGraphic.id === graphic.id || !graphic._isSate || !otherGraphic._isSate) {
+        if (
+          otherGraphic.id === graphic.id ||
+          !graphic._isSate ||
+          !otherGraphic._isSate
+        ) {
           return;
         }
 
-        graphic._sateLinks[otherGraphic.id] = graphic._sateLinks[otherGraphic.id] || {};
+        graphic._sateLinks[otherGraphic.id] =
+          graphic._sateLinks[otherGraphic.id] || {};
         const lastState = graphic._sateLinks[otherGraphic.id];
 
         // 计算两卫星间距离
@@ -475,7 +514,8 @@ export default {
           lastState.linkGraphic = linkGraphic;
           lastState.state = true;
         } else {
-          lastState.linkGraphic && satelliteLayer.removeGraphic(lastState.linkGraphic);
+          lastState.linkGraphic &&
+            satelliteLayer.removeGraphic(lastState.linkGraphic);
           lastState.state = false;
         }
       });
@@ -494,7 +534,7 @@ export default {
     },
 
     handlePanelClose() {
-      geoMapStore.SET_COMPONENT_VISIBLE_FALSE("satelliteTreePluginVisiable");
+      geoMapStore.SET_COMPONENT_VISIBLE_FALSE("satelliteTreePlugin");
     },
   },
 };

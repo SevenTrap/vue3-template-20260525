@@ -1,7 +1,27 @@
 <template>
-  <AircasPanel v-show="aircasGraphicLayersPluginVisiable" title="数据目录树" width="300" height="700" top="120" left="100" @close="handlePanelClose">
-    <el-input v-model="filterText" placeholder="请输入名称" style="margin-bottom: 5px" @keyup.enter="handleSearchByName" />
-    <el-tree-v2 ref="aircasGraphicLayersTree" class="aircas-el-tree-v2" :data="graphicLayersTree" node-key="id" :filter-method="filterNode" :height="600">
+  <AircasPanel
+    v-show="aircasGraphicLayersPlugin"
+    title="数据目录树"
+    width="300"
+    height="700"
+    top="120"
+    left="100"
+    @close="handlePanelClose"
+  >
+    <el-input
+      v-model="filterText"
+      placeholder="请输入名称"
+      style="margin-bottom: 5px"
+      @keyup.enter="handleSearchByName"
+    />
+    <el-tree-v2
+      ref="aircasGraphicLayersTree"
+      class="aircas-el-tree-v2"
+      :data="graphicLayersTree"
+      node-key="id"
+      :filter-method="filterNode"
+      :height="600"
+    >
       <template #default="{ node, data }">
         <template v-if="node.isLeaf">
           <span @click.stop="handleFlyTo(data)">
@@ -37,7 +57,7 @@ export default {
     }, 1000);
   },
   computed: {
-    ...mapState(useAircasPluginStore, ["aircasGraphicLayersPluginVisiable"]),
+    ...mapState(useAircasPluginStore, ["aircasGraphicLayersPlugin"]),
   },
   methods: {
     // TODO 当 globalViewer 没有初始化，globalViewer.getLayers()获取不到数据会报错，需要优化解决
@@ -96,7 +116,9 @@ export default {
 
     handlePanelClose() {
       const aircasPluginStore = useAircasPluginStore();
-      aircasPluginStore.SET_COMPONENT_VISIBLE_FALSE("aircasGraphicLayersPluginVisiable");
+      aircasPluginStore.SET_COMPONENT_VISIBLE_FALSE(
+        "aircasGraphicLayersPlugin",
+      );
     },
   },
 

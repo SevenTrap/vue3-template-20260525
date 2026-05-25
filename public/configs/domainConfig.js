@@ -1,3 +1,3 @@
 const DOMAIN_CONFIG = {
-  MAP_SERVER_URI: "http://localhost:3000", // web球底图服务地址
+  map_server_uri: "http://localhost:3000", // web球底图服务地址
 };
