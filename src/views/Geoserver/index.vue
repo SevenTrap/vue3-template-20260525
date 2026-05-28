@@ -30,10 +30,10 @@ export default {
       pitch: -89.8,
     };
     initViewer(earthContainer, MAP_CONFIG_Satellite);
-    initLayers(globalViewer);
+    // initLayers(globalViewer);
 
-    addGeoCirclePositions(globalViewer);
-    addGeoCircleLabel(globalViewer);
+    // addGeoCirclePositions(globalViewer);
+    // addGeoCircleLabel(globalViewer);
   },
 
   beforeUnmount() {

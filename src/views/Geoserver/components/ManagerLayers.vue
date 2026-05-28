@@ -2,18 +2,18 @@
   <aircasPanel v-show="managerLayersPlugin" title="图层管理" @close="handlePanelClose">
     <div class="layer-manager">
       <header>
-        <el-input class="search-input" type="text" />
+        <el-input class="search-input" type="text" v-model="searchValue" />
 
-        <el-button class="search-btn" type="primary">查询</el-button>
+        <el-button class="search-btn" type="primary" @click="handleSearch">查询</el-button>
       </header>
 
       <el-tree
-        :props="{ label: 'name' }"
         :data="layersTree"
         :default-checked-keys="defaultCheckedKeys"
         node-key="id"
         show-checkbox
         @check-change="handleCheckChange"
+        :filter-node="filterNode"
       />
     </div>
   </aircasPanel>
@@ -32,6 +32,7 @@ export default {
   name: "ManagerLayers",
   data() {
     return {
+      searchValue: "",
       layersTree: [],
       defaultCheckedKeys: [],
     };
@@ -58,6 +59,7 @@ export default {
           layerManagerTree[1].children.push({
             id: server.id,
             name: server.server_name,
+            label: server.server_name,
             type: "3dtiles",
             ...server,
           });
@@ -65,6 +67,8 @@ export default {
           layerManagerTree[2].children.push({
             id: server.id,
             name: server.server_name,
+            label: server.server_name,
+            // disabled: true,
             type: "terrain",
             ...server,
           });
@@ -72,6 +76,7 @@ export default {
           layerManagerTree[0].children.push({
             id: server.id,
             name: server.server_name,
+            label: server.server_name,
             type: "wmts",
             ...server,
           });
@@ -124,6 +129,19 @@ export default {
         default:
           this.$message.info("图层类型不正确");
       }
+    },
+
+    filterNode(value, data) {
+      if (!value) return true;
+      return data.name.includes(value);
+    },
+    handleSearch() {
+      console.log(this.searchValue);
+      if (!this.searchValue) {
+        this.layersTree = layerManagerTree;
+        return;
+      }
+      this.layersTree = layerManagerTree.filter((item) => item.name.includes(this.searchValue));
     },
 
     addXyzLayer(layer) {},

@@ -39,7 +39,7 @@
         <!-- 作战时间 -->
         <div class="titlebar-time">
           <div class="time-top">
-            <div class="time-type" style="background-color: #ffd142">作战时间</div>
+            <div class="time-type" style="background-color: #ffd142">推演时间</div>
             <div class="time-date">{{ opDate }}</div>
           </div>
 

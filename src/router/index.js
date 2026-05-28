@@ -18,7 +18,7 @@ import geoserverRouter from "./modules/geoserver";
 const routes = [
   {
     path: "/",
-    redirect: "/layout/homePage",
+    redirect: "/layout/geoserver",
   },
   {
     path: "/login",

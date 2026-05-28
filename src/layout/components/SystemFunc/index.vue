@@ -13,9 +13,9 @@
     </a>
 
     <!-- 退出登录logout -->
-    <span class="icon-btn" title="退出登录" @click="signOut">
+    <!-- <span class="icon-btn" title="退出登录" @click="signOut">
       <img src="./assets/logout.svg" />
-    </span>
+    </span> -->
   </div>
 </template>
 
@@ -44,7 +44,7 @@ export default {
     userName() {
       let username = getStorage("username");
       if (!username) {
-        return "none";
+        return "GEOSERVER";
       }
       return username.toLowerCase();
     },
