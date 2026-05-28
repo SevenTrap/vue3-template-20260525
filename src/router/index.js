@@ -18,7 +18,7 @@ import geoserverRouter from "./modules/geoserver";
 const routes = [
   {
     path: "/",
-    redirect: "/layout/homePage",
+    redirect: "/layout/geoMap",
   },
   {
     path: "/login",
@@ -29,14 +29,13 @@ const routes = [
     path: "/layout",
     redirect: "/layout/homePage",
     component: LayoutPage,
-    children: [...homeRouter, ...elementRouter, ...templateRouter, ...geoserverRouter],
+    children: [...homeRouter, ...elementRouter, ...templateRouter, ...cesiumRouter, ...geoserverRouter],
   },
-
   {
     path: "/layoutGeo",
     redirect: "/layoutGeo/homePage",
     component: LayoutGeo,
-    children: [...aiRouter, ...cesiumRouter, ...geoRouter, ...openlayersRouter],
+    children: [...aiRouter, ...geoRouter, ...openlayersRouter],
   },
   {
     path: "/layoutLeo",

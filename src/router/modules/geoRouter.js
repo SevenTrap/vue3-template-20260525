@@ -9,16 +9,6 @@ const geoRouter = [
       roles: [],
     },
   },
-  {
-    path: "/layoutGeo/geoMap",
-    name: "GeoMap",
-    component: () => import("@/views/GeoMap/index.vue"),
-    meta: {
-      title: "高轨态势(cesium)",
-      desc: "以mars3d为基础构建的三维球",
-      roles: [],
-    },
-  },
 ];
 
 export default geoRouter;

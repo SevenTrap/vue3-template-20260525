@@ -3,6 +3,7 @@
 
   <!-- 页面左侧菜单栏组件 -->
   <MenuBarPlugin></MenuBarPlugin>
+  <MenuTools></MenuTools>
 
   <!-- 所有插件在此处需要进行handleClose处理 -->
   <AircasManagerLayersPlugin></AircasManagerLayersPlugin>
@@ -12,11 +13,14 @@
   <!-- 卫星树插件 -->
   <SatelliteTreePlugin></SatelliteTreePlugin>
 
-  <!-- 卫星热度图插件 -->
-  <SatelliteHeatH3Plugin></SatelliteHeatH3Plugin>
-
   <!-- GEO卫星相对距离与光照角插件 -->
   <GeoSatRelativeEchartsPlugin></GeoSatRelativeEchartsPlugin>
+
+  <!-- 轨道动力学可视化插件 -->
+  <OrbitDynamicsPlugin></OrbitDynamicsPlugin>
+
+  <!-- 视角控制插件 -->
+  <OrbitViewControlPlugin></OrbitViewControlPlugin>
 
   <div class="page-control-btns">
     <div>
@@ -28,27 +32,29 @@
 </template>
 
 <script>
-import * as mars3d from "mars3d";
 import dayjs from "dayjs";
 import { initViewer, globalViewer } from "@/utils/initEarth";
 import { addGeoCirclePositions, removeGeoCirclePositions, addGeoCircleLabel, removeGeoCircleLabel } from "@/utils/mars3d/mars3dGeoStyle.js";
-import SatelliteOrbitPredictor from "@/models/satelliteOrbitPredictor.js";
 
 import MenuBarPlugin from "./components/MenuBarPlugin.vue";
+import MenuTools from "./components/MenuTools.vue";
 import SatelliteTreePlugin from "./components/SatelliteTreePlugin.vue";
-import SatelliteHeatH3Plugin from "./components/SatelliteHeatH3Plugin.vue";
 import GeoSatRelativeEchartsPlugin from "./components/GeoSatRelativeEchartsPlugin.vue";
-import SatelliteClass from "@/models/SatelliteClass";
+import OrbitDynamicsPlugin from "./components/OrbitDynamicsPlugin.vue";
+import OrbitViewControlPlugin from "./components/OrbitViewControlPlugin.vue";
 
+import SatelliteClass from "@/models/SatelliteClass";
 import { addSatelliteOribitByLLAs } from "./utils/mars3dSatellite";
 
 export default {
   name: "GeoMap",
   components: {
     MenuBarPlugin,
+    MenuTools,
     SatelliteTreePlugin,
-    SatelliteHeatH3Plugin,
     GeoSatRelativeEchartsPlugin,
+    OrbitDynamicsPlugin,
+    OrbitViewControlPlugin,
   },
 
   data() {

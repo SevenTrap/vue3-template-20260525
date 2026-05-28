@@ -1,19 +1,6 @@
 <template>
-  <aircas-panel
-    v-show="satelliteTreePlugin"
-    title="卫星列表"
-    width="300"
-    height="700"
-    top="120"
-    left="100"
-    @close="handlePanelClose"
-  >
-    <el-input
-      v-model="filterText"
-      placeholder="请输入卫星名称"
-      style="margin-bottom: 5px"
-      @keyup.enter="handleSearch"
-    />
+  <aircas-panel v-show="satelliteTreePlugin" title="卫星列表" width="300" height="700" top="120" left="100" @close="handlePanelClose">
+    <el-input v-model="filterText" placeholder="请输入卫星名称" style="margin-bottom: 5px" @keyup.enter="handleSearch" />
     <el-tree-v2
       ref="satelliteTree"
       class="aircas-el-tree-v2"
@@ -70,6 +57,8 @@ export default {
     this.satellitesTree = satellitesTree;
     this.satelliteModels = satelliteModels;
 
+    geoMapStore.SET_SATELLITE_MODELS(satelliteModels);
+
     this.$nextTick(() => {
       this.initLayer();
       this.initDmzLayer();
@@ -83,12 +72,8 @@ export default {
       const currentCheckedNorads = info.checkedKeys;
       const oldCheckedNorads = this.checkedNorads.slice();
 
-      const addedNorads = currentCheckedNorads.filter(
-        (norad) => !oldCheckedNorads.includes(norad),
-      );
-      const removeNorads = oldCheckedNorads.filter(
-        (norad) => !currentCheckedNorads.includes(norad),
-      );
+      const addedNorads = currentCheckedNorads.filter((norad) => !oldCheckedNorads.includes(norad));
+      const removeNorads = oldCheckedNorads.filter((norad) => !currentCheckedNorads.includes(norad));
 
       for (let i = 0, len = addedNorads.length; i < len; i++) {
         try {
@@ -106,6 +91,7 @@ export default {
       }
 
       this.checkedNorads = currentCheckedNorads;
+      geoMapStore.SET_CHECKED_NORADS(currentCheckedNorads);
     },
 
     handleFlyTo(data) {
@@ -193,8 +179,7 @@ export default {
             timeField: "currTime",
             pauseTime: 12 * 60 * 60,
             interpolation: true,
-            interpolationAlgorithm:
-              mars3d.Cesium.LagrangePolynomialApproximation,
+            interpolationAlgorithm: mars3d.Cesium.LagrangePolynomialApproximation,
             interpolationDegree: 3,
             forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
           },
@@ -310,14 +295,9 @@ export default {
             if (!satPosition) {
               return [];
             }
-            const cartographic =
-              mars3d.Cesium.Cartographic.fromCartesian(satPosition);
+            const cartographic = mars3d.Cesium.Cartographic.fromCartesian(satPosition);
 
-            const groundPosition = mars3d.Cesium.Cartesian3.fromRadians(
-              cartographic.longitude,
-              cartographic.latitude,
-              cartographic.height - 1000,
-            );
+            const groundPosition = mars3d.Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, cartographic.height - 1000);
 
             return [satPosition, groundPosition];
           }, false),
@@ -400,8 +380,7 @@ export default {
           return;
         }
 
-        dmzGraphic._lastInPoly[graphic.id] =
-          dmzGraphic._lastInPoly[graphic.id] || {};
+        dmzGraphic._lastInPoly[graphic.id] = dmzGraphic._lastInPoly[graphic.id] || {};
         const lastState = dmzGraphic._lastInPoly[graphic.id];
 
         const thisIsInPoly = dmzGraphic.isInPoly(position);
@@ -456,16 +435,11 @@ export default {
 
       // TODO 处理卫星间链路
       satelliteLayer.eachGraphic((otherGraphic) => {
-        if (
-          otherGraphic.id === graphic.id ||
-          !graphic._isSate ||
-          !otherGraphic._isSate
-        ) {
+        if (otherGraphic.id === graphic.id || !graphic._isSate || !otherGraphic._isSate) {
           return;
         }
 
-        graphic._sateLinks[otherGraphic.id] =
-          graphic._sateLinks[otherGraphic.id] || {};
+        graphic._sateLinks[otherGraphic.id] = graphic._sateLinks[otherGraphic.id] || {};
         const lastState = graphic._sateLinks[otherGraphic.id];
 
         // 计算两卫星间距离
@@ -514,8 +488,7 @@ export default {
           lastState.linkGraphic = linkGraphic;
           lastState.state = true;
         } else {
-          lastState.linkGraphic &&
-            satelliteLayer.removeGraphic(lastState.linkGraphic);
+          lastState.linkGraphic && satelliteLayer.removeGraphic(lastState.linkGraphic);
           lastState.state = false;
         }
       });

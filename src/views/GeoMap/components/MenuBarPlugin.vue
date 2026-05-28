@@ -8,52 +8,38 @@
 <template>
   <div class="menu-bar">
     <el-tooltip content="图层管理" placement="right">
-      <div
-        class="menu-item"
-        :class="{ active: aircasManagerLayersPlugin }"
-        @click="handleToggleAircasPlugin('aircasManagerLayersPlugin')"
-      >
+      <div class="menu-item" :class="{ active: aircasManagerLayersPlugin }" @click="handleToggleAircasPlugin('aircasManagerLayersPlugin')">
         <img src="/assets/menuBar/icon10.svg" />
       </div>
     </el-tooltip>
 
     <el-tooltip content="卫星可视化插件" placement="right">
-      <div
-        class="menu-item"
-        :class="{ active: satelliteTreePlugin }"
-        @click="handleToggleGeoMap('satelliteTreePlugin')"
-      >
+      <div class="menu-item" :class="{ active: satelliteTreePlugin }" @click="handleToggleGeoMap('satelliteTreePlugin')">
         <img src="/assets/menuBar/icon2.svg" />
       </div>
     </el-tooltip>
 
     <el-tooltip content="图层控制" placement="right">
-      <div
-        class="menu-item"
-        :class="{ active: aircasGraphicLayersPlugin }"
-        @click="handleToggleAircasPlugin('aircasGraphicLayersPlugin')"
-      >
+      <div class="menu-item" :class="{ active: aircasGraphicLayersPlugin }" @click="handleToggleAircasPlugin('aircasGraphicLayersPlugin')">
         <img src="/assets/menuBar/icon3.svg" />
-      </div>
-    </el-tooltip>
-
-    <el-tooltip content="卫星热力图插件" placement="right">
-      <div
-        class="menu-item"
-        :class="{ active: satelliteHeatH3Plugin }"
-        @click="handleToggleGeoMap('satelliteHeatH3Plugin')"
-      >
-        <img src="/assets/menuBar/icon4.svg" />
       </div>
     </el-tooltip>
 
     <el-tooltip content="GEO相对距离与光照角" placement="right">
-      <div
-        class="menu-item"
-        :class="{ active: geoSatRelativeEchartsPlugin }"
-        @click="handleToggleGeoMap('geoSatRelativeEchartsPlugin')"
-      >
+      <div class="menu-item" :class="{ active: geoSatRelativeEchartsPlugin }" @click="handleToggleGeoMap('geoSatRelativeEchartsPlugin')">
         <img src="/assets/menuBar/icon3.svg" />
+      </div>
+    </el-tooltip>
+
+    <el-tooltip content="轨道动力学可视化" placement="right">
+      <div class="menu-item" :class="{ active: orbitDynamicsPlugin }" @click="handleToggleGeoMap('orbitDynamicsPlugin')">
+        <img src="/assets/menuBar/icon7.svg" />
+      </div>
+    </el-tooltip>
+
+    <el-tooltip content="视角控制" placement="right">
+      <div class="menu-item" :class="{ active: orbitViewControlPlugin }" @click="handleToggleGeoMap('orbitViewControlPlugin')">
+        <img src="/assets/menuBar/icon9.svg" />
       </div>
     </el-tooltip>
   </div>
@@ -72,11 +58,10 @@ export default {
       "satelliteTreePlugin",
       "satelliteHeatH3Plugin",
       "geoSatRelativeEchartsPlugin",
+      "orbitDynamicsPlugin",
+      "orbitViewControlPlugin",
     ]),
-    ...mapState(useAircasPluginStore, [
-      "aircasManagerLayersPlugin",
-      "aircasGraphicLayersPlugin",
-    ]),
+    ...mapState(useAircasPluginStore, ["aircasManagerLayersPlugin", "aircasGraphicLayersPlugin"]),
   },
 
   methods: {
@@ -95,7 +80,7 @@ export default {
 
 <style lang="scss" scoped>
 .menu-bar {
-  position: absolute;
+  position: fixed;
   top: 120px;
   left: 10px;
   width: 60px;
@@ -106,6 +91,7 @@ export default {
   background: #0186855c;
   border: 1px solid #018a87;
   border-radius: 4px;
+  z-index: 9999;
 
   .menu-item {
     cursor: pointer;
