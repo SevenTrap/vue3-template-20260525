@@ -1,11 +1,29 @@
 <template>
-  <aircas-panel v-show="orbitViewControlPlugin" title="视角控制" width="280" height="460" bottom="100" right="20" @close="handlePanelClose">
+  <aircas-panel v-show="orbitViewControlPlugin" title="视角控制" width="320" height="640" bottom="100" right="20" @close="handlePanelClose">
     <div class="orbit-view-control-panel">
       <div class="form-item">
-        <div class="form-label">当前坐标系</div>
-        <el-tag :type="coordinate === 'ECI' ? 'warning' : 'success'" size="default">
-          {{ coordinate === "ECI" ? "ECI 惯性系" : "ECEF 地固系" }}
-        </el-tag>
+        <div class="form-label">坐标系</div>
+        <el-radio-group v-model="coordinateProxy" size="small">
+          <el-radio-button value="ECEF">地固系(ECEF)</el-radio-button>
+          <el-radio-button value="ECI">惯性系(ECI)</el-radio-button>
+        </el-radio-group>
+      </div>
+
+      <div class="form-item">
+        <div class="form-label">参考起始时刻</div>
+        <el-date-picker
+          v-model="startDate"
+          type="datetime"
+          size="small"
+          style="width: 100%"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          @change="handleOrbitConfigChange"
+        />
+      </div>
+
+      <div class="form-item">
+        <div class="form-label">轨道外推步长 (秒)</div>
+        <el-input-number v-model="stepSec" :min="1" :max="86400" :step="60" size="small" style="width: 100%" @change="handleOrbitConfigChange" />
       </div>
 
       <div class="form-item">
