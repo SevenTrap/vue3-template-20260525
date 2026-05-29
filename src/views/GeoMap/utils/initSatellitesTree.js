@@ -46,7 +46,7 @@ export async function initSatellitesTree() {
       satelliteModels.set(satelliteModel.noradID, satelliteModel);
 
       if (satelliteModel.a <= 8500) {
-        // 低轨
+        // 低轨卫星
         satellitesTree[0].children[0].children.push({
           id: satelliteModel.noradID,
           label: satelliteModel.name,
@@ -56,7 +56,7 @@ export async function initSatellitesTree() {
           model: satelliteModel,
         });
       } else if (satelliteModel.a < 40000) {
-        // 中轨
+        // 中轨卫星
         satellitesTree[0].children[1].children.push({
           id: satelliteModel.noradID,
           label: satelliteModel.name,
@@ -65,8 +65,8 @@ export async function initSatellitesTree() {
           sensorType: i % 2 === 0 ? "Conic" : "Rectangular",
           model: satelliteModel,
         });
-      } else if (satelliteModel.a < 60000) {
-        // 地球同步轨道
+      } else {
+        // 高轨卫星
         satellitesTree[0].children[2].children.push({
           id: satelliteModel.noradID,
           label: satelliteModel.name,

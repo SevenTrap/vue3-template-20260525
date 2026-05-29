@@ -11,6 +11,11 @@ export const useGeoMapStore = defineStore("geoMap", {
     // orbitDynamicsPlugin: false, // 轨道动力学可视化插件
 
     sceneControlPlugin: false, // 场景控制插件
+    showSatellitePoint: true, // 显示星下点
+    showSatelliteOrbit: true, // 显示轨道线
+    showSatelliteTrajectory: true, // 显示轨迹线
+    showSatelliteName: true, // 显示卫星名称
+    showSatelliteModel: true, // 显示卫星模型
 
     orbitViewControlPlugin: true, // 视角控制插件
     coordinate: "ECEF", // ECEF: 地固坐标系、ECI: 惯性坐标系
