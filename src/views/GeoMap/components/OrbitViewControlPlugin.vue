@@ -65,17 +65,32 @@
         </div>
       </div>
 
-      <div class="form-tip">提示：第一人称 / 第三人称视角需要先勾选卫星且打开轨道动力学插件。</div>
+      <div class="form-tip">
+        已勾选 {{ checkedNorads.length }} 颗卫星，已绘制 {{ drawnNorads.length }} 颗。<br />
+        ECEF 模式：地球不动，GEO 卫星地面轨迹呈 8 字。<br />
+        ECI 模式：地球自转，轨道呈静态标准圆。<br />
+        第一人称 / 第三人称视角需先勾选聚焦卫星。
+      </div>
     </div>
   </aircas-panel>
 </template>
 
 <script>
+import dayjs from "dayjs";
 import * as mars3d from "mars3d";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { globalViewer } from "@/utils/initEarth.js";
-import { getSatelliteGraphic } from "../utils/mars3dOrbitDynamics.js";
+import {
+  ensureOrbitLayer,
+  destroyOrbitLayer,
+  addSatelliteOrbit,
+  removeSatelliteOrbit,
+  clearOrbitGraphics,
+  lockCameraToInertial,
+  unlockCameraFromInertial,
+  getSatelliteGraphic,
+} from "../utils/mars3dOrbitDynamics.js";
 
 const geoMapStore = useGeoMapStore();
 
@@ -108,15 +123,31 @@ export default {
     return {
       ecefPresets: ECEF_PRESETS,
       eciPresets: ECI_PRESETS,
+      startDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      stepSec: 3600,
       selectedNorad: "",
+      drawnNorads: [],
     };
   },
   computed: {
     ...mapState(useGeoMapStore, ["orbitViewControlPlugin", "coordinate", "viewMode", "checkedNorads", "satelliteModels", "focusedNorad"]),
+    coordinateProxy: {
+      get() {
+        return this.coordinate;
+      },
+      set(value) {
+        this.handleCoordinateChange(value);
+      },
+    },
   },
   watch: {
     checkedNorads: {
       handler(newVal) {
+        const oldVal = this.drawnNorads;
+        if (this.orbitViewControlPlugin) {
+          this.syncSatellites(newVal || [], oldVal || []);
+        }
+
         if (this.selectedNorad && !newVal.includes(this.selectedNorad)) {
           this.selectedNorad = newVal[0] || "";
           geoMapStore.SET_FOCUSED_NORAD(this.selectedNorad);
@@ -127,15 +158,25 @@ export default {
       },
       deep: true,
     },
+    orbitViewControlPlugin(visible) {
+      if (visible) {
+        this.rebuildAll();
+      } else {
+        this.cleanup();
+      }
+    },
   },
   mounted() {
+    this.startDate = dayjs().format("YYYY-MM-DD HH:mm:ss");
+    ensureOrbitLayer(globalViewer);
+
     if (this.checkedNorads.length > 0) {
       this.selectedNorad = this.focusedNorad || this.checkedNorads[0];
       geoMapStore.SET_FOCUSED_NORAD(this.selectedNorad);
     }
   },
   beforeUnmount() {
-    this.releaseTracking();
+    this.cleanup();
   },
   methods: {
     /**
@@ -144,6 +185,26 @@ export default {
      */
     handlePanelClose() {
       geoMapStore.SET_COMPONENT_VISIBLE_FALSE("orbitViewControlPlugin");
+      this.cleanup();
+    },
+
+    /**
+     * 坐标系切换并重建轨道
+     * @param {string} value - "ECEF" 或 "ECI"
+     * @returns {void}
+     */
+    handleCoordinateChange(value) {
+      geoMapStore.SET_COORDINATE(value);
+      this.applyCameraLock();
+      this.rebuildAll();
+    },
+
+    /**
+     * 轨道配置变化（起始时刻/步长）
+     * @returns {void}
+     */
+    handleOrbitConfigChange() {
+      this.rebuildAll();
     },
 
     /**
@@ -190,6 +251,87 @@ export default {
     releaseTracking() {
       if (!globalViewer) return;
       globalViewer.trackedEntity = undefined;
+    },
+
+    /**
+     * 根据当前坐标系决定是否锁定惯性相机
+     * @returns {void}
+     */
+    applyCameraLock() {
+      if (!globalViewer) return;
+      if (this.coordinate === "ECI") {
+        lockCameraToInertial(globalViewer);
+      } else {
+        unlockCameraFromInertial(globalViewer);
+      }
+    },
+
+    /**
+     * 解析当前起始时间
+     * @returns {Date}
+     */
+    resolveStartDate() {
+      if (!this.startDate) return new Date();
+      return dayjs(this.startDate).toDate();
+    },
+
+    /**
+     * 解析轨道绘制坐标系
+     * @returns {"INERTIAL"|"FIXED"}
+     */
+    resolveFrame() {
+      return this.coordinate === "ECI" ? "INERTIAL" : "FIXED";
+    },
+
+    /**
+     * 全量重建当前勾选卫星轨道
+     * @returns {void}
+     */
+    rebuildAll() {
+      if (!this.orbitViewControlPlugin) return;
+      ensureOrbitLayer(globalViewer);
+      clearOrbitGraphics();
+      this.drawnNorads = [];
+
+      const frame = this.resolveFrame();
+      const startDate = this.resolveStartDate();
+      const step = Math.max(1, Number(this.stepSec) || 3600) * 1000;
+
+      (this.checkedNorads || []).forEach((norad) => {
+        const satelliteClass = this.satelliteModels.get(norad);
+        if (!satelliteClass) return;
+        addSatelliteOrbit(satelliteClass, { frame, startDate, step });
+        this.drawnNorads.push(norad);
+      });
+
+      this.applyCameraLock();
+    },
+
+    /**
+     * 根据勾选变化增量同步轨道
+     * @param {Array<string>} newVal - 新勾选
+     * @param {Array<string>} oldVal - 旧勾选
+     * @returns {void}
+     */
+    syncSatellites(newVal, oldVal) {
+      const added = newVal.filter((n) => !oldVal.includes(n));
+      const removed = oldVal.filter((n) => !newVal.includes(n));
+
+      removed.forEach((norad) => {
+        removeSatelliteOrbit(norad);
+        this.drawnNorads = this.drawnNorads.filter((n) => n !== norad);
+      });
+
+      const frame = this.resolveFrame();
+      const startDate = this.resolveStartDate();
+      const step = Math.max(1, Number(this.stepSec) || 3600) * 1000;
+
+      added.forEach((norad) => {
+        const satelliteClass = this.satelliteModels.get(norad);
+        if (!satelliteClass) return;
+        addSatelliteOrbit(satelliteClass, { frame, startDate, step });
+        this.drawnNorads.push(norad);
+      });
     },
 
     /**
@@ -297,7 +439,7 @@ export default {
     flyToFirstPerson() {
       const graphic = this.resolveFocusedGraphic();
       if (!graphic) {
-        console.warn("[OrbitViewControlPlugin] 未找到聚焦卫星 graphic，请先在 OrbitDynamicsPlugin 中绘制");
+        console.warn("[OrbitViewControlPlugin] 未找到聚焦卫星 graphic，请先在当前插件中绘制轨道");
         return;
       }
       globalViewer.trackedEntity = graphic.entity || graphic._entity;
@@ -316,7 +458,7 @@ export default {
     flyToThirdPerson() {
       const graphic = this.resolveFocusedGraphic();
       if (!graphic) {
-        console.warn("[OrbitViewControlPlugin] 未找到聚焦卫星 graphic，请先在 OrbitDynamicsPlugin 中绘制");
+        console.warn("[OrbitViewControlPlugin] 未找到聚焦卫星 graphic，请先在当前插件中绘制轨道");
         return;
       }
       globalViewer.trackedEntity = graphic.entity || graphic._entity;
@@ -347,6 +489,17 @@ export default {
       const lat = Math.max(-80, Math.min(80, 90 - inclinationDeg));
 
       this.flyToGlobal(lon, lat, ORBITAL_PLANE_ALT, -30);
+    },
+
+    /**
+     * 清理轨道图层、相机锁定与跟踪状态
+     * @returns {void}
+     */
+    cleanup() {
+      this.releaseTracking();
+      unlockCameraFromInertial(globalViewer);
+      destroyOrbitLayer(globalViewer);
+      this.drawnNorads = [];
     },
   },
 };
@@ -397,7 +550,7 @@ export default {
     background: rgba(0, 0, 0, 0.3);
     color: #aaa;
     font-size: 12px;
-    line-height: 1.6;
+    line-height: 1.7;
     border-radius: 4px;
   }
 }

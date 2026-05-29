@@ -30,18 +30,6 @@
         <img src="/assets/menuBar/icon3.svg" />
       </div>
     </el-tooltip>
-
-    <el-tooltip content="轨道动力学可视化" placement="right">
-      <div class="menu-item" :class="{ active: orbitDynamicsPlugin }" @click="handleToggleGeoMap('orbitDynamicsPlugin')">
-        <img src="/assets/menuBar/icon7.svg" />
-      </div>
-    </el-tooltip>
-
-    <el-tooltip content="视角控制" placement="right">
-      <div class="menu-item" :class="{ active: orbitViewControlPlugin }" @click="handleToggleGeoMap('orbitViewControlPlugin')">
-        <img src="/assets/menuBar/icon9.svg" />
-      </div>
-    </el-tooltip>
   </div>
 </template>
 
@@ -54,13 +42,7 @@ export default {
   name: "MenuBar",
 
   computed: {
-    ...mapState(useGeoMapStore, [
-      "satelliteTreePlugin",
-      "satelliteHeatH3Plugin",
-      "geoSatRelativeEchartsPlugin",
-      "orbitDynamicsPlugin",
-      "orbitViewControlPlugin",
-    ]),
+    ...mapState(useGeoMapStore, ["satelliteTreePlugin", "geoSatRelativeEchartsPlugin"]),
     ...mapState(useAircasPluginStore, ["aircasManagerLayersPlugin", "aircasGraphicLayersPlugin"]),
   },
 
