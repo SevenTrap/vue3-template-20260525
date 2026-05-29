@@ -4,17 +4,18 @@ import { markRaw } from "vue";
 export const useGeoMapStore = defineStore("geoMap", {
   state: () => ({
     satelliteTreePlugin: false, // 卫星插件
-    geoSatRelativeEchartsPlugin: false, // GEO卫星相对距离与光照角插件
-    orbitDynamicsPlugin: false, // 轨道动力学可视化插件
-    orbitViewControlPlugin: false, // 视角控制插件
-
-    coordinate: "ECEF", // ECEF: 地固坐标系、ECI: 惯性坐标系
-    lookAt: "", // 视角
-    viewMode: "default", // 视角预设：default / firstPerson / thirdPerson / southPole / northPole / equator
-    focusedNorad: "", // 当前视角聚焦的卫星 NORAD ID
-
     checkedNorads: [], // SatelliteTreePlugin 当前勾选的 NORAD ID 列表
     satelliteModels: markRaw(new Map()), // NORAD -> SatelliteClass 实例
+
+    geoSatRelativeEchartsPlugin: false, // GEO卫星相对距离与光照角插件
+    // orbitDynamicsPlugin: false, // 轨道动力学可视化插件
+
+    sceneControlPlugin: false, // 场景控制插件
+
+    orbitViewControlPlugin: true, // 视角控制插件
+    coordinate: "ECEF", // ECEF: 地固坐标系、ECI: 惯性坐标系
+    viewMode: "default", // 视角预设
+    focusedNorad: "", // 当前视角聚焦的卫星 NORAD ID
   }),
   getters: {
     getMenuBarVisible: (state) => {
@@ -22,10 +23,6 @@ export const useGeoMapStore = defineStore("geoMap", {
     },
   },
   actions: {
-    /**
-     * @description 更新菜单栏组件
-     * @param {string} menuItem
-     */
     UPDATE_COMPONENT_VISIBLE(menuItem) {
       this[menuItem] = !this[menuItem];
     },
@@ -46,10 +43,6 @@ export const useGeoMapStore = defineStore("geoMap", {
       this[menuItem] = false;
     },
 
-    /**
-     * @description 切换坐标系（ECI/ECEF）
-     * @param {"ECI"|"ECEF"} coord
-     */
     SET_COORDINATE(coord) {
       this.coordinate = coord;
     },
@@ -60,6 +53,10 @@ export const useGeoMapStore = defineStore("geoMap", {
      */
     SET_VIEW_MODE(mode) {
       this.viewMode = mode;
+    },
+
+    SET_STATE_DATA(paylod) {
+      this[paylod.key] = paylod.value;
     },
 
     /**

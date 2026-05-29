@@ -1,5 +1,5 @@
 <template>
-  <div ref="geoEarthContainer" class="earth-container"></div>
+  <div ref="geoEarthContainer" class="earth-container" :class="$attrs.class"></div>
 
   <!-- 页面左侧菜单栏组件 -->
   <MenuBarPlugin></MenuBarPlugin>
@@ -18,6 +18,9 @@
 
   <!-- 视角控制插件 -->
   <OrbitViewControlPlugin></OrbitViewControlPlugin>
+
+  <!-- 场景控制插件 -->
+  <SceneControlPlugin></SceneControlPlugin>
 
   <div class="page-control-btns">
     <div>
@@ -38,7 +41,7 @@ import MenuTools from "./components/MenuTools.vue";
 import SatelliteTreePlugin from "./components/SatelliteTreePlugin.vue";
 import GeoSatRelativeEchartsPlugin from "./components/GeoSatRelativeEchartsPlugin.vue";
 import OrbitViewControlPlugin from "./components/OrbitViewControlPlugin.vue";
-
+import SceneControlPlugin from "./components/SceneControlPlugin.vue";
 import SatelliteClass from "@/models/SatelliteClass";
 import { addSatelliteOribitByLLAs } from "./utils/mars3dSatellite";
 
@@ -50,6 +53,7 @@ export default {
     SatelliteTreePlugin,
     GeoSatRelativeEchartsPlugin,
     OrbitViewControlPlugin,
+    SceneControlPlugin,
   },
 
   data() {

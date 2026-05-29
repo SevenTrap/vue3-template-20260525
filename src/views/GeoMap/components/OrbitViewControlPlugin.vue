@@ -3,66 +3,29 @@
     <div class="orbit-view-control-panel">
       <div class="form-item">
         <div class="form-label">坐标系</div>
+
         <el-radio-group v-model="coordinateProxy" size="small">
-          <el-radio-button value="ECEF">地固系(ECEF)</el-radio-button>
-          <el-radio-button value="ECI">惯性系(ECI)</el-radio-button>
+          <el-radio value="ECEF">地固系(ECEF)</el-radio>
+          <el-radio value="ECI">惯性系(ECI)</el-radio>
         </el-radio-group>
       </div>
 
-      <div class="form-item">
-        <div class="form-label">参考起始时刻</div>
-        <el-date-picker
-          v-model="startDate"
-          type="datetime"
-          size="small"
-          style="width: 100%"
-          value-format="YYYY-MM-DD HH:mm:ss"
-          @change="handleOrbitConfigChange"
-        />
-      </div>
-
-      <div class="form-item">
-        <div class="form-label">轨道外推步长 (秒)</div>
-        <el-input-number v-model="stepSec" :min="1" :max="86400" :step="60" size="small" style="width: 100%" @change="handleOrbitConfigChange" />
-      </div>
-
-      <div class="form-item">
-        <div class="form-label">聚焦卫星</div>
-        <el-select v-model="selectedNorad" placeholder="请选择卫星" size="small" style="width: 100%" @change="handleSelectSatellite">
-          <el-option v-for="norad in checkedNorads" :key="norad" :label="resolveSatelliteLabel(norad)" :value="norad" />
-        </el-select>
-      </div>
-
       <!-- ECEF 坐标系下的视角预设 -->
-      <div v-if="coordinate === 'ECEF'" class="view-group">
-        <div class="view-group-title">ECEF 视角</div>
-        <div class="view-grid">
-          <el-button
-            v-for="preset in ecefPresets"
-            :key="preset.id"
-            :type="viewMode === preset.id ? 'primary' : 'default'"
-            size="small"
-            @click="handleApplyView(preset.id)"
-          >
-            {{ preset.label }}
-          </el-button>
-        </div>
+      <div v-if="coordinate === 'ECEF'" class="form-item">
+        <div class="form-label">ECEF 视角</div>
+
+        <el-radio-group v-model="viewMode" size="small">
+          <el-radio v-for="preset in ecefPresets" :key="preset.id" :value="preset.id">{{ preset.label }}</el-radio>
+        </el-radio-group>
       </div>
 
       <!-- ECI 坐标系下的视角预设 -->
-      <div v-if="coordinate === 'ECI'" class="view-group">
-        <div class="view-group-title">ECI 视角</div>
-        <div class="view-grid">
-          <el-button
-            v-for="preset in eciPresets"
-            :key="preset.id"
-            :type="viewMode === preset.id ? 'primary' : 'default'"
-            size="small"
-            @click="handleApplyView(preset.id)"
-          >
-            {{ preset.label }}
-          </el-button>
-        </div>
+      <div v-if="coordinate === 'ECI'" class="form-item">
+        <div class="form-label">ECI 视角</div>
+
+        <el-radio-group v-model="viewMode" size="small">
+          <el-radio v-for="preset in eciPresets" :key="preset.id" :value="preset.id">{{ preset.label }}</el-radio>
+        </el-radio-group>
       </div>
 
       <div class="form-tip">
@@ -94,28 +57,8 @@ import {
 
 const geoMapStore = useGeoMapStore();
 
-const ECEF_PRESETS = [
-  { id: "default", label: "默认全球" },
-  { id: "firstPerson", label: "卫星第一人称" },
-  { id: "thirdPerson", label: "卫星第三人称" },
-  { id: "southPole", label: "南极俯视" },
-  { id: "northPole", label: "北极俯视" },
-  { id: "equator", label: "赤道侧视" },
-];
-
-const ECI_PRESETS = [
-  { id: "default", label: "惯性系全球" },
-  { id: "firstPerson", label: "卫星第一人称" },
-  { id: "thirdPerson", label: "卫星第三人称" },
-  { id: "polarAxis", label: "极轴俯视" },
-  { id: "orbitalPlane", label: "轨道平面" },
-  { id: "equatorialPlane", label: "赤道平面" },
-];
-
-const GLOBAL_VIEW_ALT = 30_000_000;
-const POLE_VIEW_ALT = 25_000_000;
-const EQUATOR_VIEW_ALT = 80_000_000;
-const ORBITAL_PLANE_ALT = 60_000_000;
+import { ECEF_PRESETS, ECI_PRESETS } from "../configs/index.js";
+import { GLOBAL_VIEW_ALT, POLE_VIEW_ALT, EQUATOR_VIEW_ALT, ORBITAL_PLANE_ALT } from "../configs/index.js";
 
 export default {
   name: "OrbitViewControlPlugin",
@@ -123,6 +66,7 @@ export default {
     return {
       ecefPresets: ECEF_PRESETS,
       eciPresets: ECI_PRESETS,
+
       startDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       stepSec: 3600,
       selectedNorad: "",
@@ -162,7 +106,7 @@ export default {
       if (visible) {
         this.rebuildAll();
       } else {
-        this.cleanup();
+        // this.cleanup();
       }
     },
   },
@@ -176,23 +120,14 @@ export default {
     }
   },
   beforeUnmount() {
-    this.cleanup();
+    // this.cleanup();
   },
   methods: {
-    /**
-     * 关闭面板回调
-     * @returns {void}
-     */
     handlePanelClose() {
       geoMapStore.SET_COMPONENT_VISIBLE_FALSE("orbitViewControlPlugin");
-      this.cleanup();
+      // this.cleanup();
     },
 
-    /**
-     * 坐标系切换并重建轨道
-     * @param {string} value - "ECEF" 或 "ECI"
-     * @returns {void}
-     */
     handleCoordinateChange(value) {
       geoMapStore.SET_COORDINATE(value);
       this.applyCameraLock();
@@ -334,10 +269,6 @@ export default {
       });
     },
 
-    /**
-     * 取当前选中卫星 graphic（来自 OrbitDynamicsPlugin 绘制的图层）
-     * @returns {object|null}
-     */
     resolveFocusedGraphic() {
       if (!this.selectedNorad) return null;
       return getSatelliteGraphic(this.selectedNorad);
@@ -511,36 +442,27 @@ export default {
 
   .form-item {
     margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--aircas-color-border);
 
     .form-label {
       font-size: 12px;
       color: #ddd;
       margin-bottom: 4px;
-    }
-  }
-
-  .view-group {
-    margin-top: 8px;
-    padding: 8px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 4px;
-
-    .view-group-title {
       font-size: 13px;
       color: #fff;
-      margin-bottom: 8px;
       border-left: 3px solid #018a87;
       padding-left: 6px;
     }
 
-    .view-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    .form-content {
+      display: flex;
+      align-items: center;
       gap: 6px;
+    }
 
-      :deep(.el-button) {
-        margin-left: 0;
-      }
+    :deep(.el-button) {
+      margin-left: 0;
     }
   }
 

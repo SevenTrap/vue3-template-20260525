@@ -5,6 +5,12 @@
         <img class="menu-tool-item-icon" src="/assets/menuBar/icon2.svg" />
       </div>
     </el-tooltip>
+
+    <el-tooltip content="场景控制" placement="top">
+      <div class="menu-tool-item" :class="{ active: sceneControlPlugin }" @click="handleToggleGeoMap('sceneControlPlugin')">
+        <img class="menu-tool-item-icon" src="/assets/menuBar/icon3.svg" />
+      </div>
+    </el-tooltip>
   </div>
 </template>
 
@@ -14,11 +20,8 @@ import { useGeoMapStore } from "@/store/useGeoMapStore";
 
 export default {
   name: "MenuTools",
-  data() {
-    return {};
-  },
   computed: {
-    ...mapState(useGeoMapStore, ["orbitViewControlPlugin"]),
+    ...mapState(useGeoMapStore, ["orbitViewControlPlugin", "sceneControlPlugin"]),
   },
   methods: {
     handleToggleGeoMap(item) {
@@ -54,7 +57,7 @@ export default {
     border: 1px solid var(--aircas-color-white);
     transition: all 0.5s;
 
-    img {
+    .menu-tool-item-icon {
       width: 20px;
       height: 20px;
     }
