@@ -3,11 +3,14 @@ import { markRaw } from "vue";
 
 export const useGeoMapStore = defineStore("geoMap", {
   state: () => ({
-    satelliteTreePlugin: false, // 卫星插件
-    checkedNorads: [], // SatelliteTreePlugin 当前勾选的 NORAD ID 列表
+    satellitesTree: markRaw([]), // 卫星树
     satelliteModels: markRaw(new Map()), // NORAD -> SatelliteClass 实例
 
+    satelliteTreePlugin: false, // 卫星插件
+    checkedNorads: [], // SatelliteTreePlugin 当前勾选的 NORAD ID 列表
+
     geoSatRelativeEchartsPlugin: false, // GEO卫星相对距离与光照角插件
+    geoLngHeightEchartsPlugin: false, // GEO卫星高度与经度插件
     // orbitDynamicsPlugin: false, // 轨道动力学可视化插件
 
     sceneControlPlugin: false, // 场景控制插件

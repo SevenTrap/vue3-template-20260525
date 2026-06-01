@@ -72,39 +72,6 @@ export default {
       "showSatelliteModel",
     ]),
   },
-  watch: {
-    // showSatellitePoint(newVal) {
-    //   if (newVal) {
-    //     addSatellitePoint(globalViewer);
-    //   } else {
-    //     removeSatellitePoint(globalViewer);
-    //   }
-    // },
-    // showSatelliteOrbit(newVal) {
-    //   toggleSatelliteOribit(satelliteLayer, newVal);
-    // },
-    // showSatelliteTrajectory(newVal) {
-    //   if (newVal) {
-    //     addSatelliteTrajectory(globalViewer);
-    //   } else {
-    //     removeSatelliteTrajectory(globalViewer);
-    //   }
-    // },
-    // showSatelliteName(newVal) {
-    //   if (newVal) {
-    //     addSatelliteName(globalViewer);
-    //   } else {
-    //     removeSatelliteName(globalViewer);
-    //   }
-    // },
-    // showSatelliteModel(newVal) {
-    //   if (newVal) {
-    //     addSatelliteModel(globalViewer);
-    //   } else {
-    //     removeSatelliteModel(globalViewer);
-    //   }
-    // },
-  },
   methods: {
     handleCheckChange(data, info) {
       const currentCheckedNorads = info.checkedKeys;

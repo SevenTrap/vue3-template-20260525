@@ -12,17 +12,22 @@ export async function initSatellitesTree() {
       children: [
         {
           id: "LEO",
-          label: "低轨卫星(LEO)",
+          label: "低轨卫星",
           children: [],
         },
         {
           id: "MEO",
-          label: "中轨卫星(MEO)",
+          label: "中轨卫星",
           children: [],
         },
         {
           id: "GEO",
-          label: "地球同步轨道(GEO)",
+          label: "地球同步轨道",
+          children: [],
+        },
+        {
+          id: "HEO",
+          label: "大椭圆轨道",
           children: [],
         },
       ],
@@ -35,24 +40,27 @@ export async function initSatellitesTree() {
       const tle1 = lines[i + 1].trim();
       const tle2 = lines[i + 2].trim();
 
-      const satelliteOptions = {
-        orbitPath: true,
-        satellitePosition: false,
-        sensorShow: false,
-        sensorType: "Conic",
-      };
-
-      const satelliteModel = new SatelliteClass(name, tle1, tle2, satelliteOptions);
+      const satelliteModel = new SatelliteClass(name, tle1, tle2);
       satelliteModels.set(satelliteModel.noradID, satelliteModel);
+
+      if (satelliteModel.eccentricity > 0.05) {
+        // 大椭圆轨道卫星
+        satellitesTree[0].children[3].children.push({
+          id: satelliteModel.noradID,
+          label: satelliteModel.name,
+          type: "HEO",
+          model: satelliteModel,
+        });
+
+        continue;
+      }
 
       if (satelliteModel.a <= 8500) {
         // 低轨卫星
         satellitesTree[0].children[0].children.push({
           id: satelliteModel.noradID,
           label: satelliteModel.name,
-          orbitPath: false,
-          satellitePosition: true,
-          sensorType: i % 2 === 0 ? "Conic" : "Rectangular",
+          type: "LEO",
           model: satelliteModel,
         });
       } else if (satelliteModel.a < 40000) {
@@ -60,9 +68,7 @@ export async function initSatellitesTree() {
         satellitesTree[0].children[1].children.push({
           id: satelliteModel.noradID,
           label: satelliteModel.name,
-          orbitPath: false,
-          satellitePosition: false,
-          sensorType: i % 2 === 0 ? "Conic" : "Rectangular",
+          type: "MEO",
           model: satelliteModel,
         });
       } else {
@@ -70,9 +76,7 @@ export async function initSatellitesTree() {
         satellitesTree[0].children[2].children.push({
           id: satelliteModel.noradID,
           label: satelliteModel.name,
-          orbitPath: true,
-          satellitePosition: false,
-          sensorType: i % 2 === 0 ? "Conic" : "Rectangular",
+          type: "GEO",
           model: satelliteModel,
         });
       }
@@ -82,9 +86,10 @@ export async function initSatellitesTree() {
     }
   }
 
-  satellitesTree[0].children[0].label += ` (${satellitesTree[0].children[0].children.length})`;
-  satellitesTree[0].children[1].label += ` (${satellitesTree[0].children[1].children.length})`;
-  satellitesTree[0].children[2].label += ` (${satellitesTree[0].children[2].children.length})`;
+  // satellitesTree[0].children[0].label += ` (${satellitesTree[0].children[0].children.length})`;
+  // satellitesTree[0].children[1].label += ` (${satellitesTree[0].children[1].children.length})`;
+  // satellitesTree[0].children[2].label += ` (${satellitesTree[0].children[2].children.length})`;
+  // satellitesTree[0].children[3].label += ` (${satellitesTree[0].children[3].children.length})`;
 
   return { satellitesTree, satelliteModels };
 }

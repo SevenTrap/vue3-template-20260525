@@ -45,9 +45,10 @@ export default {
     SceneControlPlugin,
   },
 
-  mounted() {
+  async mounted() {
     let earthContainer = this.$refs.geoEarthContainer;
     initViewer(earthContainer, MAP_CONFIG_Satellite);
+
     this.$nextTick(() => {
       addGeoCircleLabel(globalViewer);
       addGeoCirclePositions(globalViewer);

@@ -1,14 +1,14 @@
 <template>
   <div class="menu-tools">
-    <el-tooltip content="视角控制" placement="top">
-      <div class="menu-tool-item" :class="{ active: orbitViewControlPlugin }" @click="handleToggleGeoMap('orbitViewControlPlugin')">
-        <img class="menu-tool-item-icon" src="/assets/menuBar/icon2.svg" />
-      </div>
-    </el-tooltip>
-
     <el-tooltip content="场景控制" placement="top">
       <div class="menu-tool-item" :class="{ active: sceneControlPlugin }" @click="handleToggleGeoMap('sceneControlPlugin')">
         <img class="menu-tool-item-icon" src="/assets/menuBar/icon3.svg" />
+      </div>
+    </el-tooltip>
+
+    <el-tooltip content="视角控制" placement="top">
+      <div class="menu-tool-item" :class="{ active: orbitViewControlPlugin }" @click="handleToggleGeoMap('orbitViewControlPlugin')">
+        <img class="menu-tool-item-icon" src="/assets/menuBar/icon2.svg" />
       </div>
     </el-tooltip>
   </div>

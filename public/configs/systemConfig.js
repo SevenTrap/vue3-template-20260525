@@ -17,3 +17,15 @@ const SYSTEM_CONFIG = {
     // { path: "javascript:void(0)", name: "MenuSix", label: "菜单栏六", iconType: "element", iconName: "Suitcase" },
   ],
 };
+
+const SYSTEM_CONFIG_Satellite = {
+  satelliteColors: {
+    中国: "#ff0000",
+    美国: "#0000ff",
+    日本: "#e89951",
+    俄罗斯: "#f9b2d7",
+  },
+  defaultTimeFront: 24 * 60 * 60 * 1000, // 默认时间周期：1天
+  defaultTimeBack: 24 * 60 * 60 * 1000, // 默认时间周期：1天
+  defaultTimeStep: 1 * 60 * 1000, // 默认时间步长：1分钟
+};

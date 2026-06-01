@@ -1,7 +1,7 @@
 import * as mars3d from "mars3d";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-const ONE_HOUR_MS = 60 * 60 * 1000;
+const ONE_HOUR_MS = 1 * 60 * 1000;
 
 /**
  * 创建卫星轨迹采样数据（前后各1天，每1小时1个点）

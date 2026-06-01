@@ -33,7 +33,7 @@ const MAP_CONFIG_Satellite = {
       constrainedAxis: false,
     },
     clock: {
-      multiplier: 1000,
+      multiplier: 100,
     },
   },
   control: {

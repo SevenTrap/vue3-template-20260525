@@ -14,11 +14,10 @@ const KM_TO_M = 1000;
  * @param {string} tle2 - The second line of the TLE data.
  */
 class SatelliteClass {
-  constructor(name, tle1, tle2, options = {}) {
+  constructor(name, tle1, tle2) {
     this.name = name;
     this.tle1 = tle1;
     this.tle2 = tle2;
-    this.options = options;
     this.satrec = null; // satellite.js object
     this.noradID = null; // NORAD ID
     this.inclination = null; // 轨道倾角(radians)
