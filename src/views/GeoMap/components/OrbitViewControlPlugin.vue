@@ -1,10 +1,10 @@
 <template>
-  <aircas-panel v-show="orbitViewControlPlugin" title="视角控制" width="320" height="640" bottom="100" right="20" @close="handlePanelClose">
+  <aircas-panel v-show="orbitViewControlPlugin" title="视角控制" width="320" height="380" bottom="100" right="20" @close="handlePanelClose">
     <div class="orbit-view-control-panel">
       <div class="form-item">
         <div class="form-label">坐标系</div>
 
-        <el-radio-group v-model="coordinateProxy" size="small">
+        <el-radio-group :model-value="coordinate" size="small" @change="handleCoordinateChange">
           <el-radio value="ECEF">地固系(ECEF)</el-radio>
           <el-radio value="ECI">惯性系(ECI)</el-radio>
         </el-radio-group>
@@ -14,7 +14,7 @@
       <div v-if="coordinate === 'ECEF'" class="form-item">
         <div class="form-label">ECEF 视角</div>
 
-        <el-radio-group v-model="viewMode" size="small">
+        <el-radio-group v-model="viewMode" size="small" @change="handleApplyView">
           <el-radio v-for="preset in ecefPresets" :key="preset.id" :value="preset.id">{{ preset.label }}</el-radio>
         </el-radio-group>
       </div>
@@ -23,16 +23,9 @@
       <div v-if="coordinate === 'ECI'" class="form-item">
         <div class="form-label">ECI 视角</div>
 
-        <el-radio-group v-model="viewMode" size="small">
+        <el-radio-group v-model="viewMode" size="small" @change="handleApplyView">
           <el-radio v-for="preset in eciPresets" :key="preset.id" :value="preset.id">{{ preset.label }}</el-radio>
         </el-radio-group>
-      </div>
-
-      <div class="form-tip">
-        已勾选 {{ checkedNorads.length }} 颗卫星，已绘制 {{ drawnNorads.length }} 颗。<br />
-        ECEF 模式：地球不动，GEO 卫星地面轨迹呈 8 字。<br />
-        ECI 模式：地球自转，轨道呈静态标准圆。<br />
-        第一人称 / 第三人称视角需先勾选聚焦卫星。
       </div>
     </div>
   </aircas-panel>
@@ -54,11 +47,9 @@ import {
   unlockCameraFromInertial,
   getSatelliteGraphic,
 } from "../utils/mars3dOrbitDynamics.js";
+import { ECEF_PRESETS, ECI_PRESETS, GLOBAL_VIEW_ALT } from "../configs/index.js";
 
 const geoMapStore = useGeoMapStore();
-
-import { ECEF_PRESETS, ECI_PRESETS } from "../configs/index.js";
-import { GLOBAL_VIEW_ALT, POLE_VIEW_ALT, EQUATOR_VIEW_ALT, ORBITAL_PLANE_ALT } from "../configs/index.js";
 
 export default {
   name: "OrbitViewControlPlugin",
@@ -67,57 +58,47 @@ export default {
       ecefPresets: ECEF_PRESETS,
       eciPresets: ECI_PRESETS,
 
-      startDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-      stepSec: 3600,
-      selectedNorad: "",
-      drawnNorads: [],
+      coordinate: "ECEF",
+      viewMode: "default",
+
+      // selectedNorad: "",
+      // drawnNorads: [],
     };
   },
   computed: {
-    ...mapState(useGeoMapStore, ["orbitViewControlPlugin", "coordinate", "viewMode", "checkedNorads", "satelliteModels", "focusedNorad"]),
-    coordinateProxy: {
-      get() {
-        return this.coordinate;
-      },
-      set(value) {
-        this.handleCoordinateChange(value);
-      },
-    },
+    ...mapState(useGeoMapStore, ["orbitViewControlPlugin", "satelliteModels"]),
   },
   watch: {
-    checkedNorads: {
-      handler(newVal) {
-        const oldVal = this.drawnNorads;
-        if (this.orbitViewControlPlugin) {
-          this.syncSatellites(newVal || [], oldVal || []);
-        }
-
-        if (this.selectedNorad && !newVal.includes(this.selectedNorad)) {
-          this.selectedNorad = newVal[0] || "";
-          geoMapStore.SET_FOCUSED_NORAD(this.selectedNorad);
-        } else if (!this.selectedNorad && newVal.length > 0) {
-          this.selectedNorad = newVal[0];
-          geoMapStore.SET_FOCUSED_NORAD(this.selectedNorad);
-        }
-      },
-      deep: true,
-    },
-    orbitViewControlPlugin(visible) {
-      if (visible) {
-        this.rebuildAll();
-      } else {
-        // this.cleanup();
-      }
-    },
+    // checkedNorads: {
+    //   handler(newVal) {
+    //     const oldVal = this.drawnNorads;
+    //     if (this.orbitViewControlPlugin) {
+    //       this.syncSatellites(newVal || [], oldVal || []);
+    //     }
+    //     if (this.selectedNorad && !newVal.includes(this.selectedNorad)) {
+    //       this.selectedNorad = newVal[0] || "";
+    //       geoMapStore.SET_FOCUSED_NORAD(this.selectedNorad);
+    //     } else if (!this.selectedNorad && newVal.length > 0) {
+    //       this.selectedNorad = newVal[0];
+    //       geoMapStore.SET_FOCUSED_NORAD(this.selectedNorad);
+    //     }
+    //   },
+    //   deep: true,
+    // },
+    // orbitViewControlPlugin(visible) {
+    //   if (visible) {
+    //     this.rebuildAll();
+    //   } else {
+    //     // this.cleanup();
+    //   }
+    // },
   },
   mounted() {
-    this.startDate = dayjs().format("YYYY-MM-DD HH:mm:ss");
-    ensureOrbitLayer(globalViewer);
-
-    if (this.checkedNorads.length > 0) {
-      this.selectedNorad = this.focusedNorad || this.checkedNorads[0];
-      geoMapStore.SET_FOCUSED_NORAD(this.selectedNorad);
-    }
+    // ensureOrbitLayer(globalViewer);
+    // if (this.checkedNorads.length > 0) {
+    //   this.selectedNorad = this.focusedNorad || this.checkedNorads[0];
+    //   geoMapStore.SET_FOCUSED_NORAD(this.selectedNorad);
+    // }
   },
   beforeUnmount() {
     // this.cleanup();
@@ -129,55 +110,54 @@ export default {
     },
 
     handleCoordinateChange(value) {
-      geoMapStore.SET_COORDINATE(value);
-      this.applyCameraLock();
-      this.rebuildAll();
+      this.coordinate = value;
+      // geoMapStore.SET_COORDINATE(value);
+      this.applyCameraLock(); // 应用相机锁定
+
+      this.handleApplyView("default"); // 应用视角
+      this.viewMode = "default";
+    },
+
+    handleApplyView(presetId) {
+      if (!globalViewer) return;
+
+      // this.releaseTracking(); // 释放跟踪卫星
+
+      if (this.coordinate === "ECI") {
+        this.applyEciView(presetId); // 应用 ECI 视角
+        geoMapStore.SET_COMPONENT_VISIBLE_TRUE("showSatelliteOrbit");
+      } else {
+        this.applyEcefView(presetId); // 应用 ECEF 视角
+        geoMapStore.SET_COMPONENT_VISIBLE_FALSE("showSatelliteOrbit");
+      }
     },
 
     /**
      * 轨道配置变化（起始时刻/步长）
      * @returns {void}
      */
-    handleOrbitConfigChange() {
-      this.rebuildAll();
-    },
+    // handleOrbitConfigChange() {
+    //   this.rebuildAll();
+    // },
 
     /**
      * 卫星下拉选择回调
      * @param {string} noradID - 卫星 NORAD ID
      * @returns {void}
      */
-    handleSelectSatellite(noradID) {
-      geoMapStore.SET_FOCUSED_NORAD(noradID);
-    },
+    // handleSelectSatellite(noradID) {
+    //   geoMapStore.SET_FOCUSED_NORAD(noradID);
+    // },
 
     /**
      * 通过 NORAD ID 取卫星名称（找不到则返回 NORAD 本身）
      * @param {string} noradID - 卫星 NORAD ID
      * @returns {string}
      */
-    resolveSatelliteLabel(noradID) {
-      const model = this.satelliteModels.get(noradID);
-      return model ? `${model.name} (${noradID})` : String(noradID);
-    },
-
-    /**
-     * 视角按钮统一入口：按 coordinate 分派到 ECEF / ECI 子方法
-     * @param {string} presetId - 视角预设 id
-     * @returns {void}
-     */
-    handleApplyView(presetId) {
-      if (!globalViewer) return;
-      geoMapStore.SET_VIEW_MODE(presetId);
-
-      this.releaseTracking();
-
-      if (this.coordinate === "ECI") {
-        this.applyEciView(presetId);
-      } else {
-        this.applyEcefView(presetId);
-      }
-    },
+    // resolveSatelliteLabel(noradID) {
+    //   const model = this.satelliteModels.get(noradID);
+    //   return model ? `${model.name} (${noradID})` : String(noradID);
+    // },
 
     /**
      * 释放跟踪卫星与重置相机变换
@@ -205,41 +185,38 @@ export default {
      * 解析当前起始时间
      * @returns {Date}
      */
-    resolveStartDate() {
-      if (!this.startDate) return new Date();
-      return dayjs(this.startDate).toDate();
-    },
+    // resolveStartDate() {
+    //   if (!this.startDate) return new Date();
+    //   return dayjs(this.startDate).toDate();
+    // },
 
     /**
      * 解析轨道绘制坐标系
      * @returns {"INERTIAL"|"FIXED"}
      */
-    resolveFrame() {
-      return this.coordinate === "ECI" ? "INERTIAL" : "FIXED";
-    },
+    // resolveFrame() {
+    //   return this.coordinate === "ECI" ? "INERTIAL" : "FIXED";
+    // },
 
     /**
      * 全量重建当前勾选卫星轨道
      * @returns {void}
      */
     rebuildAll() {
-      if (!this.orbitViewControlPlugin) return;
-      ensureOrbitLayer(globalViewer);
-      clearOrbitGraphics();
-      this.drawnNorads = [];
-
-      const frame = this.resolveFrame();
-      const startDate = this.resolveStartDate();
-      const step = Math.max(1, Number(this.stepSec) || 3600) * 1000;
-
-      (this.checkedNorads || []).forEach((norad) => {
-        const satelliteClass = this.satelliteModels.get(norad);
-        if (!satelliteClass) return;
-        addSatelliteOrbit(satelliteClass, { frame, startDate, step });
-        this.drawnNorads.push(norad);
-      });
-
-      this.applyCameraLock();
+      // if (!this.orbitViewControlPlugin) return;
+      // ensureOrbitLayer(globalViewer);
+      // clearOrbitGraphics();
+      // this.drawnNorads = [];
+      // const frame = this.resolveFrame();
+      // const startDate = this.resolveStartDate();
+      // const step = Math.max(1, Number(this.stepSec) || 3600) * 1000;
+      // (this.checkedNorads || []).forEach((norad) => {
+      //   const satelliteClass = this.satelliteModels.get(norad);
+      //   if (!satelliteClass) return;
+      //   addSatelliteOrbit(satelliteClass, { frame, startDate, step });
+      //   this.drawnNorads.push(norad);
+      // });
+      // this.applyCameraLock();
     },
 
     /**
@@ -248,40 +225,40 @@ export default {
      * @param {Array<string>} oldVal - 旧勾选
      * @returns {void}
      */
-    syncSatellites(newVal, oldVal) {
-      const added = newVal.filter((n) => !oldVal.includes(n));
-      const removed = oldVal.filter((n) => !newVal.includes(n));
+    // syncSatellites(newVal, oldVal) {
+    //   const added = newVal.filter((n) => !oldVal.includes(n));
+    //   const removed = oldVal.filter((n) => !newVal.includes(n));
 
-      removed.forEach((norad) => {
-        removeSatelliteOrbit(norad);
-        this.drawnNorads = this.drawnNorads.filter((n) => n !== norad);
-      });
+    //   removed.forEach((norad) => {
+    //     removeSatelliteOrbit(norad);
+    //     this.drawnNorads = this.drawnNorads.filter((n) => n !== norad);
+    //   });
 
-      const frame = this.resolveFrame();
-      const startDate = this.resolveStartDate();
-      const step = Math.max(1, Number(this.stepSec) || 3600) * 1000;
+    //   const frame = this.resolveFrame();
+    //   const startDate = this.resolveStartDate();
+    //   const step = Math.max(1, Number(this.stepSec) || 3600) * 1000;
 
-      added.forEach((norad) => {
-        const satelliteClass = this.satelliteModels.get(norad);
-        if (!satelliteClass) return;
-        addSatelliteOrbit(satelliteClass, { frame, startDate, step });
-        this.drawnNorads.push(norad);
-      });
-    },
+    //   added.forEach((norad) => {
+    //     const satelliteClass = this.satelliteModels.get(norad);
+    //     if (!satelliteClass) return;
+    //     addSatelliteOrbit(satelliteClass, { frame, startDate, step });
+    //     this.drawnNorads.push(norad);
+    //   });
+    // },
 
-    resolveFocusedGraphic() {
-      if (!this.selectedNorad) return null;
-      return getSatelliteGraphic(this.selectedNorad);
-    },
+    // resolveFocusedGraphic() {
+    //   if (!this.selectedNorad) return null;
+    //   return getSatelliteGraphic(this.selectedNorad);
+    // },
 
     /**
      * 取当前选中卫星的 SatelliteClass 实例
      * @returns {object|null}
      */
-    resolveFocusedClass() {
-      if (!this.selectedNorad) return null;
-      return this.satelliteModels.get(this.selectedNorad);
-    },
+    // resolveFocusedClass() {
+    //   if (!this.selectedNorad) return null;
+    //   return this.satelliteModels.get(this.selectedNorad);
+    // },
 
     /**
      * ECEF 视角预设分派
@@ -291,22 +268,16 @@ export default {
     applyEcefView(presetId) {
       switch (presetId) {
         case "default":
-          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, -90);
-          break;
-        case "firstPerson":
-          this.flyToFirstPerson();
-          break;
-        case "thirdPerson":
-          this.flyToThirdPerson();
+          this.flyToGlobal(104, 27, GLOBAL_VIEW_ALT, -90); // 默认视角
           break;
         case "southPole":
-          this.flyToGlobal(0, -90, POLE_VIEW_ALT, -90);
+          this.flyToGlobal(0, -90, GLOBAL_VIEW_ALT, -90); // 南极视角
           break;
-        case "northPole":
-          this.flyToGlobal(0, 90, POLE_VIEW_ALT, -90);
+        case "starPole":
+          this.flyToGlobal(0, 90, GLOBAL_VIEW_ALT, -90); // 恒星视角
           break;
         case "equator":
-          this.flyToGlobal(0, 0, EQUATOR_VIEW_ALT, 0);
+          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, -90); // 赤道视角
           break;
         default:
           break;
@@ -321,22 +292,22 @@ export default {
     applyEciView(presetId) {
       switch (presetId) {
         case "default":
-          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, -90);
+          this.flyToGlobal(104, 27, GLOBAL_VIEW_ALT, -90); // 默认视角
           break;
-        case "firstPerson":
-          this.flyToFirstPerson();
+        case "southPole":
+          this.flyToGlobal(0, -90, GLOBAL_VIEW_ALT, -90); // 南极视角
           break;
-        case "thirdPerson":
-          this.flyToThirdPerson();
+        case "firstSatPole":
+          this.flyToFirstPerson(); // 主星视角
           break;
-        case "polarAxis":
-          this.flyToGlobal(0, 90, POLE_VIEW_ALT, -90);
+        case "secondSatPole":
+          this.flyToThirdPerson(); // 从星视角
           break;
-        case "orbitalPlane":
-          this.flyToOrbitalPlane();
+        case "orbitalPlanePole":
+          this.flyToOrbitalPlane(); // 轨道平面
           break;
-        case "equatorialPlane":
-          this.flyToGlobal(0, 0, EQUATOR_VIEW_ALT, 0);
+        case "equatorPlanePole":
+          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, 0); // 赤道平面
           break;
         default:
           break;
@@ -367,71 +338,71 @@ export default {
      * 第一人称：相机绑定到卫星模型上、近距离视角
      * @returns {void}
      */
-    flyToFirstPerson() {
-      const graphic = this.resolveFocusedGraphic();
-      if (!graphic) {
-        console.warn("[OrbitViewControlPlugin] 未找到聚焦卫星 graphic，请先在当前插件中绘制轨道");
-        return;
-      }
-      globalViewer.trackedEntity = graphic.entity || graphic._entity;
-      globalViewer.flyToGraphic(graphic, {
-        radius: 200,
-        heading: 0,
-        pitch: 0,
-        duration: 1.5,
-      });
-    },
+    // flyToFirstPerson() {
+    //   const graphic = this.resolveFocusedGraphic();
+    //   if (!graphic) {
+    //     console.warn("[OrbitViewControlPlugin] 未找到聚焦卫星 graphic，请先在当前插件中绘制轨道");
+    //     return;
+    //   }
+    //   globalViewer.trackedEntity = graphic.entity || graphic._entity;
+    //   globalViewer.flyToGraphic(graphic, {
+    //     radius: 200,
+    //     heading: 0,
+    //     pitch: 0,
+    //     duration: 1.5,
+    //   });
+    // },
 
     /**
      * 第三人称：相机在卫星后方/上方，距离更远
      * @returns {void}
      */
-    flyToThirdPerson() {
-      const graphic = this.resolveFocusedGraphic();
-      if (!graphic) {
-        console.warn("[OrbitViewControlPlugin] 未找到聚焦卫星 graphic，请先在当前插件中绘制轨道");
-        return;
-      }
-      globalViewer.trackedEntity = graphic.entity || graphic._entity;
-      globalViewer.flyToGraphic(graphic, {
-        radius: 5_000_000,
-        heading: 0,
-        pitch: -30,
-        duration: 1.5,
-      });
-    },
+    // flyToThirdPerson() {
+    //   const graphic = this.resolveFocusedGraphic();
+    //   if (!graphic) {
+    //     console.warn("[OrbitViewControlPlugin] 未找到聚焦卫星 graphic，请先在当前插件中绘制轨道");
+    //     return;
+    //   }
+    //   globalViewer.trackedEntity = graphic.entity || graphic._entity;
+    //   globalViewer.flyToGraphic(graphic, {
+    //     radius: 5_000_000,
+    //     heading: 0,
+    //     pitch: -30,
+    //     duration: 1.5,
+    //   });
+    // },
 
     /**
      * 飞到与卫星轨道倾角对应的"轨道平面"侧视
      * 用 RAAN 决定方位，用倾角决定俯仰
      * @returns {void}
      */
-    flyToOrbitalPlane() {
-      const satelliteClass = this.resolveFocusedClass();
-      if (!satelliteClass) {
-        this.flyToGlobal(0, 0, ORBITAL_PLANE_ALT, -45);
-        return;
-      }
+    // flyToOrbitalPlane() {
+    //   const satelliteClass = this.resolveFocusedClass();
+    //   if (!satelliteClass) {
+    //     this.flyToGlobal(0, 0, ORBITAL_PLANE_ALT, -45);
+    //     return;
+    //   }
 
-      const raanDeg = mars3d.Cesium.Math.toDegrees(satelliteClass.raan || 0);
-      const inclinationDeg = mars3d.Cesium.Math.toDegrees(satelliteClass.inclination || 0);
+    //   const raanDeg = mars3d.Cesium.Math.toDegrees(satelliteClass.raan || 0);
+    //   const inclinationDeg = mars3d.Cesium.Math.toDegrees(satelliteClass.inclination || 0);
 
-      const lon = ((raanDeg + 90) % 360) - 180;
-      const lat = Math.max(-80, Math.min(80, 90 - inclinationDeg));
+    //   const lon = ((raanDeg + 90) % 360) - 180;
+    //   const lat = Math.max(-80, Math.min(80, 90 - inclinationDeg));
 
-      this.flyToGlobal(lon, lat, ORBITAL_PLANE_ALT, -30);
-    },
+    //   this.flyToGlobal(lon, lat, ORBITAL_PLANE_ALT, -30);
+    // },
 
     /**
      * 清理轨道图层、相机锁定与跟踪状态
      * @returns {void}
      */
-    cleanup() {
-      this.releaseTracking();
-      unlockCameraFromInertial(globalViewer);
-      destroyOrbitLayer(globalViewer);
-      this.drawnNorads = [];
-    },
+    // cleanup() {
+    //   this.releaseTracking();
+    //   unlockCameraFromInertial(globalViewer);
+    //   destroyOrbitLayer(globalViewer);
+    //   this.drawnNorads = [];
+    // },
   },
 };
 </script>
@@ -449,10 +420,12 @@ export default {
       font-size: 12px;
       color: #ddd;
       margin-bottom: 4px;
-      font-size: 13px;
+      font-size: 14px;
       color: #fff;
       border-left: 3px solid #018a87;
       padding-left: 6px;
+      font-weight: 700;
+      // background: linear-gradient(to right, #018a87 10%, #00d0ff 20%);
     }
 
     .form-content {

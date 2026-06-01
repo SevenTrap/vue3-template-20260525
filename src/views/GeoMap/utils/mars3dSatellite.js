@@ -1,361 +1,11 @@
-import { v4 as uuidV4 } from "uuid";
-import { satelliteLayer, satellitePathLayer, satelliteLinkLayer } from "./initMars3dLayers.js";
+import * as mars3d from "mars3d";
 
-export function addSatelliteOribitByLLAs(graphicLayer, llas, id) {
-  const uuid = id || uuidV4();
-  console.log(uuid);
-}
-
-export function initDmzLayer() {
-  const arr = [
-    {
-      name: "西安",
-      radius: 1500000,
-      point: [108.938314, 34.345614, 342.9],
-    },
-    {
-      name: "喀什",
-      radius: 1800000,
-      point: [75.990372, 39.463507, 1249.5],
-    },
-    { name: "文昌", radius: 1200000, point: [110.755151, 19.606573, 21.1] },
-  ];
-
-  for (let i = 0; i < arr.length; i++) {
-    const item = arr[i];
-    // 地面站gltf模型
-    const graphic = new mars3d.graphic.ModelEntity({
-      name: "地面站模型",
-      position: item.point,
-      style: {
-        url: "assets/gltf/leida.glb",
-        heading: 270,
-        scale: 30,
-        minimumPixelSize: 40,
-      },
-      popup: item.name,
-    });
-    dmzLayer.addGraphic(graphic);
-
-    const dmfwGraphic = new mars3d.graphic.CircleEntity({
-      name: item.name,
-      position: item.point,
-      style: {
-        radius: item.radius,
-        color: "#ff0000",
-        opacity: 0.3,
-      },
-      popup: item.name,
-    });
-    dmzLayer.addGraphic(dmfwGraphic);
-
-    // 判断时会用到的变量
-    dmfwGraphic._isFW = true;
-    dmfwGraphic._lastInPoly = {};
-  }
-}
-
-function processInArea(graphic) {
-  const position = graphic.position;
-  if (!position) {
-    return;
-  }
-
-  dmzLayer.eachGraphic((dmzGraphic) => {
-    if (!dmzGraphic._isFW) {
-      return;
-    }
-
-    dmzGraphic._lastInPoly[graphic.id] = dmzGraphic._lastInPoly[graphic.id] || {};
-    const lastState = dmzGraphic._lastInPoly[graphic.id];
-
-    const thisIsInPoly = dmzGraphic.isInPoly(position);
-
-    // console.log(lastState.state, thisIsInPoly);
-
-    if (thisIsInPoly !== lastState.state) {
-      if (thisIsInPoly) {
-        // console.log(`卫星${graphic.id}进入地面站${dmzGraphic.name}的覆盖范围`);
-
-        const line = new mars3d.graphic.PolylineEntity({
-          positions: new mars3d.Cesium.CallbackProperty(() => {
-            const pt1 = graphic.position;
-            const pt2 = dmzGraphic.position;
-            if (pt1 && pt2) {
-              return [pt1, pt2];
-            }
-            return [];
-          }, false),
-          style: {
-            color: "#00ff00",
-            opacity: 0.5,
-            width: 1,
-            outline: false,
-          },
-        });
-        satellitePathLayer.addGraphic(line);
-        lastState.line = line;
-        graphic.coneShow = true;
-      } else {
-        // console.log(`卫星${graphic.id}离开地面站${dmzGraphic.name}的覆盖范围`);
-
-        if (lastState.line) {
-          satellitePathLayer.removeGraphic(lastState.line);
-          delete lastState.line;
-        }
-
-        graphic.coneShow = false;
-      }
-
-      dmzGraphic._lastInPoly[graphic.id].state = thisIsInPoly;
-    }
-  });
-}
-
-export function processSatsLinks(graphic) {
-  // console.log(`${graphic.name}的卫星链路`);
-  // console.log(satelliteLayer.getGraphics());
-
-  // TODO 处理卫星间链路
-  satelliteLayer.eachGraphic((otherGraphic) => {
-    if (otherGraphic.id === graphic.id || !graphic._isSate || !otherGraphic._isSate) {
-      return;
-    }
-
-    graphic._sateLinks[otherGraphic.id] = graphic._sateLinks[otherGraphic.id] || {};
-    const lastState = graphic._sateLinks[otherGraphic.id];
-
-    // 计算两卫星间距离
-    const pos1 = graphic.position;
-    const pos2 = otherGraphic.position;
-
-    // console.log(graphic.entity.position.getValue(globalViewer.clock.currentTime));
-
-    // const graphicPosition1 = mars3d.LngLatPoint.fromCartesian(pos1);
-
-    if (!pos1 || !pos2) {
-      return;
-    }
-
-    const distance = mars3d.Cesium.Cartesian3.distance(pos1, pos2);
-
-    // TODO 根据距离判断是否具备通信能力，距离阈值可配置
-    if (10 < distance && distance < 1500 * 1000) {
-      if (lastState.state) {
-        // console.log(`卫星${graphic.id}和卫星${otherGraphic.id}通信链路已存在`);
-        return;
-      }
-      // console.log(`卫星${graphic.id}和卫星${otherGraphic.id}具备通信能力，距离是${distance}米`);
-      const id = `link-${graphic.id}-${otherGraphic.id}`;
-
-      const linkGraphic = new mars3d.graphic.PolylineEntity({
-        id: id,
-        positions: new mars3d.Cesium.CallbackProperty(() => {
-          const pt1 = graphic.position;
-          const pt2 = otherGraphic.position;
-
-          // const graphicPosition2 = mars3d.LngLatPoint.fromCartesian(pt1);
-          // console.log("position1", graphic.name, graphicPosition1.lng, graphicPosition1.lat, graphicPosition1.alt);
-          // console.log("position2", graphic.name, graphicPosition2.lng, graphicPosition2.lat, graphicPosition2.alt);
-          if (pt1 && pt2) {
-            return [pt1, pt2];
-          }
-          return [];
-        }, false),
-        style: {
-          width: 2,
-          color: "#ff0000",
-        },
-      });
-      satelliteLayer.addGraphic(linkGraphic);
-      lastState.linkGraphic = linkGraphic;
-      lastState.state = true;
-    } else {
-      lastState.linkGraphic && satelliteLayer.removeGraphic(lastState.linkGraphic);
-      lastState.state = false;
-    }
-  });
-}
-
-export function initSatelliteLayer() {
-  this.satelliteModels.forEach((satelliteModel) => {
-    const llaArray = satelliteModel.getLLAsByPeriod(new Date(), 60 * 1000);
-
-    const positions = [];
-    const positions2 = [];
-    const positions3 = [];
-    llaArray.map((item) => {
-      const position = {
-        lng: item.lon,
-        lat: item.lat,
-        alt: item.heightKm * 1000,
-        currTime: item.time,
-      };
-      const position2 = {
-        lng: item.lon,
-        lat: item.lat,
-        alt: 0,
-        currTime: item.time,
-      };
-
-      positions.push(position);
-      positions2.push(position2);
-      positions3.push([item.lon, item.lat, item.heightKm * 1000]);
-    });
-
-    const pathGraphic = new mars3d.graphic.PathEntity({
-      position: {
-        type: "time",
-        list: positions,
-        timeField: "currTime",
-        pauseTime: 12 * 60 * 60,
-        interpolation: true,
-        interpolationAlgorithm: mars3d.Cesium.LagrangePolynomialApproximation,
-        interpolationDegree: 3,
-        forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
-      },
-      style: {
-        width: 2,
-        color: "#ff0000",
-        opacity: 0.7,
-        resolution: 1,
-        leadTime: 0,
-        trailTime: 3600,
-      },
-    });
-
-    const pathGraphic2 = new mars3d.graphic.PathEntity({
-      position: {
-        type: "time",
-        list: positions2,
-        timeField: "currTime",
-        forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
-      },
-      style: {
-        width: 2,
-        color: "#ff0000",
-        opacity: 0.7,
-        resolution: 1,
-        leadTime: 0,
-        trailTime: 3600,
-      },
-    });
-
-    const graphic = new mars3d.graphic.PolylineEntity({
-      positions: positions3,
-      style: {
-        width: 5,
-        color: "#3388ff",
-        // color: Cesium.CallbackProperty(function () {
-        //   return Cesium.Color.BLUE
-        // }, false),
-
-        label: { text: "鼠标移入会高亮", pixelOffsetY: -30 },
-        // 高亮时的样式（默认为鼠标移入，也可以指定type:'click'单击高亮），构造后也可以openHighlight、closeHighlight方法来手动调用
-        highlight: {
-          color: "#ff0000",
-        },
-      },
-    });
-    // satellitePathLayer.addGraphic(pathGraphic);
-    // satellitePathLayer.addGraphic(pathGraphic2);
-    // satellitePathLayer.addGraphic(graphic);
-
-    addSatellite(satelliteModel);
-
-    const satelliteGraphic = new mars3d.graphic.Satellite({
-      id: satelliteModel.noradID,
-      name: satelliteModel.noradID,
-      tle1: satelliteModel.tle1,
-      tle2: satelliteModel.tle2,
-      model: {
-        url: "assets/gltf/weixin.gltf",
-        scale: 1,
-        minimumPixelSize: 90,
-        silhouette: false,
-      },
-
-      label: {
-        text: satelliteModel.noradID,
-        font_size: 20,
-        font_family: "楷体",
-        color: "#ffffff",
-        opacity: 1,
-        outline: true,
-        outlineColor: "#000000",
-        outlineWidth: 2,
-        background: true,
-        backgroundColor: "#000000",
-        backgroundOpacity: 0.5,
-        backgroundPadding: new mars3d.Cesium.Cartesian2(2, 5),
-        pixelOffsetX: 0,
-        pixelOffsetY: -20,
-        pixelOffsetScaleByDistance: true,
-        pixelOffsetScaleByDistance_far: 1000000,
-        pixelOffsetScaleByDistance_farValue: 0.5,
-        pixelOffsetScaleByDistance_near: 1000,
-        pixelOffsetScaleByDistance_nearValue: 1.0,
-        scaleByDistance: true,
-        scaleByDistance_far: 1000000,
-        scaleByDistance_farValue: 0.5,
-        scaleByDistance_near: 1000,
-        scaleByDistance_nearValue: 1.0,
-      },
-
-      cone: {
-        sensorType: mars3d.graphic.SatelliteSensor.Type.Conic,
-        angle1: 30,
-        angle: 15,
-        color: "rgba(0,255,0,0.3)",
-        show: false,
-      },
-
-      path: {
-        color: "#00ff00",
-        width: 1,
-        opacity: 0.5,
-      },
-      popup: `${satelliteModel.noradID}`,
-    });
-
-    satelliteLayer.addGraphic(satelliteGraphic);
-
-    const graphicPosition = new mars3d.graphic.PolylinePrimitive({
-      positions: new mars3d.Cesium.CallbackProperty((time) => {
-        const satPosition = satelliteGraphic.position?.getValue(time);
-        if (!satPosition) {
-          return [];
-        }
-        const cartographic = mars3d.Cesium.Cartographic.fromCartesian(satPosition);
-
-        const groundPosition = mars3d.Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, cartographic.height - 1000);
-
-        return [satPosition, groundPosition];
-      }, false),
-      style: {
-        width: 2,
-        color: "#ff0000",
-        opacity: 0.7,
-        arcType: mars3d.Cesium.ArcType.NONE,
-        clampToGround: false,
-      },
-    });
-
-    satellitePathLayer.addGraphic(graphicPosition);
-
-    graphicPosition.entity.polyline.arcType = Cesium.ArcType.NONE;
-  });
-}
-
-export function addSatellite(satelliteModel) {
-  if (!satelliteLayer || !satelliteModel) {
-    return;
-  }
+// 添加卫星上球展示
+export function addSatellite(satelliteLayer, satelliteModel) {
+  if (!satelliteLayer || !satelliteModel) return;
 
   const graphicSatellite = satelliteLayer.getGraphicById(satelliteModel.noradID);
-  if (graphicSatellite) {
-    return;
-  }
+  if (graphicSatellite) return;
 
   const satelliteGraphic = new mars3d.graphic.Satellite({
     id: satelliteModel.noradID,
@@ -363,7 +13,7 @@ export function addSatellite(satelliteModel) {
     tle1: satelliteModel.tle1,
     tle2: satelliteModel.tle2,
     model: {
-      url: "assets/gltf/weixin.gltf",
+      url: "/assets/gltf/weixin.gltf",
       scale: 1,
       minimumPixelSize: 90,
       silhouette: false,
@@ -405,7 +55,6 @@ export function addSatellite(satelliteModel) {
     // },
 
     path: {
-      // show: satelliteModel.options.orbitPath,
       show: true,
       color: "#00ff00",
       width: 1,
@@ -413,7 +62,7 @@ export function addSatellite(satelliteModel) {
     },
   });
 
-  const line = new mars3d.graphic.PolylineEntity({
+  const satelliteLine = new mars3d.graphic.PolylineEntity({
     id: satelliteModel.noradID + "-path",
     positions: new mars3d.Cesium.CallbackProperty((time) => {
       const satPosition = satelliteGraphic.position;
@@ -434,10 +83,108 @@ export function addSatellite(satelliteModel) {
     },
   });
 
-  // satelliteLayer.addGraphic(line);
+  satelliteLayer.addGraphic(satelliteLine);
   satelliteLayer.addGraphic(satelliteGraphic);
 
-  // satelliteGraphic._isSate = true;
-  // satelliteGraphic._sateLinks = {};
+  satelliteGraphic._isSate = true;
+  satelliteLine._isSateLine = true;
   return satelliteGraphic;
+}
+
+/**
+ * 切换卫星轨道线显示状态
+ * @param {object} satelliteLayer - 卫星图层
+ * @param {boolean} showSatelliteOrbit - 是否显示轨道线
+ * @returns {void}
+ */
+export function toggleSatelliteOribit(satelliteLayer, showSatelliteOrbit) {
+  if (!satelliteLayer) return;
+
+  satelliteLayer.eachGraphic((graphic) => {
+    if (!graphic._isSate) return;
+
+    graphic.path.show = showSatelliteOrbit;
+    graphic.path.opacity = showSatelliteOrbit ? 0.5 : 0;
+  });
+}
+
+/**
+ * 切换卫星轨迹线显示状态
+ * @param {object} satelliteLayer - 卫星图层
+ * @param {boolean} showSatelliteTrajectory - 是否显示轨迹线
+ * @returns {void}
+ */
+export function toggleSatelliteTrajectory(satelliteLayer, showSatelliteTrajectory) {
+  if (!satelliteLayer) return;
+
+  satelliteLayer.eachGraphic((graphic) => {
+    if (!graphic._isSate) return;
+
+    graphic.path.show = showSatelliteTrajectory;
+    graphic.path.opacity = showSatelliteTrajectory ? 0.5 : 0;
+  });
+}
+
+/**
+ * 切换卫星名称显示状态
+ * @param {object} satelliteLayer - 卫星图层
+ * @param {boolean} showSatelliteName - 是否显示卫星名称
+ * @returns {void}
+ */
+export function toggleSatelliteName(satelliteLayer, showSatelliteName) {
+  if (!satelliteLayer) return;
+
+  satelliteLayer.eachGraphic((graphic) => {
+    if (!graphic._isSate) return;
+
+    graphic.label.show = showSatelliteName;
+    graphic.label.opacity = showSatelliteName ? 1 : 0;
+  });
+}
+
+/**
+ * 切换卫星模型显示状态
+ * @param {object} satelliteLayer - 卫星图层
+ * @param {boolean} showSatelliteModel - 是否显示卫星模型
+ * @returns {void}
+ */
+export function toggleSatelliteModel(satelliteLayer, showSatelliteModel) {
+  if (!satelliteLayer) return;
+
+  satelliteLayer.eachGraphic((graphic) => {
+    if (!graphic._isSate) return;
+    console.log(graphic, "111");
+
+    graphic.model.show = showSatelliteModel;
+    graphic.model.opacity = showSatelliteModel ? 1 : 0;
+  });
+}
+
+/**
+ * 切换卫星坐标系显示状态
+ * @param {object} satelliteLayer - 卫星图层
+ * @param {boolean} showSatelliteCoordinate - 是否显示卫星坐标系
+ * @returns {void}
+ */
+export function toggleSatelliteCoordinate(satelliteLayer, showSatelliteCoordinate) {
+  if (!satelliteLayer) return;
+
+  satelliteLayer.eachGraphic((graphic) => {
+    if (!graphic._isSate) return;
+
+    graphic.referenceFrame = showSatelliteCoordinate ? mars3d.Cesium.ReferenceFrame.INERTIAL : mars3d.Cesium.ReferenceFrame.FIXED;
+
+    console.log(graphic, "222");
+  });
+}
+
+export function toggleSatellitePoint(satelliteLayer, showSatellitePoint) {
+  if (!satelliteLayer) return;
+
+  satelliteLayer.eachGraphic((graphic) => {
+    if (!graphic._isSateLine) return;
+
+    graphic.show = showSatellitePoint;
+    graphic.opacity = showSatellitePoint ? 1 : 0;
+  });
 }

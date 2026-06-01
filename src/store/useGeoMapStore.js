@@ -18,9 +18,8 @@ export const useGeoMapStore = defineStore("geoMap", {
     showSatelliteModel: true, // 显示卫星模型
 
     orbitViewControlPlugin: true, // 视角控制插件
-    coordinate: "ECEF", // ECEF: 地固坐标系、ECI: 惯性坐标系
-    viewMode: "default", // 视角预设
     focusedNorad: "", // 当前视角聚焦的卫星 NORAD ID
+    coordinate: "ECEF", // 坐标系
   }),
   getters: {
     getMenuBarVisible: (state) => {
@@ -48,8 +47,8 @@ export const useGeoMapStore = defineStore("geoMap", {
       this[menuItem] = false;
     },
 
-    SET_COORDINATE(coord) {
-      this.coordinate = coord;
+    SET_COORDINATE(coordinate) {
+      this.coordinate = coordinate;
     },
 
     /**

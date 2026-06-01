@@ -1,9 +1,9 @@
 const MAP_CONFIG_Satellite = {
   scene: {
     center: {
-      lat: 27.227714,
-      lng: 89.713518,
-      alt: 80_000_000,
+      lat: 27,
+      lng: 104,
+      alt: 100_000_000,
       heading: 360,
       pitch: -90,
     },
@@ -27,7 +27,7 @@ const MAP_CONFIG_Satellite = {
     cameraController: {
       zoomFactor: 3.0,
       minimumZoomDistance: 1,
-      maximumZoomDistance: 100_000_000,
+      maximumZoomDistance: 200_000_000,
       enableRotate: true,
       enableZoom: true,
       constrainedAxis: false,

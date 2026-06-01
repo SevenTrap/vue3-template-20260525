@@ -32,7 +32,7 @@ import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { globalViewer } from "@/utils/initEarth.js";
 
-import { addSatellite } from "@/utils/mars3d/mars3dSatellite.js";
+import { addSatellite } from "../utils/mars3dSatellite.js";
 import { initSatellitesTree } from "../utils/initSatellitesTree.js";
 
 import { satelliteLayer, satellitePathLayer, satelliteLinkLayer, initMars3dLayers } from "../utils/initMars3dLayers.js";
@@ -63,7 +63,47 @@ export default {
     });
   },
   computed: {
-    ...mapState(useGeoMapStore, ["satelliteTreePlugin"]),
+    ...mapState(useGeoMapStore, [
+      "satelliteTreePlugin",
+      "showSatellitePoint",
+      "showSatelliteOrbit",
+      "showSatelliteTrajectory",
+      "showSatelliteName",
+      "showSatelliteModel",
+    ]),
+  },
+  watch: {
+    // showSatellitePoint(newVal) {
+    //   if (newVal) {
+    //     addSatellitePoint(globalViewer);
+    //   } else {
+    //     removeSatellitePoint(globalViewer);
+    //   }
+    // },
+    // showSatelliteOrbit(newVal) {
+    //   toggleSatelliteOribit(satelliteLayer, newVal);
+    // },
+    // showSatelliteTrajectory(newVal) {
+    //   if (newVal) {
+    //     addSatelliteTrajectory(globalViewer);
+    //   } else {
+    //     removeSatelliteTrajectory(globalViewer);
+    //   }
+    // },
+    // showSatelliteName(newVal) {
+    //   if (newVal) {
+    //     addSatelliteName(globalViewer);
+    //   } else {
+    //     removeSatelliteName(globalViewer);
+    //   }
+    // },
+    // showSatelliteModel(newVal) {
+    //   if (newVal) {
+    //     addSatelliteModel(globalViewer);
+    //   } else {
+    //     removeSatelliteModel(globalViewer);
+    //   }
+    // },
   },
   methods: {
     handleCheckChange(data, info) {
@@ -77,7 +117,7 @@ export default {
         try {
           const norad = addedNorads[i];
           const satelliteModel = this.satelliteModels.get(norad);
-          if (satelliteModel) addSatellite(satelliteModel);
+          if (satelliteModel) addSatellite(satelliteLayer, satelliteModel);
         } catch (e) {
           console.error(e);
         }

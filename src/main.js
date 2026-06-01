@@ -3,6 +3,7 @@ import { createPinia } from "pinia";
 import ElementPlus from "element-plus";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import * as ElementPlusIcons from "@element-plus/icons-vue";
+import "font-awesome/css/font-awesome.min.css";
 
 // style 样式配置
 import "element-plus/dist/index.css";

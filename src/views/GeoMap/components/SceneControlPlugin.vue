@@ -1,52 +1,6 @@
 <template>
   <aircas-panel v-show="sceneControlPlugin" title="场景控制" width="320" height="380" bottom="100" right="20" @close="handlePanelClose">
     <div class="scene-control-panel">
-      <!-- <div class="form-item">
-        <div class="form-title">推演时间</div>
-
-        <div class="form-content">
-          <span class="form-content-label">开始时间：</span>
-          <el-date-picker
-            class="form-content-input"
-            v-model="startDate"
-            type="datetime"
-            size="small"
-            style="width: 100%"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            @change="handleConfigChange"
-          />
-        </div>
-
-        <div class="form-content">
-          <span class="form-content-label">结束时间：</span>
-          <el-date-picker
-            class="form-content-input"
-            v-model="endDate"
-            type="datetime"
-            size="small"
-            style="width: 100%"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            @change="handleConfigChange"
-          />
-        </div>
-
-        <div class="form-content">
-          <span class="form-content-label">步长：</span>
-          <el-input-number
-            class="form-content-input"
-            v-model="stepSec"
-            :min="1"
-            :max="86400"
-            :step="60"
-            size="small"
-            style="width: 100%"
-            @change="handleConfigChange"
-          >
-            <template #suffix> 秒 </template>
-          </el-input-number>
-        </div>
-      </div> -->
-
       <div class="form-item">
         <div class="form-title">显示控制</div>
 
@@ -65,23 +19,28 @@
 
         <div class="button-group">
           <div class="button-group-item">
-            <el-checkbox size="small" v-model="showSatellitePoint" @change="handleToggleSate('showSatellitePoint')" label="显示星下点"></el-checkbox>
+            <el-checkbox size="small" :model-value="showSatellitePoint" @change="handleToggleSate('showSatellitePoint')" label="显示星下点"></el-checkbox>
           </div>
 
           <div class="button-group-item">
-            <el-checkbox size="small" v-model="showSatelliteOrbit" @change="handleToggleSate('showSatelliteOrbit')" label="显示轨道线"></el-checkbox>
+            <el-checkbox size="small" :model-value="showSatelliteOrbit" @change="handleToggleSate('showSatelliteOrbit')" label="显示轨道线"></el-checkbox>
           </div>
 
           <div class="button-group-item">
-            <el-checkbox size="small" v-model="showSatelliteTrajectory" @change="handleToggleSate('showSatelliteTrajectory')" label="显示轨迹线"></el-checkbox>
+            <el-checkbox
+              size="small"
+              :model-value="showSatelliteTrajectory"
+              @change="handleToggleSate('showSatelliteTrajectory')"
+              label="显示轨迹线"
+            ></el-checkbox>
           </div>
 
           <div class="button-group-item">
-            <el-checkbox size="small" v-model="showSatelliteName" @change="handleToggleSate('showSatelliteName')" label="显示卫星名称"></el-checkbox>
+            <el-checkbox size="small" :model-value="showSatelliteName" @change="handleToggleSate('showSatelliteName')" label="显示卫星名称"></el-checkbox>
           </div>
 
           <div class="button-group-item">
-            <el-checkbox size="small" v-model="showSatelliteModel" @change="handleToggleSate('showSatelliteModel')" label="显示卫星模型"></el-checkbox>
+            <el-checkbox size="small" :model-value="showSatelliteModel" @change="handleToggleSate('showSatelliteModel')" label="显示卫星模型"></el-checkbox>
           </div>
         </div>
       </div>
@@ -94,7 +53,16 @@ import dayjs from "dayjs";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { globalViewer } from "@/utils/initEarth";
+import { satelliteLayer } from "../utils/initMars3dLayers.js";
 import { addGeoCirclePositions, removeGeoCirclePositions, addGeoCircleLabel, removeGeoCircleLabel } from "@/utils/mars3d/mars3dGeoStyle.js";
+import {
+  toggleSatelliteOribit,
+  toggleSatelliteTrajectory,
+  toggleSatelliteName,
+  toggleSatelliteModel,
+  toggleSatellitePoint,
+  toggleSatelliteCoordinate,
+} from "../utils/mars3dSatellite.js";
 
 const geoMapStore = useGeoMapStore();
 
@@ -121,20 +89,34 @@ export default {
       "showSatelliteModel",
     ]),
   },
-  watch: {},
-  methods: {
-    /**
-     * 推演时间变化时重建
-     * @returns {void}
-     */
-    handleConfigChange() {
-      console.log("推演时间变化时重建");
+  watch: {
+    showSatellitePoint(newVal) {
+      toggleSatellitePoint(satelliteLayer, newVal);
+    },
+    showSatelliteOrbit(newVal) {
+      toggleSatelliteOribit(satelliteLayer, newVal);
+    },
+    showSatelliteTrajectory(newVal) {
+      toggleSatelliteTrajectory(satelliteLayer, newVal);
+    },
+    showSatelliteName(newVal) {
+      toggleSatelliteName(satelliteLayer, newVal);
+    },
+    showSatelliteModel(newVal) {
+      toggleSatelliteModel(satelliteLayer, newVal);
     },
 
-    /**
-     * 切换显示/隐藏同步轨道带
-     * @returns {void}
-     */
+    // coordinate(newVal) {
+    //   console.log(newVal, "333");
+
+    //   if (newVal === "ECEF") {
+    //     toggleSatelliteCoordinate(satelliteLayer, true);
+    //   } else {
+    //     toggleSatelliteCoordinate(satelliteLayer, false);
+    //   }
+    // },
+  },
+  methods: {
     handleToggleGeoCirclePositions() {
       if (this.showGeoCirclePositions) {
         addGeoCirclePositions(globalViewer);
@@ -143,14 +125,6 @@ export default {
       }
     },
 
-    handleToggleSate(state) {
-      geoMapStore.UPDATE_COMPONENT_VISIBLE(state);
-    },
-
-    /**
-     * 切换显示/隐藏同步轨道标签
-     * @returns {void}
-     */
     handleToggleGeoCircleLabel() {
       if (this.showGeoCircleLabel) {
         addGeoCircleLabel(globalViewer);
@@ -159,13 +133,8 @@ export default {
       }
     },
 
-    /**
-     * 在 ECEF / ECI 间切换坐标系
-     * @returns {void}
-     */
-    handleToggleCoord() {
-      const nextCoord = this.coordinate === "ECI" ? "ECEF" : "ECI";
-      geoMapStore.SET_COORDINATE(nextCoord);
+    handleToggleSate(state) {
+      geoMapStore.UPDATE_COMPONENT_VISIBLE(state);
     },
 
     handlePanelClose() {
