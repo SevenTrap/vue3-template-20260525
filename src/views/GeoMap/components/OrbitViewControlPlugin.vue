@@ -126,9 +126,11 @@ export default {
       if (this.coordinate === "ECI") {
         this.applyEciView(presetId); // 应用 ECI 视角
         geoMapStore.SET_COMPONENT_VISIBLE_TRUE("showSatelliteOrbit");
+        geoMapStore.SET_COMPONENT_VISIBLE_FALSE("showSatelliteTrajectory");
       } else {
         this.applyEcefView(presetId); // 应用 ECEF 视角
         geoMapStore.SET_COMPONENT_VISIBLE_FALSE("showSatelliteOrbit");
+        geoMapStore.SET_COMPONENT_VISIBLE_TRUE("showSatelliteTrajectory");
       }
     },
 

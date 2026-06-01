@@ -17,18 +17,40 @@ const geoMapStore = useGeoMapStore();
 export default {
   name: "GeoSatRelativeEchartsPlugin",
   data() {
-    return {};
+    return {
+      chartInstance: null,
+    };
   },
   computed: {
     ...mapState(useGeoMapStore, ["geoSatRelativeEchartsPlugin"]),
   },
+  watch: {
+    geoSatRelativeEchartsPlugin(visible) {
+      if (!visible) return;
+      this.$nextTick(() => {
+        this.ensureChartReady();
+        this.initChart();
+      });
+    },
+  },
   mounted() {
-    this.chartInstance = echarts.init(this.$refs.chartContainer);
-
-    this.initChart();
+    // this.$nextTick(() => {
+    //   this.ensureChartReady();
+    //   if (this.geoSatRelativeEchartsPlugin) {
+    //     this.initChart();
+    //   }
+    // });
   },
 
   methods: {
+    ensureChartReady() {
+      const container = this.$refs.chartContainer;
+      if (!container) return;
+      if (!this.chartInstance) {
+        this.chartInstance = echarts.init(container);
+      }
+      this.chartInstance.resize();
+    },
     handlePanelClose() {
       geoMapStore.SET_COMPONENT_VISIBLE_FALSE("geoSatRelativeEchartsPlugin");
     },
@@ -36,8 +58,7 @@ export default {
     initChart() {
       const { times, distances, sunAngles } = this.computeSeries();
 
-      console.log(times, distances, sunAngles);
-
+      if (!this.chartInstance) return;
       this.chartInstance.resize();
 
       const option = {
@@ -136,10 +157,11 @@ export default {
           // satellite.js: sunPos(jd) -> geocentric equatorial position of the sun, rsun in AU
           const jd = satellite.jday(currentDate);
           const sunPos = satellite.sunPos(jd);
+          const rsun = sunPos?.rsun;
           const sunEci = {
-            x: sunPos.rsun[0] * AU_KM,
-            y: sunPos.rsun[1] * AU_KM,
-            z: sunPos.rsun[2] * AU_KM,
+            x: (rsun?.x ?? rsun?.[0]) * AU_KM,
+            y: (rsun?.y ?? rsun?.[1]) * AU_KM,
+            z: (rsun?.z ?? rsun?.[2]) * AU_KM,
           };
           if (!isValidVec(sunEci)) {
             current = current.add(1, "hour");

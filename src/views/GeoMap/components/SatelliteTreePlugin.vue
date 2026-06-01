@@ -146,14 +146,11 @@ export default {
       return data.label && data.label.indexOf(value) !== -1;
     },
 
-    removeGraphicById(graphicLayer, id) {
-      const graphic = graphicLayer.getGraphicById(id);
-      if (!graphic) return;
-      graphicLayer.removeGraphic(graphic);
-    },
     removeSatelliteById(id) {
       const sateGraphic = satelliteLayer.getGraphicById(id);
       const pathGraphic = satelliteLayer.getGraphicById(`${id}-path`);
+      const trajectoryGraphic = satelliteLayer.getGraphicById(`${id}-orbit-trajectory`);
+      if (trajectoryGraphic) satelliteLayer.removeGraphic(trajectoryGraphic);
       if (pathGraphic) satelliteLayer.removeGraphic(pathGraphic);
       if (sateGraphic) satelliteLayer.removeGraphic(sateGraphic);
     },

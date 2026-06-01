@@ -1,5 +1,39 @@
 import * as mars3d from "mars3d";
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * 创建卫星轨迹采样数据（前后各1天，每1小时1个点）
+ * @param {object} satelliteModel - 卫星模型对象
+ * @returns {{positions:Array, sampledPosition:object|null}} 轨迹线点位与时序位置属性
+ */
+const createOrbitTrajectoryData = (satelliteModel) => {
+  const Cesium = mars3d.Cesium;
+  if (!satelliteModel?.getLLAs) return { positions: [], sampledPosition: null };
+
+  const now = new Date();
+  const startTime = new Date(now.getTime() - ONE_DAY_MS);
+  const endTime = new Date(now.getTime() + ONE_DAY_MS);
+  const llas = satelliteModel.getLLAs(startTime, endTime, ONE_HOUR_MS) || [];
+  if (!llas.length) return { positions: [], sampledPosition: null };
+
+  const positions = [];
+  const sampledPosition = new Cesium.SampledPositionProperty(Cesium.ReferenceFrame.FIXED);
+  sampledPosition.forwardExtrapolationType = Cesium.ExtrapolationType.HOLD;
+  sampledPosition.backwardExtrapolationType = Cesium.ExtrapolationType.HOLD;
+
+  llas.forEach((lla, index) => {
+    if (!lla) return;
+    const position = Cesium.Cartesian3.fromDegrees(lla.lon, lla.lat, (lla.altKm || 0) * 1000);
+    positions.push(position);
+    const sampleTime = new Date(startTime.getTime() + index * ONE_HOUR_MS);
+    sampledPosition.addSample(Cesium.JulianDate.fromDate(sampleTime), position);
+  });
+
+  return { positions, sampledPosition };
+};
+
 // 添加卫星上球展示
 export function addSatellite(satelliteLayer, satelliteModel) {
   if (!satelliteLayer || !satelliteModel) return;
@@ -17,6 +51,11 @@ export function addSatellite(satelliteLayer, satelliteModel) {
       scale: 1,
       minimumPixelSize: 90,
       silhouette: false,
+    },
+    point: {
+      show: true,
+      color: "#ff0000",
+      pixelSize: 10,
     },
 
     label: {
@@ -83,11 +122,31 @@ export function addSatellite(satelliteLayer, satelliteModel) {
     },
   });
 
+  const { positions: orbitTrajectoryPositions, sampledPosition } = createOrbitTrajectoryData(satelliteModel);
+  const orbitTrajectoryLine = new mars3d.graphic.PolylinePrimitive({
+    id: `${satelliteModel.noradID}-orbit-trajectory`,
+    positions: orbitTrajectoryPositions,
+    style: {
+      color: "#00ff00",
+      opacity: 0.65,
+      width: 2,
+      arcType: mars3d.Cesium.ArcType.NONE,
+      clampToGround: false,
+    },
+  });
+
+  if (sampledPosition) {
+    satelliteGraphic.position = sampledPosition;
+    satelliteGraphic.orientation = new mars3d.Cesium.VelocityOrientationProperty(sampledPosition);
+  }
+
+  satelliteLayer.addGraphic(orbitTrajectoryLine);
   satelliteLayer.addGraphic(satelliteLine);
   satelliteLayer.addGraphic(satelliteGraphic);
 
   satelliteGraphic._isSate = true;
   satelliteLine._isSateLine = true;
+  orbitTrajectoryLine._isSateTrajectory = true;
   return satelliteGraphic;
 }
 
@@ -118,10 +177,10 @@ export function toggleSatelliteTrajectory(satelliteLayer, showSatelliteTrajector
   if (!satelliteLayer) return;
 
   satelliteLayer.eachGraphic((graphic) => {
-    if (!graphic._isSate) return;
+    if (!graphic._isSateTrajectory) return;
 
-    graphic.path.show = showSatelliteTrajectory;
-    graphic.path.opacity = showSatelliteTrajectory ? 0.5 : 0;
+    graphic.show = showSatelliteTrajectory;
+    graphic.opacity = showSatelliteTrajectory ? 0.5 : 0;
   });
 }
 
