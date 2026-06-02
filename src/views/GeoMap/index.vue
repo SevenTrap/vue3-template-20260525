@@ -16,6 +16,9 @@
   <!-- GEO卫星相对距离与光照角插件 -->
   <GeoSatRelativeEchartsPlugin></GeoSatRelativeEchartsPlugin>
 
+  <!-- 卫星经度与相对同步轨道高度插件 -->
+  <GeoLngHeightEchartsPlugin></GeoLngHeightEchartsPlugin>
+
   <!-- 视角控制插件 -->
   <OrbitViewControlPlugin></OrbitViewControlPlugin>
 
@@ -31,6 +34,7 @@ import MenuBarPlugin from "./components/MenuBarPlugin.vue";
 import MenuTools from "./components/MenuTools.vue";
 import SatelliteTreePlugin from "./components/SatelliteTreePlugin.vue";
 import GeoSatRelativeEchartsPlugin from "./components/GeoSatRelativeEchartsPlugin.vue";
+import GeoLngHeightEchartsPlugin from "./components/GeoLngHeightEchartsPlugin.vue";
 import OrbitViewControlPlugin from "./components/OrbitViewControlPlugin.vue";
 import SceneControlPlugin from "./components/SceneControlPlugin.vue";
 
@@ -41,6 +45,7 @@ export default {
     MenuTools,
     SatelliteTreePlugin,
     GeoSatRelativeEchartsPlugin,
+    GeoLngHeightEchartsPlugin,
     OrbitViewControlPlugin,
     SceneControlPlugin,
   },

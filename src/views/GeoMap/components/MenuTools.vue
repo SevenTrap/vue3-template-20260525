@@ -6,11 +6,17 @@
       </div>
     </el-tooltip>
 
-    <!-- <el-tooltip content="视角控制" placement="top">
-      <div class="menu-tool-item" :class="{ active: orbitViewControlPlugin }" @click="handleToggleGeoMap('orbitViewControlPlugin')">
-        <img class="menu-tool-item-icon" src="/assets/menuBar/icon2.svg" />
+    <el-tooltip content="经高图" placement="top">
+      <div class="menu-tool-item" :class="{ active: geoLngHeightEchartsPlugin }" @click="handleToggleGeoMap('geoLngHeightEchartsPlugin')">
+        <img class="menu-tool-item-icon" src="/assets/menuBar/icon5.svg" />
       </div>
-    </el-tooltip> -->
+    </el-tooltip>
+
+    <el-tooltip content="光照角图" placement="top">
+      <div class="menu-tool-item" :class="{ active: geoSatRelativeEchartsPlugin }" @click="handleToggleGeoMap('geoSatRelativeEchartsPlugin')">
+        <img class="menu-tool-item-icon" src="/assets/menuBar/icon4.svg" />
+      </div>
+    </el-tooltip>
   </div>
 </template>
 
@@ -21,7 +27,7 @@ import { useGeoMapStore } from "@/store/useGeoMapStore";
 export default {
   name: "MenuTools",
   computed: {
-    ...mapState(useGeoMapStore, ["orbitViewControlPlugin", "sceneControlPlugin"]),
+    ...mapState(useGeoMapStore, ["orbitViewControlPlugin", "sceneControlPlugin", "geoSatRelativeEchartsPlugin", "geoLngHeightEchartsPlugin"]),
   },
   methods: {
     handleToggleGeoMap(item) {

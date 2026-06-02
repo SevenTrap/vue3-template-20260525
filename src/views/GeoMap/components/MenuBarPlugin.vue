@@ -19,17 +19,23 @@
       </div>
     </el-tooltip>
 
-    <el-tooltip content="图层控制" placement="right">
+    <!-- <el-tooltip content="图层控制" placement="right">
       <div class="menu-item" :class="{ active: aircasGraphicLayersPlugin }" @click="handleToggleAircasPlugin('aircasGraphicLayersPlugin')">
         <img src="/assets/menuBar/icon3.svg" />
       </div>
-    </el-tooltip>
+    </el-tooltip> -->
 
-    <el-tooltip content="GEO相对距离与光照角" placement="right">
+    <!-- <el-tooltip content="GEO相对距离与光照角" placement="right">
       <div class="menu-item" :class="{ active: geoSatRelativeEchartsPlugin }" @click="handleToggleGeoMap('geoSatRelativeEchartsPlugin')">
         <img src="/assets/menuBar/icon3.svg" />
       </div>
-    </el-tooltip>
+    </el-tooltip> -->
+
+    <!-- <el-tooltip content="卫星经高图" placement="right">
+      <div class="menu-item" :class="{ active: geoLngHeightEchartsPlugin }" @click="handleToggleGeoMap('geoLngHeightEchartsPlugin')">
+        <img src="/assets/menuBar/icon3.svg" />
+      </div>
+    </el-tooltip> -->
   </div>
 </template>
 
@@ -42,7 +48,7 @@ export default {
   name: "MenuBar",
 
   computed: {
-    ...mapState(useGeoMapStore, ["satelliteTreePlugin", "geoSatRelativeEchartsPlugin"]),
+    ...mapState(useGeoMapStore, ["satelliteTreePlugin", "geoSatRelativeEchartsPlugin", "geoLngHeightEchartsPlugin"]),
     ...mapState(useAircasPluginStore, ["aircasManagerLayersPlugin", "aircasGraphicLayersPlugin"]),
   },
 

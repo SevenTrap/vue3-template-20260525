@@ -18,6 +18,7 @@ export default {
   name: "GeoLngHeightEchartsPlugin",
   data() {
     return {
+      pluginTitle: "卫星经度和高度图",
       chartInstance: null,
     };
   },
