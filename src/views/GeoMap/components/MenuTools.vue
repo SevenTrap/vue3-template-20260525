@@ -6,11 +6,11 @@
       </div>
     </el-tooltip>
 
-    <el-tooltip content="视角控制" placement="top">
+    <!-- <el-tooltip content="视角控制" placement="top">
       <div class="menu-tool-item" :class="{ active: orbitViewControlPlugin }" @click="handleToggleGeoMap('orbitViewControlPlugin')">
         <img class="menu-tool-item-icon" src="/assets/menuBar/icon2.svg" />
       </div>
-    </el-tooltip>
+    </el-tooltip> -->
   </div>
 </template>
 

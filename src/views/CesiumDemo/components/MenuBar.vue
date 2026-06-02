@@ -8,21 +8,13 @@
 <template>
   <div class="menu-bar">
     <el-tooltip content="图层管理" placement="right">
-      <div
-        class="menu-item"
-        :class="{ active: aircasManagerLayersPlugin }"
-        @click="handleToggleAircasPlugin('aircasManagerLayersPlugin')"
-      >
+      <div class="menu-item" :class="{ active: aircasManagerLayersPlugin }" @click="handleToggleAircasPlugin('aircasManagerLayersPlugin')">
         <img src="/assets/menuBar/icon10.svg" />
       </div>
     </el-tooltip>
 
     <el-tooltip content="海水温度可视化" placement="right">
-      <div
-        class="menu-item"
-        :class="{ active: sstLayer }"
-        @click="handleToggleMenu('sstLayer')"
-      >
+      <div class="menu-item" :class="{ active: sstLayer }" @click="handleToggleMenu('sstLayer')">
         <img src="/assets/menuBar/icon9.svg" />
       </div>
     </el-tooltip>
@@ -45,12 +37,12 @@ export default {
   methods: {
     handleToggleMenu(item) {
       const cesiumDemoStore = useCesiumDemoStore();
-      cesiumDemoStore.UPDATE_COMPONENT_VISIBLE(item);
+      cesiumDemoStore.TOGGLE_COMPONENT_VISIBLE(item);
     },
 
     handleToggleAircasPlugin(item) {
       const aircasPluginStore = useAircasPluginStore();
-      aircasPluginStore.UPDATE_COMPONENT_VISIBLE(item);
+      aircasPluginStore.TOGGLE_COMPONENT_VISIBLE(item);
     },
   },
 };

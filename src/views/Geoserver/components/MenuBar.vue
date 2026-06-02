@@ -24,7 +24,7 @@ export default {
   methods: {
     handleToggleMenu(item) {
       const geoserverStore = useGeoserverStore();
-      geoserverStore.UPDATE_COMPONENT_VISIBLE(item);
+      geoserverStore.TOGGLE_COMPONENT_VISIBLE(item);
     },
   },
 };

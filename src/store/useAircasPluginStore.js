@@ -15,7 +15,7 @@ export const useAircasPluginStore = defineStore("aircasPlugin", {
      * @description 更新菜单栏组件
      * @param {string} menuItem
      */
-    UPDATE_COMPONENT_VISIBLE(menuItem) {
+    TOGGLE_COMPONENT_VISIBLE(menuItem) {
       this[menuItem] = !this[menuItem];
     },
 

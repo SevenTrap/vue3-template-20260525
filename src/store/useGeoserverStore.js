@@ -11,7 +11,7 @@ export const useGeoserverStore = defineStore("geoserver", {
     },
   },
   actions: {
-    UPDATE_COMPONENT_VISIBLE(menuItem) {
+    TOGGLE_COMPONENT_VISIBLE(menuItem) {
       this[menuItem] = !this[menuItem];
     },
 

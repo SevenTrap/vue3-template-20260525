@@ -1,6 +1,33 @@
 <template>
-  <aircas-panel v-show="sceneControlPlugin" title="场景控制" width="320" height="380" bottom="100" right="20" @close="handlePanelClose">
+  <aircas-panel v-show="sceneControlPlugin" title="场景控制" width="320" height="450" bottom="100" right="20" @close="handlePanelClose">
     <div class="scene-control-panel">
+      <div class="form-item">
+        <div class="form-title">坐标系</div>
+
+        <el-radio-group :model-value="coordinate" size="small" @change="handleCoordinateChange">
+          <el-radio value="ECEF">地固系(ECEF)</el-radio>
+          <el-radio value="ECI">惯性系(ECI)</el-radio>
+        </el-radio-group>
+      </div>
+
+      <!-- ECEF 坐标系下的视角预设 -->
+      <div v-if="coordinate === 'ECEF'" class="form-item">
+        <div class="form-title">ECEF 视角</div>
+
+        <el-radio-group v-model="viewMode" size="small" @change="handleApplyView">
+          <el-radio v-for="preset in ecefPresets" :key="preset.id" :value="preset.id">{{ preset.label }}</el-radio>
+        </el-radio-group>
+      </div>
+
+      <!-- ECI 坐标系下的视角预设 -->
+      <div v-if="coordinate === 'ECI'" class="form-item">
+        <div class="form-title">ECI 视角</div>
+
+        <el-radio-group v-model="viewMode" size="small" @change="handleApplyView">
+          <el-radio v-for="preset in eciPresets" :key="preset.id" :value="preset.id">{{ preset.label }}</el-radio>
+        </el-radio-group>
+      </div>
+
       <div class="form-item">
         <div class="form-title">显示控制</div>
 
@@ -49,20 +76,25 @@
 </template>
 
 <script>
+import * as mars3d from "mars3d";
 import dayjs from "dayjs";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { globalViewer } from "@/utils/initEarth";
 import { satelliteLayer } from "../utils/initMars3dLayers.js";
 import { addGeoCirclePositions, removeGeoCirclePositions, addGeoCircleLabel, removeGeoCircleLabel } from "@/utils/mars3d/mars3dGeoStyle.js";
+import { toggleSatelliteOribit, toggleSatelliteTrajectory, toggleSatelliteName, toggleSatelliteModel, toggleSatellitePoint } from "../utils/mars3dSatellite.js";
 import {
-  toggleSatelliteOribit,
-  toggleSatelliteTrajectory,
-  toggleSatelliteName,
-  toggleSatelliteModel,
-  toggleSatellitePoint,
-  toggleSatelliteCoordinate,
-} from "../utils/mars3dSatellite.js";
+  ensureOrbitLayer,
+  destroyOrbitLayer,
+  addSatelliteOrbit,
+  removeSatelliteOrbit,
+  clearOrbitGraphics,
+  lockCameraToInertial,
+  unlockCameraFromInertial,
+  getSatelliteGraphic,
+} from "../utils/mars3dOrbitDynamics.js";
+import { ECEF_PRESETS, ECI_PRESETS, GLOBAL_VIEW_ALT } from "../configs/index.js";
 
 const geoMapStore = useGeoMapStore();
 
@@ -70,6 +102,12 @@ export default {
   name: "SceneControlPlugin",
   data() {
     return {
+      ecefPresets: ECEF_PRESETS,
+      eciPresets: ECI_PRESETS,
+
+      // coordinate: "ECEF",
+      viewMode: "default",
+
       showGeoCirclePositions: true, // 显示同步轨道带
       showGeoCircleLabel: true, // 显示经度标签
       startDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
@@ -82,6 +120,7 @@ export default {
     ...mapState(useGeoMapStore, [
       "sceneControlPlugin",
       "coordinate",
+
       "showSatellitePoint",
       "showSatelliteOrbit",
       "showSatelliteTrajectory",
@@ -91,18 +130,23 @@ export default {
   },
   watch: {
     showSatellitePoint(newVal) {
+      // console.log("showSatellitePoint", newVal);
       toggleSatellitePoint(satelliteLayer, newVal);
     },
     showSatelliteOrbit(newVal) {
+      // console.log("showSatelliteOrbit", newVal);
       toggleSatelliteOribit(satelliteLayer, newVal);
     },
     showSatelliteTrajectory(newVal) {
+      // console.log("showSatelliteTrajectory", newVal);
       toggleSatelliteTrajectory(satelliteLayer, newVal);
     },
     showSatelliteName(newVal) {
+      // console.log("showSatelliteName", newVal);
       toggleSatelliteName(satelliteLayer, newVal);
     },
     showSatelliteModel(newVal) {
+      // console.log("showSatelliteModel", newVal);
       toggleSatelliteModel(satelliteLayer, newVal);
     },
 
@@ -117,6 +161,121 @@ export default {
     // },
   },
   methods: {
+    handleCoordinateChange(value) {
+      // console.log(value, "handleCoordinateChange");
+      geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
+      // debugger;
+
+      this.applyCameraLock(); // 应用相机锁定
+      this.handleApplyView("default"); // 应用视角
+      this.viewMode = "default";
+    },
+
+    handleApplyView(presetId) {
+      // console.log(this.coordinate, "handleApplyView");
+      if (!globalViewer) return;
+
+      // this.releaseTracking(); // 释放跟踪卫星
+
+      if (this.coordinate === "ECI") {
+        this.applyEciView(presetId); // 应用 ECI 视角
+        geoMapStore.SET_COMPONENT_VISIBLE_TRUE("showSatelliteOrbit");
+        geoMapStore.SET_COMPONENT_VISIBLE_FALSE("showSatelliteTrajectory");
+      } else {
+        this.applyEcefView(presetId); // 应用 ECEF 视角
+        geoMapStore.SET_COMPONENT_VISIBLE_FALSE("showSatelliteOrbit");
+        geoMapStore.SET_COMPONENT_VISIBLE_TRUE("showSatelliteTrajectory");
+      }
+    },
+
+    /**
+     * 根据当前坐标系决定是否锁定惯性相机
+     * @returns {void}
+     */
+    applyCameraLock() {
+      if (!globalViewer) return;
+      // console.log(this.coordinate, "applyCameraLock");
+      if (this.coordinate === "ECI") {
+        lockCameraToInertial(globalViewer);
+      } else {
+        unlockCameraFromInertial(globalViewer);
+      }
+    },
+
+    /**
+     * ECEF 视角预设分派
+     * @param {string} presetId - 预设 id
+     * @returns {void}
+     */
+    applyEcefView(presetId) {
+      switch (presetId) {
+        case "default":
+          this.flyToGlobal(104, 27, GLOBAL_VIEW_ALT, -90); // 默认视角
+          break;
+        case "southPole":
+          this.flyToGlobal(0, -90, GLOBAL_VIEW_ALT, -90); // 南极视角
+          break;
+        case "starPole":
+          this.flyToGlobal(0, 90, GLOBAL_VIEW_ALT, -90); // 恒星视角
+          break;
+        case "equator":
+          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, -90); // 赤道视角
+          break;
+        default:
+          break;
+      }
+    },
+
+    /**
+     * ECI 视角预设分派
+     * @param {string} presetId - 预设 id
+     * @returns {void}
+     */
+    applyEciView(presetId) {
+      switch (presetId) {
+        case "default":
+          this.flyToGlobal(104, 27, GLOBAL_VIEW_ALT, -90); // 默认视角
+          break;
+        case "southPole":
+          this.flyToGlobal(0, -90, GLOBAL_VIEW_ALT, -90); // 南极视角
+          break;
+        case "firstSatPole":
+          this.flyToFirstPerson(); // 主星视角
+          break;
+        case "secondSatPole":
+          this.flyToThirdPerson(); // 从星视角
+          break;
+        case "orbitalPlanePole":
+          this.flyToOrbitalPlane(); // 轨道平面
+          break;
+        case "equatorPlanePole":
+          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, 0); // 赤道平面
+          break;
+        default:
+          break;
+      }
+    },
+
+    /**
+     * 按经纬高 / 俯仰飞行到指定全球视角
+     * @param {number} lon - 经度（度）
+     * @param {number} lat - 纬度（度）
+     * @param {number} alt - 高度（米）
+     * @param {number} pitchDeg - 俯仰（度，负值朝下）
+     * @returns {void}
+     */
+    flyToGlobal(lon, lat, alt, pitchDeg) {
+      globalViewer.camera.flyTo({
+        destination: mars3d.Cesium.Cartesian3.fromDegrees(lon, lat, alt),
+        orientation: {
+          heading: mars3d.Cesium.Math.toRadians(0),
+          pitch: mars3d.Cesium.Math.toRadians(pitchDeg),
+          roll: 0,
+        },
+        duration: 1.5,
+      });
+    },
+
     handleToggleGeoCirclePositions() {
       if (this.showGeoCirclePositions) {
         addGeoCirclePositions(globalViewer);
@@ -134,6 +293,7 @@ export default {
     },
 
     handleToggleSate(state) {
+      // console.log("handleToggleSate", state);
       geoMapStore.TOGGLE_COMPONENT_VISIBLE(state);
     },
 

@@ -37,14 +37,14 @@ export const useGeoMapStore = defineStore("geoMap", {
     geoLngHeightEchartsPlugin: false, // GEO卫星高度与经度插件
     // orbitDynamicsPlugin: false, // 轨道动力学可视化插件
 
-    sceneControlPlugin: false, // 场景控制插件
+    sceneControlPlugin: true, // 场景控制插件
     showSatellitePoint: true, // 显示星下点
     showSatelliteOrbit: true, // 显示轨道线
     showSatelliteTrajectory: true, // 显示轨迹线
     showSatelliteName: true, // 显示卫星名称
     showSatelliteModel: true, // 显示卫星模型
 
-    orbitViewControlPlugin: true, // 视角控制插件
+    orbitViewControlPlugin: false, // 视角控制插件
     focusedNorad: "", // 当前视角聚焦的卫星 NORAD ID
     coordinate: "ECEF", // 坐标系
   }),

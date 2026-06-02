@@ -101,7 +101,7 @@ export default {
     // 关闭此插件弹窗
     handlePanelClose() {
       const cesiumDemoStore = useCesiumDemoStore();
-      cesiumDemoStore.UPDATE_COMPONENT_VISIBLE("sstLayer", false);
+      cesiumDemoStore.TOGGLE_COMPONENT_VISIBLE("sstLayer", false);
     },
 
     // 初始化d3图例函数
