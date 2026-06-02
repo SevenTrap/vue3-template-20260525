@@ -35,7 +35,7 @@ import { globalViewer } from "@/utils/initEarth.js";
 import { addSatellite } from "../utils/mars3dSatellite.js";
 import { initSatellitesTree } from "../utils/initSatellitesTree.js";
 
-import { satelliteLayer, satellitePathLayer, satelliteLinkLayer, initMars3dLayers } from "../utils/initMars3dLayers.js";
+import { satelliteLayer, initMars3dLayers } from "../utils/initMars3dLayers.js";
 
 const geoMapStore = useGeoMapStore();
 
@@ -56,7 +56,7 @@ export default {
     this.satellitesTree = satellitesTree;
     this.satelliteModels = satelliteModels;
 
-    geoMapStore.SET_SATELLITE_MODELS(satelliteModels);
+    geoMapStore.SET_STATE_DATA({ key: "satelliteModels", value: satelliteModels });
 
     this.$nextTick(() => {
       initMars3dLayers();

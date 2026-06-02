@@ -49,12 +49,12 @@ export default {
   methods: {
     handleToggleGeoMap(item) {
       const geoMapStore = useGeoMapStore();
-      geoMapStore.UPDATE_COMPONENT_VISIBLE(item);
+      geoMapStore.TOGGLE_COMPONENT_VISIBLE(item);
     },
 
     handleToggleAircasPlugin(item) {
       const aircasPluginStore = useAircasPluginStore();
-      aircasPluginStore.UPDATE_COMPONENT_VISIBLE(item);
+      aircasPluginStore.TOGGLE_COMPONENT_VISIBLE(item);
     },
   },
 };

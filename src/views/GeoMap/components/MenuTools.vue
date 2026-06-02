@@ -26,7 +26,7 @@ export default {
   methods: {
     handleToggleGeoMap(item) {
       const geoMapStore = useGeoMapStore();
-      geoMapStore.UPDATE_COMPONENT_VISIBLE(item);
+      geoMapStore.TOGGLE_COMPONENT_VISIBLE(item);
     },
   },
 };

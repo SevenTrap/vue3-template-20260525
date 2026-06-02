@@ -134,7 +134,7 @@ export default {
     },
 
     handleToggleSate(state) {
-      geoMapStore.UPDATE_COMPONENT_VISIBLE(state);
+      geoMapStore.TOGGLE_COMPONENT_VISIBLE(state);
     },
 
     handlePanelClose() {
