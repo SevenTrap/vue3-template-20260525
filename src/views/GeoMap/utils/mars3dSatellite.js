@@ -48,7 +48,9 @@ export function addSatellite(satelliteLayer, satelliteModel) {
     name: satelliteModel.name,
     tle1: satelliteModel.tle1,
     tle2: satelliteModel.tle2,
+    referenceFrame: mars3d.Cesium.ReferenceFrame.FIXED, // INERTIAL：惯性坐标系  FIXED：地球坐标系
     model: {
+      show: false,
       url: "/assets/gltf/weixin.gltf",
       scale: 1,
       minimumPixelSize: 90,
@@ -100,59 +102,59 @@ export function addSatellite(satelliteLayer, satelliteModel) {
     // },
 
     path: {
-      show: true,
+      show: false,
       color: "#00ff00",
       width: 1,
       opacity: 0.5,
     },
   });
 
-  const satelliteLine = new mars3d.graphic.PolylineEntity({
-    id: satelliteModel.noradID + "-path",
-    positions: new mars3d.Cesium.CallbackProperty((time) => {
-      const satPosition = satelliteGraphic.position;
-      if (!satPosition) {
-        return [];
-      }
-      const cartographic = mars3d.Cesium.Cartographic.fromCartesian(satPosition);
+  // const satelliteLine = new mars3d.graphic.PolylineEntity({
+  //   id: satelliteModel.noradID + "-path",
+  //   positions: new mars3d.Cesium.CallbackProperty((time) => {
+  //     const satPosition = satelliteGraphic.position;
+  //     if (!satPosition) {
+  //       return [];
+  //     }
+  //     const cartographic = mars3d.Cesium.Cartographic.fromCartesian(satPosition);
 
-      const groundPosition = mars3d.Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0);
+  //     const groundPosition = mars3d.Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0);
 
-      return [satPosition, groundPosition];
-    }, false),
-    style: {
-      color: "#00ff00",
-      opacity: 0.5,
-      width: 1,
-      outline: false,
-    },
-  });
+  //     return [satPosition, groundPosition];
+  //   }, false),
+  //   style: {
+  //     color: "#00ff00",
+  //     opacity: 0.5,
+  //     width: 1,
+  //     outline: false,
+  //   },
+  // });
 
-  const { positions: orbitTrajectoryPositions, sampledPosition } = createOrbitTrajectoryData(satelliteModel);
-  const orbitTrajectoryLine = new mars3d.graphic.PolylinePrimitive({
-    id: `${satelliteModel.noradID}-orbit-trajectory`,
-    positions: orbitTrajectoryPositions,
-    style: {
-      color: "#00ff00",
-      opacity: 0.65,
-      width: 2,
-      arcType: mars3d.Cesium.ArcType.NONE,
-      clampToGround: false,
-    },
-  });
+  // const { positions: orbitTrajectoryPositions, sampledPosition } = createOrbitTrajectoryData(satelliteModel);
+  // const orbitTrajectoryLine = new mars3d.graphic.PolylinePrimitive({
+  //   id: `${satelliteModel.noradID}-orbit-trajectory`,
+  //   positions: orbitTrajectoryPositions,
+  //   style: {
+  //     color: "#00ff00",
+  //     opacity: 0.65,
+  //     width: 2,
+  //     arcType: mars3d.Cesium.ArcType.NONE,
+  //     clampToGround: false,
+  //   },
+  // });
 
-  if (sampledPosition) {
-    satelliteGraphic.position = sampledPosition;
-    satelliteGraphic.orientation = new mars3d.Cesium.VelocityOrientationProperty(sampledPosition);
-  }
+  // if (sampledPosition) {
+  //   satelliteGraphic.position = sampledPosition;
+  //   satelliteGraphic.orientation = new mars3d.Cesium.VelocityOrientationProperty(sampledPosition);
+  // }
 
-  satelliteLayer.addGraphic(orbitTrajectoryLine);
+  // satelliteLayer.addGraphic(orbitTrajectoryLine);
   // satelliteLayer.addGraphic(satelliteLine);
   satelliteLayer.addGraphic(satelliteGraphic);
 
   satelliteGraphic._isSate = true;
-  satelliteLine._isSateLine = true;
-  orbitTrajectoryLine._isSateTrajectory = true;
+  // satelliteLine._isSateLine = true;
+  // orbitTrajectoryLine._isSateTrajectory = true;
   return satelliteGraphic;
 }
 

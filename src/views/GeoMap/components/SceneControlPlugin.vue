@@ -45,12 +45,12 @@
         <div class="form-title">图层控制</div>
 
         <div class="button-group">
-          <div class="button-group-item">
+          <!-- <div class="button-group-item">
             <el-checkbox size="small" :model-value="showSatellitePoint" @change="handleToggleSate('showSatellitePoint')" label="显示星下点"></el-checkbox>
-          </div>
+          </div> -->
 
           <div class="button-group-item">
-            <el-checkbox size="small" :model-value="showSatelliteOrbit" @change="handleToggleSate('showSatelliteOrbit')" label="显示轨道线"></el-checkbox>
+            <el-checkbox size="small" :model-value="showSatelliteOrbit" @change="handleToggleSate('showSatelliteOrbit')" label="显示轨道"></el-checkbox>
           </div>
 
           <div class="button-group-item">
@@ -58,7 +58,7 @@
               size="small"
               :model-value="showSatelliteTrajectory"
               @change="handleToggleSate('showSatelliteTrajectory')"
-              label="显示轨迹线"
+              label="显示轨迹"
             ></el-checkbox>
           </div>
 

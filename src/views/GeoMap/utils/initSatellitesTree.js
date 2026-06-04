@@ -86,10 +86,10 @@ export async function initSatellitesTree() {
     }
   }
 
-  // satellitesTree[0].children[0].label += ` (${satellitesTree[0].children[0].children.length})`;
-  // satellitesTree[0].children[1].label += ` (${satellitesTree[0].children[1].children.length})`;
-  // satellitesTree[0].children[2].label += ` (${satellitesTree[0].children[2].children.length})`;
-  // satellitesTree[0].children[3].label += ` (${satellitesTree[0].children[3].children.length})`;
+  satellitesTree[0].children[0].label += ` (${satellitesTree[0].children[0].children.length})`;
+  satellitesTree[0].children[1].label += ` (${satellitesTree[0].children[1].children.length})`;
+  satellitesTree[0].children[2].label += ` (${satellitesTree[0].children[2].children.length})`;
+  satellitesTree[0].children[3].label += ` (${satellitesTree[0].children[3].children.length})`;
 
   return { satellitesTree, satelliteModels };
 }

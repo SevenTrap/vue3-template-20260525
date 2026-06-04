@@ -25,6 +25,9 @@ export const ECI_PRESETS = [
 
 // 62485; shijian-25
 
+export const DEFAULT_NORAD_USA = ["41745", "41744"]; // USA271, USA270
+export const DEFAULT_NORAD_CHINA = ["62485"]; // shijian-25
+
 export const SCENE_LISTS = [
   {
     id: 1,
