@@ -2,6 +2,18 @@ import * as mars3d from "mars3d";
 const GEO_HEIGHT = 35786 * 1000;
 const ALT_HEIGHT = 20000 * 1000;
 
+const createPatrolAreaPositions = () => {
+  const positions_0KM = [];
+  const positions_35786KM = [];
+
+  for (let lon = 16; lon <= 199; lon += 1) {
+    positions_0KM.push(mars3d.Cesium.Cartesian3.fromDegrees(lon, 0, 1));
+    positions_35786KM.push(mars3d.Cesium.Cartesian3.fromDegrees(lon, 0, GEO_HEIGHT));
+  }
+
+  return [...positions_0KM.reverse(), ...positions_35786KM];
+};
+
 function createGeoCirclePositions(stepDeg = 1) {
   const positions = [];
 
@@ -33,9 +45,7 @@ export function addGeoCirclePositions(viewer) {
 
 export function removeGeoCirclePositions(viewer) {
   const entity = viewer.entities.getById("geoCirclePositionsEntity");
-  if (entity) {
-    viewer.entities.remove(entity);
-  }
+  if (entity) viewer.entities.remove(entity);
 }
 
 export function addGeoCircleLabel(viewer) {
@@ -50,7 +60,7 @@ export function addGeoCircleLabel(viewer) {
       position: new mars3d.LngLatPoint(lon, 0, ALT_HEIGHT),
       style: {
         pixelSize: 6,
-        color: "#ff0000",
+        color: "#ffffff",
         outline: true,
         outlineColor: "#ffffff",
         outlineWidth: 1,
@@ -76,7 +86,81 @@ export function addGeoCircleLabel(viewer) {
 
 export function removeGeoCircleLabel(viewer) {
   const layer = viewer.getLayerById("geoLabelGraphicLayer");
-  if (layer) {
-    viewer.removeLayer(layer);
-  }
+  if (layer) viewer.removeLayer(layer);
 }
+
+/**
+ * 添加巡视区域扇面
+ * @param {object} viewer - Cesium Viewer 实例
+ * @returns {void}
+ */
+export const addPatrolArea = (viewer) => {
+  const patrolAreaEntityLayer = new mars3d.layer.GraphicLayer({ id: "patrolAreaEntityLayer" });
+
+  viewer.addLayer(patrolAreaEntityLayer);
+
+  const labelGraphic = new mars3d.graphic.PointEntity({
+    position: new mars3d.LngLatPoint(16, 0, GEO_HEIGHT),
+    style: {
+      label: {
+        show: true,
+        text: "16E",
+        font_size: 16,
+        font_family: "微软雅黑",
+        font_weight: "bold",
+        color: "#ffffff",
+        outline: true,
+        outlineColor: "#000000",
+        outlineWidth: 1,
+        pixelOffsetY: -10,
+      },
+    },
+  });
+
+  const labelGraphicEnd = new mars3d.graphic.PointEntity({
+    position: new mars3d.LngLatPoint(-161, 0, GEO_HEIGHT),
+    style: {
+      label: {
+        show: true,
+        text: "161W",
+        font_size: 16,
+        font_family: "微软雅黑",
+        font_weight: "bold",
+        color: "#ffffff",
+        outline: true,
+        outlineColor: "#000000",
+        outlineWidth: 1,
+        pixelOffsetY: -10,
+      },
+    },
+  });
+
+  patrolAreaEntityLayer.addGraphic(labelGraphic);
+  patrolAreaEntityLayer.addGraphic(labelGraphicEnd);
+
+  viewer.entities.add({
+    id: "patrolAreaEntity",
+    name: "巡视区域",
+    polygon: {
+      hierarchy: new mars3d.Cesium.PolygonHierarchy(createPatrolAreaPositions()),
+      material: mars3d.Cesium.Color.RED.withAlpha(0.15),
+      outline: false,
+      outlineColor: mars3d.Cesium.Color.CYAN.withAlpha(0.55),
+      perPositionHeight: true,
+      arcType: mars3d.Cesium.ArcType.NONE,
+    },
+  });
+};
+
+/**
+ * 移除巡视区域扇面
+ * @param {object} viewer - Cesium Viewer 实例
+ * @returns {void}
+ */
+export const removePatrolArea = (viewer) => {
+  const layer = viewer.getLayerById("patrolAreaEntityLayer");
+  if (layer) viewer.removeLayer(layer);
+
+  const entity = viewer.entities.getById("patrolAreaEntity");
+  if (entity) viewer.entities.remove(entity);
+};

@@ -38,6 +38,9 @@
           <div class="button-group-item">
             <el-checkbox size="small" v-model="showGeoCircleLabel" @change="handleToggleGeoCircleLabel" label="显示经度标签"></el-checkbox>
           </div>
+          <div class="button-group-item">
+            <el-checkbox size="small" v-model="showPatrolArea" @change="handleTogglePatrolArea" label="显示巡视区域"></el-checkbox>
+          </div>
         </div>
       </div>
 
@@ -82,7 +85,14 @@ import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { globalViewer } from "@/utils/initEarth";
 import { satelliteLayer } from "../utils/initMars3dLayers.js";
-import { addGeoCirclePositions, removeGeoCirclePositions, addGeoCircleLabel, removeGeoCircleLabel } from "@/utils/mars3d/mars3dGeoStyle.js";
+import {
+  addGeoCirclePositions,
+  removeGeoCirclePositions,
+  addGeoCircleLabel,
+  removeGeoCircleLabel,
+  addPatrolArea,
+  removePatrolArea,
+} from "@/utils/mars3d/mars3dGeoStyle.js";
 import {
   toggleSatelliteOribit,
   toggleSatelliteTrajectory,
@@ -117,6 +127,7 @@ export default {
 
       showGeoCirclePositions: true, // 显示同步轨道带
       showGeoCircleLabel: true, // 显示经度标签
+      showPatrolArea: true, // 显示巡视区域
       startDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       endDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       stepSec: 3600,
@@ -366,6 +377,18 @@ export default {
         addGeoCircleLabel(globalViewer);
       } else {
         removeGeoCircleLabel(globalViewer);
+      }
+    },
+
+    /**
+     * 切换巡视区域显示状态
+     * @returns {void}
+     */
+    handleTogglePatrolArea() {
+      if (this.showPatrolArea) {
+        addPatrolArea(globalViewer);
+      } else {
+        removePatrolArea(globalViewer);
       }
     },
 

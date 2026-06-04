@@ -28,7 +28,7 @@
 
 <script>
 import { initViewer, globalViewer } from "@/utils/initEarth";
-import { addGeoCirclePositions, addGeoCircleLabel } from "@/utils/mars3d/mars3dGeoStyle.js";
+import { addGeoCirclePositions, addGeoCircleLabel, addPatrolArea } from "@/utils/mars3d/mars3dGeoStyle.js";
 
 import MenuBarPlugin from "./components/MenuBarPlugin.vue";
 import MenuTools from "./components/MenuTools.vue";
@@ -57,6 +57,7 @@ export default {
     this.$nextTick(() => {
       addGeoCircleLabel(globalViewer);
       addGeoCirclePositions(globalViewer);
+      addPatrolArea(globalViewer);
     });
   },
 
