@@ -83,7 +83,14 @@ import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { globalViewer } from "@/utils/initEarth";
 import { satelliteLayer } from "../utils/initMars3dLayers.js";
 import { addGeoCirclePositions, removeGeoCirclePositions, addGeoCircleLabel, removeGeoCircleLabel } from "@/utils/mars3d/mars3dGeoStyle.js";
-import { toggleSatelliteOribit, toggleSatelliteTrajectory, toggleSatelliteName, toggleSatelliteModel, toggleSatellitePoint } from "../utils/mars3dSatellite.js";
+import {
+  toggleSatelliteOribit,
+  toggleSatelliteTrajectory,
+  toggleSatelliteName,
+  toggleSatelliteModel,
+  toggleSatellitePoint,
+  setSatelliteFaceEarth,
+} from "../utils/mars3dSatellite.js";
 import {
   ensureOrbitLayer,
   destroyOrbitLayer,
@@ -113,6 +120,8 @@ export default {
       startDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       endDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       stepSec: 3600,
+
+      trackedNorad: "", // 当前跟随的卫星 NORAD ID
     };
   },
 
@@ -120,6 +129,9 @@ export default {
     ...mapState(useGeoMapStore, [
       "sceneControlPlugin",
       "coordinate",
+
+      "threatTargetID",
+      "importTargetID",
 
       "showSatellitePoint",
       "showSatelliteOrbit",
@@ -163,6 +175,7 @@ export default {
   methods: {
     handleCoordinateChange(value) {
       // console.log(value, "handleCoordinateChange");
+      this.releaseTracking(); // 释放跟踪卫星，避免遗留跟随状态
       geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
       // debugger;
 
@@ -175,7 +188,11 @@ export default {
       // console.log(this.coordinate, "handleApplyView");
       if (!globalViewer) return;
 
-      // this.releaseTracking(); // 释放跟踪卫星
+      // 非主星/从星视角：释放跟随并恢复当前坐标系相机状态
+      if (presetId !== "firstSatPole" && presetId !== "secondSatPole") {
+        this.releaseTracking();
+        this.applyCameraLock();
+      }
 
       if (this.coordinate === "ECI") {
         this.applyEciView(presetId); // 应用 ECI 视角
@@ -274,6 +291,66 @@ export default {
         },
         duration: 1.5,
       });
+    },
+
+    /**
+     * 主星视角：相机定位并持续跟随威胁目标卫星
+     * @returns {void}
+     */
+    flyToFirstPerson() {
+      this.trackSatellite(this.threatTargetID);
+    },
+
+    /**
+     * 从星视角：相机定位并持续跟随被威胁目标卫星
+     * @returns {void}
+     */
+    flyToThirdPerson() {
+      this.trackSatellite(this.importTargetID);
+    },
+
+    /**
+     * 持续跟随指定卫星，并让卫星模型朝向地球
+     * @param {string|number} noradID - 卫星 NORAD ID
+     * @returns {void}
+     */
+    trackSatellite(noradID) {
+      if (!globalViewer || !noradID) return;
+
+      console.log(noradID, "trackSatellite");
+
+      // satelliteLayer.getGraphics().map((graphic) => console.log(graphic.id, "graphicid"));
+
+      const graphic = satelliteLayer?.getGraphics().find((graphic) => graphic.id === "20253");
+
+      if (!graphic) {
+        this.$message.warning("未找到该卫星，请先在卫星树中勾选该卫星");
+        return;
+      }
+
+      unlockCameraFromInertial(globalViewer); // 解除 ECI 锁定，避免与跟随冲突
+      setSatelliteFaceEarth(satelliteLayer, noradID, true); // 模型朝向地球
+
+      console.log(graphic.trackedEntity, "graphic.entity");
+
+      globalViewer.trackedEntity = graphic.trackedEntity; // 持续跟随
+
+      this.trackedNorad = noradID;
+    },
+
+    /**
+     * 释放卫星跟随并还原模型朝向
+     * @returns {void}
+     */
+    releaseTracking() {
+      if (!globalViewer) return;
+
+      globalViewer.trackedEntity = undefined;
+
+      if (this.trackedNorad) {
+        setSatelliteFaceEarth(satelliteLayer, this.trackedNorad, false);
+        this.trackedNorad = "";
+      }
     },
 
     handleToggleGeoCirclePositions() {

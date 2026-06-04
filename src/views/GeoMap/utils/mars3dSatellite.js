@@ -41,6 +41,8 @@ export function addSatellite(satelliteLayer, satelliteModel) {
   const graphicSatellite = satelliteLayer.getGraphicById(satelliteModel.noradID);
   if (graphicSatellite) return;
 
+  console.log(satelliteModel.noradID, "addSatellite");
+
   const satelliteGraphic = new mars3d.graphic.Satellite({
     id: satelliteModel.noradID,
     name: satelliteModel.name,
@@ -51,6 +53,10 @@ export function addSatellite(satelliteLayer, satelliteModel) {
       scale: 1,
       minimumPixelSize: 90,
       silhouette: false,
+      mergeOrientation: false,
+      heading: 90,
+      pitch: 0,
+      roll: 0,
     },
     point: {
       show: true,
@@ -141,7 +147,7 @@ export function addSatellite(satelliteLayer, satelliteModel) {
   }
 
   satelliteLayer.addGraphic(orbitTrajectoryLine);
-  satelliteLayer.addGraphic(satelliteLine);
+  // satelliteLayer.addGraphic(satelliteLine);
   satelliteLayer.addGraphic(satelliteGraphic);
 
   satelliteGraphic._isSate = true;
@@ -247,3 +253,32 @@ export function toggleSatellitePoint(satelliteLayer, showSatellitePoint) {
     graphic.opacity = showSatellitePoint ? 1 : 0;
   });
 }
+
+/**
+ * 切换卫星模型朝向：启用时模型始终指向地心（nadir），禁用时还原沿速度方向
+ * @param {object} satelliteLayer - 卫星图层
+ * @param {string|number} noradID - 卫星 NORAD ID
+ * @param {boolean} enable - true：朝向地球；false：还原速度朝向
+ * @returns {void}
+ */
+export const setSatelliteFaceEarth = (satelliteLayer, noradID, enable) => {
+  if (!satelliteLayer || !noradID) return;
+
+  const graphic = satelliteLayer.getGraphicById(noradID);
+  const entity = graphic?.entity;
+  if (!entity || !entity.position) return;
+
+  const Cesium = mars3d.Cesium;
+  const positionProperty = entity.position;
+
+  if (enable) {
+    entity.orientation = new Cesium.CallbackProperty((time, result) => {
+      const position = positionProperty.getValue(time);
+      if (!position) return undefined;
+      const hpr = new Cesium.HeadingPitchRoll(0, Cesium.Math.toRadians(-90), 0);
+      return Cesium.Transforms.headingPitchRollQuaternion(position, hpr, Cesium.Ellipsoid.WGS84, undefined, result);
+    }, false);
+  } else {
+    entity.orientation = new Cesium.VelocityOrientationProperty(positionProperty);
+  }
+};

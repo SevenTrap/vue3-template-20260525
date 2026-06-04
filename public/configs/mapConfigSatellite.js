@@ -25,7 +25,7 @@ const MAP_CONFIG_Satellite = {
       enableLighting: true,
     },
     cameraController: {
-      zoomFactor: 3.0,
+      zoomFactor: 1.0,
       minimumZoomDistance: 1,
       maximumZoomDistance: 200_000_000,
       enableRotate: true,
@@ -38,7 +38,7 @@ const MAP_CONFIG_Satellite = {
   },
   control: {
     homeButton: {
-      enabled: true,
+      enabled: false,
       icon: "/assets/mapConfig/home.svg",
     },
     fullscreenButton: {
@@ -48,15 +48,15 @@ const MAP_CONFIG_Satellite = {
     zoom: {
       zoomInIcon: "/assets/mapConfig/zoomIn.svg",
       zoomOutIcon: "/assets/mapConfig/zoomOut.svg",
-      enabled: true,
+      enabled: false,
     },
     mouseDownView: true,
     fullscreenButton: false,
     baseLayerPicker: false,
     sceneModePicker: {
-      enabled: true,
+      enabled: false,
     },
-    navigationHelpButton: true,
+    navigationHelpButton: false,
     contextmenu: {
       hasDefault: true,
     },
@@ -73,7 +73,7 @@ const MAP_CONFIG_Satellite = {
       format: "yyyy-MM-dd HH:mm:ss",
     },
     locationBar: {
-      fps: true,
+      fps: false,
       crs: "EPSG4326",
       crsDecimal: 0,
     },

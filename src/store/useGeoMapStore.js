@@ -5,6 +5,7 @@ export const useGeoMapStore = defineStore("geoMap", {
   state: () => ({
     sceneID: "1", // 场景ID
     threatTargetID: "41745", // 威胁目标ID
+    threatTargetName: "敌方卫星", // 威胁目标名称
     threatTles: [
       {
         date: "20260209",
@@ -28,6 +29,7 @@ export const useGeoMapStore = defineStore("geoMap", {
       },
     ],
     importTargetID: "62485", // 被威胁目标ID
+    importTargetName: "我方卫星", // 被威胁目标名称
     importTles: [
       {
         date: "20260208",
@@ -56,8 +58,8 @@ export const useGeoMapStore = defineStore("geoMap", {
     endTime: "", // 结束时间
     closeTime: "2026-02-07 10:23:34", // 接近时间
     timeStep: 1 * 60 * 1000, // 默认时间步长：1分钟
-    timeFront: 24 * 60 * 60 * 1000, // 前轨时间：1天
-    timeBack: 24 * 60 * 60 * 1000, // 后轨时间：1天
+    timeFront: 3 * 24 * 60 * 60 * 1000, // 前轨时间：1天
+    timeBack: 3 * 24 * 60 * 60 * 1000, // 后轨时间：1天
 
     satellitesTree: markRaw([]), // 卫星树
     satelliteModels: markRaw(new Map()), // NORAD -> SatelliteClass 实例
@@ -69,7 +71,17 @@ export const useGeoMapStore = defineStore("geoMap", {
     geoLngHeightEchartsPlugin: false, // GEO卫星高度与经度插件
     // orbitDynamicsPlugin: false, // 轨道动力学可视化插件
 
-    sceneControlPlugin: true, // 场景控制插件
+    // 经度-相对同步轨道高度计算结果（供多个组件复用）
+    lngHeightData: markRaw({
+      startTime: 0, // 计算起始时间（ms 时间戳）
+      endTime: 0, // 计算结束时间（ms 时间戳）
+      threatTrack: [], // 威胁目标轨迹 [{ timeMs, time, lon, lat, altKm, heightDiff }]
+      importTrack: [], // 被威胁目标轨迹 [{ timeMs, time, lon, lat, altKm, heightDiff }]
+      distances: [], // 两星三维距离（km），按时间索引对齐
+      sunAngles: [], // threat->import 与 threat->sun 的夹角（°），按时间索引对齐
+    }),
+
+    sceneControlPlugin: false, // 场景控制插件
     showSatellitePoint: true, // 显示星下点
     showSatelliteOrbit: true, // 显示轨道线
     showSatelliteTrajectory: true, // 显示轨迹线
@@ -126,6 +138,20 @@ export const useGeoMapStore = defineStore("geoMap", {
      */
     SET_CHECKED_NORADS(norads) {
       this.checkedNorads = Array.isArray(norads) ? [...norads] : [];
+    },
+
+    /**
+     * @description 保存经度-相对同步轨道高度的计算结果（LLA、两星距离、光照角等）
+     * @param {Object} data
+     * @param {number} data.startTime - 起始时间（ms 时间戳）
+     * @param {number} data.endTime - 结束时间（ms 时间戳）
+     * @param {Array} data.threatTrack - 威胁目标轨迹
+     * @param {Array} data.importTrack - 被威胁目标轨迹
+     * @param {Array} data.distances - 两星距离（km）
+     * @param {Array} data.sunAngles - 光照角（°）
+     */
+    SET_LNG_HEIGHT_DATA(data) {
+      this.lngHeightData = markRaw({ ...data });
     },
   },
 });
