@@ -6,6 +6,12 @@
       </div>
     </el-tooltip>
 
+    <el-tooltip content="场景控制（基础）" placement="top">
+      <div class="menu-tool-item" :class="{ active: sceneControlPluginBase }" @click="handleToggleGeoMap('sceneControlPluginBase')">
+        <img class="menu-tool-item-icon" src="/assets/menuBar/icon3.svg" />
+      </div>
+    </el-tooltip>
+
     <el-tooltip content="经高图" placement="top">
       <div class="menu-tool-item" :class="{ active: geoLngHeightEchartsPlugin }" @click="handleToggleGeoMap('geoLngHeightEchartsPlugin')">
         <img class="menu-tool-item-icon" src="/assets/menuBar/icon5.svg" />
@@ -17,22 +23,63 @@
         <img class="menu-tool-item-icon" src="/assets/menuBar/icon4.svg" />
       </div>
     </el-tooltip>
+
+    <el-tooltip content="切换视角" placement="top">
+      <div class="menu-tool-item" @click="handleToggleMapView()">
+        <img class="menu-tool-item-icon" src="/assets/menuBar/icon7.svg" />
+      </div>
+    </el-tooltip>
   </div>
 </template>
 
 <script>
+import * as mars3d from "mars3d";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
+import { globalViewer } from "@/utils/initEarth";
 
 export default {
   name: "MenuTools",
   computed: {
-    ...mapState(useGeoMapStore, ["orbitViewControlPlugin", "sceneControlPlugin", "geoSatRelativeEchartsPlugin", "geoLngHeightEchartsPlugin"]),
+    ...mapState(useGeoMapStore, [
+      "orbitViewControlPlugin",
+      "sceneControlPlugin",
+      "sceneControlPluginBase",
+      "geoSatRelativeEchartsPlugin",
+      "geoLngHeightEchartsPlugin",
+    ]),
+  },
+  data() {
+    return {
+      toggleMapView: false,
+    };
   },
   methods: {
     handleToggleGeoMap(item) {
       const geoMapStore = useGeoMapStore();
       geoMapStore.TOGGLE_COMPONENT_VISIBLE(item);
+    },
+
+    handleToggleMapView() {
+      if (this.toggleMapView) {
+        this.flyToGlobal(107.5, -90, 160_000_000, 180, -90);
+        this.toggleMapView = false;
+      } else {
+        this.flyToGlobal(107.5, 27, 120_000_000, 360, -89);
+        this.toggleMapView = true;
+      }
+    },
+
+    flyToGlobal(lon, lat, alt, heading, pitchDeg) {
+      globalViewer.camera.flyTo({
+        destination: mars3d.Cesium.Cartesian3.fromDegrees(lon, lat, alt),
+        orientation: {
+          heading: mars3d.Cesium.Math.toRadians(heading),
+          pitch: mars3d.Cesium.Math.toRadians(pitchDeg),
+          roll: 0,
+        },
+        duration: 1.5,
+      });
     },
   },
 };

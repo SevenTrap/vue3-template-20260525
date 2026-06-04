@@ -1,5 +1,5 @@
 <template>
-  <aircas-panel v-show="sceneControlPlugin" title="场景控制" width="320" height="450" bottom="100" right="20" @close="handlePanelClose">
+  <aircas-panel v-show="sceneControlPluginBase" title="场景控制" width="320" height="450" bottom="100" right="20" @close="handlePanelClose">
     <div class="scene-control-panel">
       <div class="form-item">
         <div class="form-title">坐标系</div>
@@ -10,21 +10,11 @@
         </el-radio-group>
       </div>
 
-      <!-- ECEF 坐标系下的视角预设 -->
-      <div v-if="coordinate === 'ECEF'" class="form-item">
-        <div class="form-title">地固系视角</div>
-
-        <el-radio-group v-model="viewMode" size="small" @change="handleApplyView">
-          <el-radio v-for="preset in ecefPresets" :key="preset.id" :value="preset.id">{{ preset.label }}</el-radio>
-        </el-radio-group>
-      </div>
-
-      <!-- ECI 坐标系下的视角预设 -->
-      <div v-if="coordinate === 'ECI'" class="form-item">
+      <div class="form-item">
         <div class="form-title">惯性系视角</div>
 
         <el-radio-group v-model="viewMode" size="small" @change="handleApplyView">
-          <el-radio v-for="preset in eciPresets" :key="preset.id" :value="preset.id">{{ preset.label }}</el-radio>
+          <el-radio v-for="preset in basePresets" :key="preset.id" :value="preset.id">{{ preset.label }}</el-radio>
         </el-radio-group>
       </div>
 
@@ -45,25 +35,12 @@
       </div>
 
       <div class="form-item">
-        <div class="form-title">图层控制</div>
+        <div class="form-title">卫星控制</div>
 
         <div class="button-group">
-          <!-- <div class="button-group-item">
-            <el-checkbox size="small" :model-value="showSatellitePoint" @change="handleToggleSate('showSatellitePoint')" label="显示星下点"></el-checkbox>
-          </div> -->
-
           <div class="button-group-item">
             <el-checkbox size="small" :model-value="showSatelliteOrbit" @change="handleToggleSate('showSatelliteOrbit')" label="显示轨道"></el-checkbox>
           </div>
-
-          <!-- <div class="button-group-item">
-            <el-checkbox
-              size="small"
-              :model-value="showSatelliteTrajectory"
-              @change="handleToggleSate('showSatelliteTrajectory')"
-              label="显示轨迹"
-            ></el-checkbox>
-          </div> -->
 
           <div class="button-group-item">
             <el-checkbox size="small" :model-value="showSatelliteName" @change="handleToggleSate('showSatelliteName')" label="显示卫星名称"></el-checkbox>
@@ -101,28 +78,16 @@ import {
   toggleSatellitePoint,
   setSatelliteFaceEarth,
 } from "../utils/mars3dSatellite.js";
-import {
-  ensureOrbitLayer,
-  destroyOrbitLayer,
-  addSatelliteOrbit,
-  removeSatelliteOrbit,
-  clearOrbitGraphics,
-  lockCameraToInertial,
-  unlockCameraFromInertial,
-  getSatelliteGraphic,
-} from "../utils/mars3dOrbitDynamics.js";
-import { ECEF_PRESETS, ECI_PRESETS, GLOBAL_VIEW_ALT } from "../configs/index.js";
+import { lockCameraToInertial, unlockCameraFromInertial } from "../utils/mars3dOrbitDynamics.js";
+import { BASE_VIEW_PRESETS, GLOBAL_VIEW_ALT } from "../configs/index.js";
 
 const geoMapStore = useGeoMapStore();
 
 export default {
-  name: "SceneControlPlugin",
+  name: "SceneControlPluginBase",
   data() {
     return {
-      ecefPresets: ECEF_PRESETS,
-      eciPresets: ECI_PRESETS,
-
-      // coordinate: "ECEF",
+      basePresets: BASE_VIEW_PRESETS,
       viewMode: "default",
 
       showGeoCirclePositions: true, // 显示同步轨道带
@@ -131,14 +96,12 @@ export default {
       startDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       endDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       stepSec: 3600,
-
-      trackedNorad: "", // 当前跟随的卫星 NORAD ID
     };
   },
 
   computed: {
     ...mapState(useGeoMapStore, [
-      "sceneControlPlugin",
+      "sceneControlPluginBase",
       "coordinate",
 
       "threatTargetID",
@@ -153,67 +116,28 @@ export default {
   },
   watch: {
     showSatellitePoint(newVal) {
-      // console.log("showSatellitePoint", newVal);
       toggleSatellitePoint(satelliteLayer, newVal);
     },
     showSatelliteOrbit(newVal) {
-      // console.log("showSatelliteOrbit", newVal);
       toggleSatelliteOribit(satelliteLayer, newVal);
     },
     showSatelliteTrajectory(newVal) {
-      // console.log("showSatelliteTrajectory", newVal);
       toggleSatelliteTrajectory(satelliteLayer, newVal);
     },
     showSatelliteName(newVal) {
-      // console.log("showSatelliteName", newVal);
       toggleSatelliteName(satelliteLayer, newVal);
     },
     showSatelliteModel(newVal) {
-      // console.log("showSatelliteModel", newVal);
       toggleSatelliteModel(satelliteLayer, newVal);
     },
-
-    // coordinate(newVal) {
-    //   console.log(newVal, "333");
-
-    //   if (newVal === "ECEF") {
-    //     toggleSatelliteCoordinate(satelliteLayer, true);
-    //   } else {
-    //     toggleSatelliteCoordinate(satelliteLayer, false);
-    //   }
-    // },
   },
   methods: {
     handleCoordinateChange(value) {
-      // console.log(value, "handleCoordinateChange");
-      this.releaseTracking(); // 释放跟踪卫星，避免遗留跟随状态
+      if (value === this.coordinate) return;
+
       geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
-      // debugger;
 
       this.applyCameraLock(); // 应用相机锁定
-      this.handleApplyView("default"); // 应用视角
-      this.viewMode = "default";
-    },
-
-    handleApplyView(presetId) {
-      // console.log(this.coordinate, "handleApplyView");
-      if (!globalViewer) return;
-
-      // 非主星/从星视角：释放跟随并恢复当前坐标系相机状态
-      if (presetId !== "firstSatPole" && presetId !== "secondSatPole") {
-        this.releaseTracking();
-        this.applyCameraLock();
-      }
-
-      if (this.coordinate === "ECI") {
-        this.applyEciView(presetId); // 应用 ECI 视角
-        geoMapStore.SET_COMPONENT_VISIBLE_TRUE("showSatelliteOrbit");
-        geoMapStore.SET_COMPONENT_VISIBLE_FALSE("showSatelliteTrajectory");
-      } else {
-        this.applyEcefView(presetId); // 应用 ECEF 视角
-        geoMapStore.SET_COMPONENT_VISIBLE_FALSE("showSatelliteOrbit");
-        geoMapStore.SET_COMPONENT_VISIBLE_TRUE("showSatelliteTrajectory");
-      }
     },
 
     /**
@@ -222,44 +146,44 @@ export default {
      */
     applyCameraLock() {
       if (!globalViewer) return;
-      // console.log(this.coordinate, "applyCameraLock");
+
       if (this.coordinate === "ECI") {
         lockCameraToInertial(globalViewer);
       } else {
         unlockCameraFromInertial(globalViewer);
       }
+
+      this.handleToggleSatelliteOrbit();
     },
 
     /**
-     * ECEF 视角预设分派
-     * @param {string} presetId - 预设 id
+     * 切换卫星轨道显示状态
      * @returns {void}
      */
-    applyEcefView(presetId) {
-      switch (presetId) {
-        case "default":
-          this.flyToGlobal(104, 27, GLOBAL_VIEW_ALT, -90); // 默认视角
-          break;
-        case "southPole":
-          this.flyToGlobal(0, -90, GLOBAL_VIEW_ALT, -90); // 南极视角
-          break;
-        case "starPole":
-          this.flyToGlobal(0, 90, GLOBAL_VIEW_ALT, -90); // 恒星视角
-          break;
-        case "equator":
-          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, -90); // 赤道视角
-          break;
-        default:
-          break;
+    handleToggleSatelliteOrbit() {
+      if (this.coordinate === "ECI") {
+        satelliteLayer.eachGraphic((graphic) => {
+          console.log(graphic, "graphic");
+          if (!graphic._isSate) return;
+          graphic.referenceFrame = mars3d.Cesium.ReferenceFrame.INERTIAL;
+          return graphic;
+        });
+      } else {
+        satelliteLayer.eachGraphic((graphic) => {
+          console.log(graphic, "graphic");
+          if (!graphic._isSate) return;
+          graphic.referenceFrame = mars3d.Cesium.ReferenceFrame.FIXED;
+          return graphic;
+        });
       }
     },
 
     /**
-     * ECI 视角预设分派
+     * 应用视角
      * @param {string} presetId - 预设 id
      * @returns {void}
      */
-    applyEciView(presetId) {
+    handleApplyView(presetId) {
       switch (presetId) {
         case "default":
           this.flyToGlobal(104, 27, GLOBAL_VIEW_ALT, -90); // 默认视角
@@ -267,19 +191,8 @@ export default {
         case "southPole":
           this.flyToGlobal(0, -90, GLOBAL_VIEW_ALT, -90); // 南极视角
           break;
-        case "firstSatPole":
-          this.flyToFirstPerson(); // 主星视角
-          break;
-        case "secondSatPole":
-          this.flyToThirdPerson(); // 从星视角
-          break;
-        case "orbitalPlanePole":
-          this.flyToOrbitalPlane(); // 轨道平面
-          break;
-        case "equatorPlanePole":
-          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, 0); // 赤道平面
-          break;
-        default:
+        case "equator":
+          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, -90); // 赤道视角
           break;
       }
     },
@@ -305,65 +218,9 @@ export default {
     },
 
     /**
-     * 主星视角：相机定位并持续跟随威胁目标卫星
+     * 切换同步轨道显示状态
      * @returns {void}
      */
-    flyToFirstPerson() {
-      this.trackSatellite(this.threatTargetID);
-    },
-
-    /**
-     * 从星视角：相机定位并持续跟随被威胁目标卫星
-     * @returns {void}
-     */
-    flyToThirdPerson() {
-      this.trackSatellite(this.importTargetID);
-    },
-
-    /**
-     * 持续跟随指定卫星，并让卫星模型朝向地球
-     * @param {string|number} noradID - 卫星 NORAD ID
-     * @returns {void}
-     */
-    trackSatellite(noradID) {
-      if (!globalViewer || !noradID) return;
-
-      console.log(noradID, "trackSatellite");
-
-      // satelliteLayer.getGraphics().map((graphic) => console.log(graphic.id, "graphicid"));
-
-      const graphic = satelliteLayer?.getGraphics().find((graphic) => graphic.id === "20253");
-
-      if (!graphic) {
-        this.$message.warning("未找到该卫星，请先在卫星树中勾选该卫星");
-        return;
-      }
-
-      unlockCameraFromInertial(globalViewer); // 解除 ECI 锁定，避免与跟随冲突
-      setSatelliteFaceEarth(satelliteLayer, noradID, true); // 模型朝向地球
-
-      console.log(graphic.trackedEntity, "graphic.entity");
-
-      globalViewer.trackedEntity = graphic.trackedEntity; // 持续跟随
-
-      this.trackedNorad = noradID;
-    },
-
-    /**
-     * 释放卫星跟随并还原模型朝向
-     * @returns {void}
-     */
-    releaseTracking() {
-      if (!globalViewer) return;
-
-      globalViewer.trackedEntity = undefined;
-
-      if (this.trackedNorad) {
-        setSatelliteFaceEarth(satelliteLayer, this.trackedNorad, false);
-        this.trackedNorad = "";
-      }
-    },
-
     handleToggleGeoCirclePositions() {
       if (this.showGeoCirclePositions) {
         addGeoCirclePositions(globalViewer);
@@ -372,6 +229,10 @@ export default {
       }
     },
 
+    /**
+     * 切换经度标签显示状态
+     * @returns {void}
+     */
     handleToggleGeoCircleLabel() {
       if (this.showGeoCircleLabel) {
         addGeoCircleLabel(globalViewer);
@@ -392,13 +253,8 @@ export default {
       }
     },
 
-    handleToggleSate(state) {
-      // console.log("handleToggleSate", state);
-      geoMapStore.TOGGLE_COMPONENT_VISIBLE(state);
-    },
-
     handlePanelClose() {
-      geoMapStore.SET_COMPONENT_VISIBLE_FALSE("sceneControlPlugin");
+      geoMapStore.SET_COMPONENT_VISIBLE_FALSE("sceneControlPluginBase");
     },
   },
 };

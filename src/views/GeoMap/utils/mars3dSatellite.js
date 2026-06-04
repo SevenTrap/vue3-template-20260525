@@ -102,7 +102,7 @@ export function addSatellite(satelliteLayer, satelliteModel) {
     // },
 
     path: {
-      show: false,
+      show: true,
       color: "#00ff00",
       width: 1,
       opacity: 0.5,

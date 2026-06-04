@@ -24,6 +24,7 @@
 
   <!-- 场景控制插件 -->
   <SceneControlPlugin></SceneControlPlugin>
+  <SceneControlPluginBase></SceneControlPluginBase>
 </template>
 
 <script>
@@ -37,6 +38,7 @@ import GeoSatRelativeEchartsPlugin from "./components/GeoSatRelativeEchartsPlugi
 import GeoLngHeightEchartsPlugin from "./components/GeoLngHeightEchartsPlugin.vue";
 import OrbitViewControlPlugin from "./components/OrbitViewControlPlugin.vue";
 import SceneControlPlugin from "./components/SceneControlPlugin.vue";
+import SceneControlPluginBase from "./components/SceneControlPluginBase.vue";
 
 export default {
   name: "GeoMap",
@@ -48,6 +50,7 @@ export default {
     GeoLngHeightEchartsPlugin,
     OrbitViewControlPlugin,
     SceneControlPlugin,
+    SceneControlPluginBase,
   },
 
   async mounted() {
