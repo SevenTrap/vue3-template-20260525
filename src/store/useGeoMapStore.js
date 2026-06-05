@@ -54,22 +54,20 @@ export const useGeoMapStore = defineStore("geoMap", {
     ], // 被威胁目标TLE
     besideTargetIDs: [], // 旁观目标ID
     besideTles: {}, // 旁观目标TLE { ID: [{ tle1: "", tle2: "" }] }
-    startTime: "", // 开始时间
-    endTime: "", // 结束时间
+    startTime: "2026-02-04 00:00:00", // 开始时间
+    endTime: "2026-02-04 23:59:59", // 结束时间
     closeTime: "2026-02-07 10:23:34", // 接近时间
     timeStep: 1 * 60 * 1000, // 默认时间步长：1分钟
     timeFront: 3 * 24 * 60 * 60 * 1000, // 前轨时间：1天
     timeBack: 3 * 24 * 60 * 60 * 1000, // 后轨时间：1天
 
+    checkedNorads: [], // SatelliteTreePlugin 当前勾选的 NORAD ID 列表
     satellitesTree: markRaw([]), // 卫星树
     satelliteModels: markRaw(new Map()), // NORAD -> SatelliteClass 实例
 
     satelliteTreePlugin: false, // 卫星插件
-    checkedNorads: [], // SatelliteTreePlugin 当前勾选的 NORAD ID 列表
-
     geoSatRelativeEchartsPlugin: false, // GEO卫星相对距离与光照角插件
     geoLngHeightEchartsPlugin: false, // GEO卫星高度与经度插件
-    // orbitDynamicsPlugin: false, // 轨道动力学可视化插件
 
     // 经度-相对同步轨道高度计算结果（供多个组件复用）
     lngHeightData: markRaw({
@@ -83,16 +81,16 @@ export const useGeoMapStore = defineStore("geoMap", {
 
     sceneControlPlugin: false, // 场景控制插件
     sceneControlPluginBase: false, // 场景控制插件（基础）
+    historyCasePlugin: false, // 历史案例插件
 
+    // 卫星可视化插件
+    focusedNorad: "", // 当前视角聚焦的卫星 NORAD ID
+    coordinate: "ECEF", // 坐标系
     showSatellitePoint: true, // 显示卫星当前实时点位
     showSatelliteOrbit: true, // 显示轨道线
     showSatelliteTrajectory: true, // 显示轨迹线
     showSatelliteName: true, // 显示卫星名称
     showSatelliteModel: true, // 显示卫星模型
-
-    orbitViewControlPlugin: false, // 视角控制插件
-    focusedNorad: "", // 当前视角聚焦的卫星 NORAD ID
-    coordinate: "ECEF", // 坐标系
   }),
   getters: {
     getMenuBarVisible: (state) => {

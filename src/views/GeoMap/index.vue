@@ -19,12 +19,11 @@
   <!-- 卫星经度与相对同步轨道高度插件 -->
   <GeoLngHeightEchartsPlugin></GeoLngHeightEchartsPlugin>
 
-  <!-- 视角控制插件 -->
-  <OrbitViewControlPlugin></OrbitViewControlPlugin>
-
   <!-- 场景控制插件 -->
   <SceneControlPlugin></SceneControlPlugin>
   <SceneControlPluginBase></SceneControlPluginBase>
+  <!-- 历史案例插件 -->
+  <HistoryCasePlugin></HistoryCasePlugin>
 </template>
 
 <script>
@@ -36,9 +35,10 @@ import MenuTools from "./components/MenuTools.vue";
 import SatelliteTreePlugin from "./components/SatelliteTreePlugin.vue";
 import GeoSatRelativeEchartsPlugin from "./components/GeoSatRelativeEchartsPlugin.vue";
 import GeoLngHeightEchartsPlugin from "./components/GeoLngHeightEchartsPlugin.vue";
-import OrbitViewControlPlugin from "./components/OrbitViewControlPlugin.vue";
+
 import SceneControlPlugin from "./components/SceneControlPlugin.vue";
 import SceneControlPluginBase from "./components/SceneControlPluginBase.vue";
+import HistoryCasePlugin from "./components/HistoryCasePlugin.vue";
 
 export default {
   name: "GeoMap",
@@ -48,9 +48,10 @@ export default {
     SatelliteTreePlugin,
     GeoSatRelativeEchartsPlugin,
     GeoLngHeightEchartsPlugin,
-    OrbitViewControlPlugin,
+
     SceneControlPlugin,
     SceneControlPluginBase,
+    HistoryCasePlugin,
   },
 
   async mounted() {

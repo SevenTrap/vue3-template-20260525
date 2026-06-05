@@ -1,6 +1,14 @@
 <template>
-  <aircas-panel v-show="geoSatRelativeEchartsPlugin" title="GEO相对距离与光照角" width="900" height="500" top="120" left="180" @close="handlePanelClose">
-    <div class="geo-sat-relative-echarts" ref="chartContainer"></div>
+  <aircas-panel
+    v-show="geoSatRelativeEchartsPlugin"
+    title="GEO相对距离与光照角"
+    width="900"
+    height="500"
+    top="120"
+    left="calc(50% - 450px)"
+    @close="handlePanelClose"
+  >
+    <div class="geo-sat-relative-echarts" ref="chartContainerSunAngle"></div>
   </aircas-panel>
 </template>
 
@@ -17,9 +25,7 @@ const geoMapStore = useGeoMapStore();
 export default {
   name: "GeoSatRelativeEchartsPlugin",
   data() {
-    return {
-      chartInstance: null,
-    };
+    return {};
   },
   computed: {
     ...mapState(useGeoMapStore, ["geoSatRelativeEchartsPlugin"]),
@@ -27,29 +33,22 @@ export default {
   watch: {
     geoSatRelativeEchartsPlugin(visible) {
       if (!visible) return;
+
       this.$nextTick(() => {
         this.ensureChartReady();
         this.initChart();
       });
     },
   },
-  mounted() {
-    // this.$nextTick(() => {
-    //   this.ensureChartReady();
-    //   if (this.geoSatRelativeEchartsPlugin) {
-    //     this.initChart();
-    //   }
-    // });
-  },
 
   methods: {
     ensureChartReady() {
-      const container = this.$refs.chartContainer;
+      const container = this.$refs.chartContainerSunAngle;
       if (!container) return;
-      if (!this.chartInstance) {
-        this.chartInstance = echarts.init(container);
+      if (!this.chartInstanceSunAngle) {
+        this.chartInstanceSunAngle = echarts.init(container);
       }
-      this.chartInstance.resize();
+      this.chartInstanceSunAngle.resize();
     },
     handlePanelClose() {
       geoMapStore.SET_COMPONENT_VISIBLE_FALSE("geoSatRelativeEchartsPlugin");
@@ -58,8 +57,8 @@ export default {
     initChart() {
       const { times, distances, sunAngles } = this.computeSeries();
 
-      if (!this.chartInstance) return;
-      this.chartInstance.resize();
+      if (!this.chartInstanceSunAngle) return;
+      this.chartInstanceSunAngle.resize();
 
       const option = {
         tooltip: {
@@ -96,28 +95,24 @@ export default {
         ],
         series: [
           {
-            // name: "相对距离",
             type: "line",
-
             yAxisIndex: 0,
             data: distances,
           },
           {
-            // name: "太阳光照角",
             type: "line",
-
             yAxisIndex: 1,
             data: sunAngles,
           },
         ],
       };
 
-      this.chartInstance &&
-        this.chartInstance.setOption(option, {
+      this.chartInstanceSunAngle &&
+        this.chartInstanceSunAngle.setOption(option, {
           notMerge: true,
           lazyUpdate: false,
         });
-      this.chartInstance.resize();
+      this.chartInstanceSunAngle.resize();
     },
     computeSeries() {
       const start = dayjs("2026-04-03 00:00:00");
@@ -197,9 +192,9 @@ export default {
     },
   },
   beforeUnmount() {
-    if (this.chartInstance) {
-      this.chartInstance.dispose();
-      this.chartInstance = null;
+    if (this.chartInstanceSunAngle) {
+      this.chartInstanceSunAngle.dispose();
+      this.chartInstanceSunAngle = null;
     }
   },
 };

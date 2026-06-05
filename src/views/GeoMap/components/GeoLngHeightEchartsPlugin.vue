@@ -1,5 +1,5 @@
 <template>
-  <aircas-panel v-show="geoLngHeightEchartsPlugin" :title="pluginTitle" width="900" height="500" top="120" left="180" @close="handlePanelClose">
+  <aircas-panel v-if="geoLngHeightEchartsPlugin" :title="pluginTitle" width="900" height="500" top="120" left="calc(50% - 450px)" @close="handlePanelClose">
     <div class="geo-sat-relative-echarts" ref="lngHeightEchartsContainer"></div>
   </aircas-panel>
 </template>
