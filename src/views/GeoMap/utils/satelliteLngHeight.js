@@ -43,7 +43,7 @@ const getTleEpochMs = (satrec) => {
  * 根据 TLE 列表构造卫星模型并按历元倒序（从新到旧）排序
  * @param {Array<{date?:string, tle1:string, tle2:string}>} tles - 两行根数列表
  * @param {string} name - 卫星名称
- * @returns {Array<{sat: SatelliteClass, epochMs: number}>} 倒序排序后的卫星列表
+ * @returns {Array<{sat: SatelliteClass, epochMs: number, date: string}>} 倒序排序后的卫星列表
  */
 const buildSortedSatellites = (tles, name) => {
   if (!Array.isArray(tles)) return [];
@@ -51,7 +51,9 @@ const buildSortedSatellites = (tles, name) => {
     .filter((item) => item && item.tle1 && item.tle2)
     .map((item) => {
       const sat = new SatelliteClass(name, item.tle1, item.tle2);
-      return { sat, epochMs: getTleEpochMs(sat.satrec) };
+      const epochMs = getTleEpochMs(sat.satrec);
+      const date = dayjs(epochMs).format("YYYY-MM-DD HH:mm:ss");
+      return { sat, epochMs, date };
     })
     .filter((item) => Number.isFinite(item.epochMs))
     .sort((a, b) => b.epochMs - a.epochMs);
@@ -102,6 +104,131 @@ const computeAngleDeg = (v1, v2) => {
   if (cosTheta > 1) cosTheta = 1;
   if (cosTheta < -1) cosTheta = -1;
   return (Math.acos(cosTheta) * 180) / Math.PI;
+};
+
+/**
+ * 保留三维向量 2 位小数
+ * @param {{x:number,y:number,z:number}} vec - 三维向量
+ * @returns {{x:number|null,y:number|null,z:number|null}|null} 保留 2 位小数后的向量
+ */
+const roundVec2 = (vec) => (isValidVec(vec) ? { x: round2(vec.x), y: round2(vec.y), z: round2(vec.z) } : null);
+
+/**
+ * 计算两个三维点的差向量
+ * @param {{x:number,y:number,z:number}} endVec - 终点向量
+ * @param {{x:number,y:number,z:number}} startVec - 起点向量
+ * @returns {{x:number,y:number,z:number}} 差向量
+ */
+const subtractVec = (endVec, startVec) => ({
+  x: endVec.x - startVec.x,
+  y: endVec.y - startVec.y,
+  z: endVec.z - startVec.z,
+});
+
+/**
+ * 计算三维向量模长
+ * @param {{x:number,y:number,z:number}} vec - 三维向量
+ * @returns {number} 向量模长
+ */
+const getVecLength = (vec) => Math.sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+
+/**
+ * 判断距离与光照角是否同时命中阈值
+ * @param {number|null} distance - 两星距离（km）
+ * @param {number|null} sunAngle - 太阳光照角（°）
+ * @param {number} distanceThreshold - 距离阈值（km）
+ * @param {number} sunAngleThreshold - 光照角阈值（°）
+ * @returns {boolean} 是否命中阈值
+ */
+const isRiskPoint = (distance, sunAngle, distanceThreshold, sunAngleThreshold) =>
+  Number.isFinite(distance) && Number.isFinite(sunAngle) && distance < distanceThreshold && sunAngle < sunAngleThreshold;
+
+/**
+ * 根据逐点命中状态生成连续风险区间
+ * @param {Array<{timeMs:number,time:string,distanceKm:number|null,sunAngleDeg:number|null}>} metrics - 相对指标序列
+ * @param {number} distanceThreshold - 距离阈值（km）
+ * @param {number} sunAngleThreshold - 光照角阈值（°）
+ * @returns {Array<{startIndex:number,endIndex:number,startTime:string,endTime:string,startTimeMs:number,endTimeMs:number}>} 连续风险区间
+ */
+const buildRiskRanges = (metrics, distanceThreshold, sunAngleThreshold) => {
+  const ranges = [];
+  let currentRange = null;
+
+  metrics.forEach((item, index) => {
+    const matched = isRiskPoint(item.distanceKm, item.sunAngleDeg, distanceThreshold, sunAngleThreshold);
+    if (matched && !currentRange) {
+      currentRange = {
+        startIndex: index,
+        endIndex: index,
+        startTime: item.time,
+        endTime: item.time,
+        startTimeMs: item.timeMs,
+        endTimeMs: item.timeMs,
+      };
+      return;
+    }
+
+    if (matched && currentRange) {
+      currentRange.endIndex = index;
+      currentRange.endTime = item.time;
+      currentRange.endTimeMs = item.timeMs;
+      return;
+    }
+
+    if (!matched && currentRange) {
+      ranges.push(currentRange);
+      currentRange = null;
+    }
+  });
+
+  if (currentRange) ranges.push(currentRange);
+  return ranges;
+};
+
+/**
+ * 生成卫星在指定时刻的位置记录
+ * @param {SatelliteClass} sat - 卫星模型
+ * @param {Date} date - 计算时刻
+ * @param {number} timeMs - 计算时刻毫秒时间戳
+ * @param {string} time - 格式化时间
+ * @param {string} name - 卫星名称
+ * @returns {{timeMs:number,time:string,name:string,eciKm:Object,ecefKm:Object,lon:number|null,lat:number|null,altKm:number|null}|null} 卫星位置记录
+ */
+const buildTrackPoint = (sat, date, timeMs, time, name) => {
+  const eci = sat.getEciPosition(date);
+  const ecef = sat.getEcfPosition(date);
+  const lla = sat.getLLA(date);
+  if (!isValidVec(eci) || !isValidVec(ecef) || !lla) return null;
+
+  return {
+    timeMs,
+    time,
+    name,
+    eciKm: roundVec2(eci),
+    ecefKm: roundVec2(ecef),
+    lon: round2(lla.lon),
+    lat: round2(lla.lat),
+    altKm: round2(lla.altKm),
+  };
+};
+
+/**
+ * 计算指定时刻两星相对指标
+ * @param {{x:number,y:number,z:number}} threatEci - 主动卫星 ECI 位置（km）
+ * @param {{x:number,y:number,z:number}} importEci - 从动卫星 ECI 位置（km）
+ * @param {Date} date - 计算时刻
+ * @returns {{distanceKm:number|null,sunAngleDeg:number|null}} 距离与光照角
+ */
+const computeRelativeMetric = (threatEci, importEci, date) => {
+  const satToImport = subtractVec(importEci, threatEci);
+  const distanceKm = round2(getVecLength(satToImport));
+  const sunEci = getSunEci(date);
+  let sunAngleDeg = null;
+  if (sunEci) {
+    const satToSun = subtractVec(sunEci, threatEci);
+    sunAngleDeg = round2(computeAngleDeg(satToImport, satToSun));
+  }
+  return { distanceKm, sunAngleDeg };
 };
 
 /**
@@ -183,4 +310,87 @@ export const computeLngHeightData = ({ threatTles, importTles, closeTime, timeFr
   }
 
   return { startTime, endTime, threatTrack, importTrack, distances, sunAngles };
+};
+
+/**
+ * 计算两颗卫星在指定时间段内的 ECI/ECEF 实时位置、距离和主动星视角太阳光照角
+ * @param {object} params - 入参
+ * @param {Array} params.threatTles - 主动卫星两行根数列表
+ * @param {Array} params.importTles - 从动卫星两行根数列表
+ * @param {string} params.startTime - 开始时间字符串
+ * @param {string} params.endTime - 结束时间字符串
+ * @param {number} params.timeStep - 时间步长（ms）
+ * @param {string} [params.threatName="threat"] - 主动卫星名称
+ * @param {string} [params.importName="import"] - 从动卫星名称
+ * @param {number} [params.distanceThreshold=100] - 距离阈值（km）
+ * @param {number} [params.sunAngleThreshold=90] - 光照角阈值（°）
+ * @returns {{startTime:number,endTime:number,threatTrack:Array,importTrack:Array,distances:Array,sunAngles:Array,metrics:Array,riskRanges:Array}} 计算结果
+ */
+export const computeSatRelativeData = ({
+  threatTles,
+  importTles,
+  startTime,
+  endTime,
+  timeStep,
+  threatName = "threat",
+  importName = "import",
+  distanceThreshold = 100,
+  sunAngleThreshold = 90,
+}) => {
+  const startTimeMs = dayjs(startTime).valueOf();
+  const endTimeMs = dayjs(endTime).valueOf();
+  const step = Number(timeStep) > 0 ? Number(timeStep) : DEFAULT_STEP_MS;
+  const threatTrack = [];
+  const importTrack = [];
+  const distances = [];
+  const sunAngles = [];
+  const metrics = [];
+  const times = [];
+
+  if (!Number.isFinite(startTimeMs) || !Number.isFinite(endTimeMs) || startTimeMs > endTimeMs) {
+    return { startTime: startTimeMs, endTime: endTimeMs, threatTrack, importTrack, distances, sunAngles, metrics, riskRanges: [] };
+  }
+
+  const threatSats = buildSortedSatellites(threatTles, threatName);
+  const importSats = buildSortedSatellites(importTles, importName);
+
+  // console.log("threatSats", threatSats);
+  // console.log("importSats", importSats);
+
+  if (!threatSats.length || !importSats.length) {
+    return { startTime: startTimeMs, endTime: endTimeMs, threatTrack, importTrack, distances, sunAngles, metrics, riskRanges: [] };
+  }
+
+  for (let t = startTimeMs; t <= endTimeMs; t += step) {
+    const date = new Date(t);
+    const time = dayjs(t).format("YYYY-MM-DD HH:mm:ss");
+    const threatSat = pickSatByTime(threatSats, t);
+    const importSat = pickSatByTime(importSats, t);
+    if (!threatSat || !importSat) continue;
+
+    const threatEci = threatSat.getEciPosition(date);
+    const importEci = importSat.getEciPosition(date);
+    if (!isValidVec(threatEci) || !isValidVec(importEci)) continue;
+
+    const threatPoint = buildTrackPoint(threatSat, date, t, time, threatName);
+    const importPoint = buildTrackPoint(importSat, date, t, time, importName);
+    if (!threatPoint || !importPoint) continue;
+
+    const { distanceKm, sunAngleDeg } = computeRelativeMetric(threatEci, importEci, date);
+
+    threatTrack.push(threatPoint);
+    importTrack.push(importPoint);
+    distances.push(distanceKm);
+    sunAngles.push(sunAngleDeg);
+    metrics.push({
+      timeMs: t,
+      time,
+      distanceKm,
+      sunAngleDeg,
+    });
+    times.push(time);
+  }
+
+  const riskRanges = buildRiskRanges(metrics, Number(distanceThreshold) || 100, Number(sunAngleThreshold) || 90);
+  return { startTime: startTimeMs, endTime: endTimeMs, times, threatTrack, importTrack, distances, sunAngles, metrics, riskRanges };
 };
