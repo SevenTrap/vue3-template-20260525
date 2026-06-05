@@ -56,14 +56,14 @@
             <el-checkbox size="small" :model-value="showSatelliteOrbit" @change="handleToggleSate('showSatelliteOrbit')" label="显示轨道"></el-checkbox>
           </div>
 
-          <!-- <div class="button-group-item">
+          <div class="button-group-item">
             <el-checkbox
               size="small"
               :model-value="showSatelliteTrajectory"
               @change="handleToggleSate('showSatelliteTrajectory')"
               label="显示轨迹"
             ></el-checkbox>
-          </div> -->
+          </div>
 
           <div class="button-group-item">
             <el-checkbox size="small" :model-value="showSatelliteName" @change="handleToggleSate('showSatelliteName')" label="显示卫星名称"></el-checkbox>
@@ -93,24 +93,17 @@ import {
   addPatrolArea,
   removePatrolArea,
 } from "@/utils/mars3d/mars3dGeoStyle.js";
+import { toggleSatelliteOribit, toggleSatelliteName, toggleSatelliteModel, toggleSatellitePoint, setSatelliteFaceEarth } from "../utils/mars3dSatellite.js";
+import { lockCameraToInertial, unlockCameraFromInertial } from "../utils/mars3dOrbitDynamics.js";
 import {
-  toggleSatelliteOribit,
-  toggleSatelliteTrajectory,
-  toggleSatelliteName,
-  toggleSatelliteModel,
-  toggleSatellitePoint,
-  setSatelliteFaceEarth,
-} from "../utils/mars3dSatellite.js";
-import {
-  ensureOrbitLayer,
-  destroyOrbitLayer,
-  addSatelliteOrbit,
-  removeSatelliteOrbit,
-  clearOrbitGraphics,
-  lockCameraToInertial,
-  unlockCameraFromInertial,
-  getSatelliteGraphic,
-} from "../utils/mars3dOrbitDynamics.js";
+  ensureRelativeTrajectoryLayer,
+  setSceneClockRange,
+  renderRelativeTrajectories,
+  rebuildRelativeTrajectoriesByFrame,
+  toggleRelativeTrajectories,
+  destroyRelativeTrajectoryLayer,
+  julianDateToTimeMs,
+} from "../utils/mars3dRelativeTrajectory.js";
 import { ECEF_PRESETS, ECI_PRESETS, GLOBAL_VIEW_ALT } from "../configs/index.js";
 
 const geoMapStore = useGeoMapStore();
@@ -128,6 +121,7 @@ export default {
       showGeoCirclePositions: true, // 显示同步轨道带
       showGeoCircleLabel: true, // 显示经度标签
       showPatrolArea: true, // 显示巡视区域
+
       startDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       endDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       stepSec: 3600,
@@ -140,16 +134,24 @@ export default {
     ...mapState(useGeoMapStore, [
       "sceneControlPlugin",
       "coordinate",
-
+      "satRelativeData2",
       "threatTargetID",
       "importTargetID",
-
+      "threatTargetName",
+      "importTargetName",
       "showSatellitePoint",
       "showSatelliteOrbit",
       "showSatelliteTrajectory",
       "showSatelliteName",
       "showSatelliteModel",
     ]),
+  },
+  mounted() {
+    // this.tryInitRelativeTrajectories();
+  },
+  beforeUnmount() {
+    this.unbindClockTick();
+    destroyRelativeTrajectoryLayer(globalViewer);
   },
   watch: {
     showSatellitePoint(newVal) {
@@ -161,8 +163,7 @@ export default {
       toggleSatelliteOribit(satelliteLayer, newVal);
     },
     showSatelliteTrajectory(newVal) {
-      // console.log("showSatelliteTrajectory", newVal);
-      // toggleSatelliteTrajectory(satelliteLayer, newVal);
+      toggleRelativeTrajectories(newVal);
     },
     showSatelliteName(newVal) {
       // console.log("showSatelliteName", newVal);
@@ -174,14 +175,82 @@ export default {
     },
   },
   methods: {
-    handleCoordinateChange(value) {
-      // console.log(value, "handleCoordinateChange");
-      this.releaseTracking(); // 释放跟踪卫星，避免遗留跟随状态
-      geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
-      // debugger;
+    /**
+     * 等待 globalViewer 就绪后初始化轨迹
+     * @param {number} [retry=0] - 重试次数
+     * @returns {void}
+     */
+    tryInitRelativeTrajectories(retry = 0) {
+      if (globalViewer) {
+        this.initRelativeTrajectories();
+        return;
+      }
+      // if (retry < 30) {
+      //   setTimeout(() => this.tryInitRelativeTrajectories(retry + 1), 100);
+      // }
+    },
 
-      this.applyCameraLock(); // 应用相机锁定
-      this.handleApplyView("default"); // 应用视角
+    /**
+     * 初始化双星相对轨迹与时钟联动
+     * @returns {void}
+     */
+    initRelativeTrajectories() {
+      if (!globalViewer || !this.satRelativeData2) return;
+
+      const data = this.satRelativeData2;
+      ensureRelativeTrajectoryLayer(globalViewer);
+      setSceneClockRange(globalViewer, data.startTime, data.endTime);
+      renderRelativeTrajectories(globalViewer, data, this.getTrajectoryRenderOptions());
+      toggleRelativeTrajectories(this.showSatelliteTrajectory);
+      // this.bindClockTick();
+    },
+
+    /**
+     * 获取相对轨迹渲染配置
+     * @returns {object} 渲染配置
+     */
+    getTrajectoryRenderOptions() {
+      return {
+        frame: this.coordinate,
+        threatNoradID: this.threatTargetID,
+        importNoradID: this.importTargetID,
+        threatName: this.threatTargetName || "威胁目标",
+        importName: this.importTargetName || "被威胁目标",
+      };
+    },
+
+    /**
+     * 注册 clock.onTick，同步当前场景时间到 store
+     * @returns {void}
+     */
+    bindClockTick() {
+      if (!globalViewer || this.clockTickHandler) return;
+
+      this.clockTickHandler = () => {
+        const timeMs = julianDateToTimeMs(globalViewer.clock.currentTime);
+        geoMapStore.SET_STATE_DATA({ key: "currentSceneTimeMs", value: timeMs });
+      };
+      globalViewer.clock.onTick.addEventListener(this.clockTickHandler);
+      this.clockTickHandler();
+    },
+
+    /**
+     * 移除 clock.onTick 监听
+     * @returns {void}
+     */
+    unbindClockTick() {
+      if (!globalViewer || !this.clockTickHandler) return;
+      globalViewer.clock.onTick.removeEventListener(this.clockTickHandler);
+      this.clockTickHandler = null;
+    },
+
+    handleCoordinateChange(value) {
+      this.releaseTracking();
+      geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
+
+      this.applyCameraLock();
+      rebuildRelativeTrajectoriesByFrame(globalViewer, this.satRelativeData2, value, this.getTrajectoryRenderOptions());
+      this.handleApplyView("default");
       this.viewMode = "default";
     },
 

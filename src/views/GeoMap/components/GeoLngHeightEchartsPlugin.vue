@@ -1,14 +1,16 @@
 <template>
-  <aircas-panel v-if="geoLngHeightEchartsPlugin" :title="pluginTitle" width="900" height="500" top="120" left="calc(50% - 450px)" @close="handlePanelClose">
+  <aircas-panel v-show="geoLngHeightEchartsPlugin" :title="pluginTitle" width="900" height="500" top="120" left="calc(50% - 450px)" @close="handlePanelClose">
     <div class="geo-sat-relative-echarts" ref="lngHeightEchartsContainer"></div>
   </aircas-panel>
 </template>
 
 <script>
+import dayjs from "dayjs";
 import * as echarts from "echarts";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { GEO_ALTITUDE_KM } from "@/views/GeoMap/utils/satelliteLngHeight";
+import { findTrackIndexByTimeMs } from "@/views/GeoMap/utils/mars3dRelativeTrajectory";
 
 const geoMapStore = useGeoMapStore();
 
@@ -38,11 +40,11 @@ export default {
     };
   },
   computed: {
-    ...mapState(useGeoMapStore, ["geoLngHeightEchartsPlugin", "satRelativeData", "threatTargetName", "importTargetName", "threatTargetID", "importTargetID"]),
+    ...mapState(useGeoMapStore, ["geoLngHeightEchartsPlugin", "satRelativeData", "currentSceneTimeMs", "currentSceneConfig"]),
 
     pluginTitle() {
-      if (!this.threatTargetName || !this.importTargetName) return "经高图";
-      return `${this.threatTargetName} vs ${this.importTargetName} - 经高图 `;
+      if (!this.currentSceneConfig.threatName || !this.currentSceneConfig.importName) return "经高图";
+      return `${this.currentSceneConfig.threatName} vs ${this.currentSceneConfig.importName} - 经高图 `;
     },
   },
   watch: {
@@ -52,6 +54,14 @@ export default {
         this.ensureChartReady();
         this.initChart();
       });
+    },
+    currentSceneTimeMs() {
+      if (!this.geoLngHeightEchartsPlugin) return;
+
+      const currentSceneTime = dayjs(this.currentSceneTimeMs).second(0).millisecond(0).format("YYYY-MM-DD HH:mm:ss");
+      this.initChart(currentSceneTime);
+
+      // this.updateRealtimeMarker();
     },
   },
   mounted() {},
@@ -66,7 +76,6 @@ export default {
       if (!container) return;
       if (!this.chartInstance) {
         this.chartInstance = echarts.init(container);
-        this.bindChartEvents();
       }
       this.chartInstance.resize();
     },
@@ -75,11 +84,11 @@ export default {
     },
 
     /**
-     * 从 store 的 satRelativeData 加载轨迹并补充相对同步轨道高度差
+     * 从 store 的 satRelativeData2 加载轨迹并补充相对同步轨道高度差
      * @returns {void}
      */
     loadChartData() {
-      const data = this.satRelativeData || {};
+      const data = this.satRelativeData2 || {};
       this.threatTrack = toTrackWithHeightDiff(data.threatTrack);
       this.importTrack = toTrackWithHeightDiff(data.importTrack);
       this.distances = data.distances || [];
@@ -87,25 +96,80 @@ export default {
     },
 
     /**
+     * 根据 web 球当前时间更新实时位置标记
+     * @returns {void}
+     */
+    updateRealtimeMarker() {
+      if (!this.chartInstance || !this.threatTrack.length) return;
+
+      const idx = findTrackIndexByTimeMs(this.threatTrack, this.currentSceneTimeMs);
+      const threat = this.threatTrack[idx];
+      const importSat = this.importTrack[idx];
+      if (!threat || !importSat) return;
+
+      this.chartInstance.setOption({
+        series: [
+          {
+            markPoint: {
+              symbol: "circle",
+              symbolSize: 12,
+              itemStyle: { color: THREAT_COLOR, borderColor: "#fff", borderWidth: 2 },
+              data: [{ coord: [threat.lon, threat.heightDiff], name: "当前位置" }],
+            },
+          },
+          {
+            markPoint: {
+              symbol: "circle",
+              symbolSize: 12,
+              itemStyle: { color: IMPORT_COLOR, borderColor: "#fff", borderWidth: 2 },
+              data: [{ coord: [importSat.lon, importSat.heightDiff], name: "当前位置" }],
+            },
+          },
+        ],
+      });
+    },
+
+    /**
      * 初始化/刷新图表
      * @returns {void}
      */
-    initChart() {
-      this.loadChartData();
+    initChart(currentSceneTime = "") {
+      const { threatTrack, importTrack, threatLons, importLons, threatHeightDiffs, importHeightDiffs, threatLngHeightDiffs, importLngHeightDiffs, times } =
+        this.satRelativeData;
+
+      let metricThreat = null;
+      let metricImport = null;
+
+      if (currentSceneTime) {
+        const currentSceneTimeMs = dayjs(currentSceneTime).valueOf();
+        console.log("currentSceneTimeMs", currentSceneTimeMs);
+        console.log("this.satRelativeData.startTime", this.satRelativeData.startTime);
+        console.log("this.satRelativeData.endTime", this.satRelativeData.endTime);
+        if (currentSceneTimeMs < this.satRelativeData.startTime) {
+          metricThreat = threatLngHeightDiffs[0];
+          metricImport = importLngHeightDiffs[0];
+        } else if (currentSceneTimeMs > this.satRelativeData.endTime) {
+          metricThreat = threatLngHeightDiffs[threatLngHeightDiffs.length - 1];
+          metricImport = importLngHeightDiffs[importLngHeightDiffs.length - 1];
+        } else {
+          const index = times.findIndex((time) => time === currentSceneTime);
+          metricThreat = threatLngHeightDiffs[index];
+          metricImport = importLngHeightDiffs[index];
+        }
+      } else {
+        metricThreat = threatLngHeightDiffs[0];
+        metricImport = importLngHeightDiffs[0];
+      }
+
+      console.log("metricThreat", metricThreat);
+      console.log("metricImport", metricImport);
 
       if (!this.chartInstance) return;
       this.chartInstance.resize();
 
-      const threatData = this.threatTrack.map((p) => [p.lon, p.heightDiff]);
-
-      const importData = this.importTrack.map((p) => [p.lon, p.heightDiff]);
-
-      console.log("threatData", threatData);
-      console.log("importData", importData);
-
       const option = {
         legend: {
-          data: [`威胁目标 ${this.threatTargetID}`, `被威胁目标 ${this.importTargetID}`],
+          data: [`威胁目标 ${this.currentSceneConfig.threatName}`, `被威胁目标 ${this.currentSceneConfig.importName}`],
           top: 8,
         },
         toolbox: {
@@ -180,39 +244,51 @@ export default {
         },
         series: [
           {
-            name: `威胁目标 ${this.threatTargetID}`,
+            name: `威胁目标 ${this.currentSceneConfig.threatName}`,
             type: "line",
             showSymbol: false,
             smooth: true,
             itemStyle: { color: THREAT_COLOR },
             lineStyle: { color: THREAT_COLOR, width: 1.5 },
-            data: threatData,
+            data: threatLngHeightDiffs,
+            zlevel: 1,
           },
           {
-            name: `被威胁目标 ${this.importTargetID}`,
+            name: `被威胁目标 ${this.currentSceneConfig.importName}`,
             type: "line",
             showSymbol: false,
             smooth: true,
             itemStyle: { color: IMPORT_COLOR },
             lineStyle: { color: IMPORT_COLOR, width: 1.5 },
-            data: importData,
+            data: importLngHeightDiffs,
+            zlevel: 1,
           },
-          // {
-          //   name: "同时刻连线",
-          //   type: "line",
-          //   silent: true,
-          //   showSymbol: true,
-          //   symbolSize: 6,
-          //   tooltip: { show: false },
-          //   itemStyle: { color: LINK_COLOR },
-          //   lineStyle: { color: LINK_COLOR, width: 1.5, type: "dashed" },
-          //   data: [],
-          // },
+          {
+            name: "当前时刻",
+            type: "scatter",
+            showSymbol: true,
+            symbolSize: 10,
+            itemStyle: { color: IMPORT_COLOR },
+            lineStyle: { color: IMPORT_COLOR, width: 1.5 },
+            data: [metricThreat],
+            zlevel: 10,
+          },
+          {
+            name: "当前时刻",
+            type: "scatter",
+            showSymbol: true,
+            symbolSize: 10,
+            itemStyle: { color: THREAT_COLOR },
+            lineStyle: { color: THREAT_COLOR, width: 1.5 },
+            data: [metricImport],
+            zlevel: 10,
+          },
         ],
       };
 
-      this.chartInstance.setOption(option, { notMerge: true, lazyUpdate: false });
-      this.chartInstance.resize();
+      this.chartInstance && this.chartInstance.setOption(option, { notMerge: false, lazyUpdate: true });
+
+      // this.updateRealtimeMarker();
     },
 
     /**
@@ -239,67 +315,8 @@ export default {
         `光照角：${fmt(sunAngle, "°")}`,
       ].join("<br/>");
     },
-
-    /**
-     * 绑定鼠标事件：hover 同一时刻两星点时绘制连线
-     * @returns {void}
-     */
-    bindChartEvents() {
-      if (!this.chartInstance) return;
-      this.chartInstance.on("mouseover", this.handleMouseOver);
-      this.chartInstance.on("mouseout", this.handleMouseOut);
-    },
-
-    /**
-     * 解绑鼠标事件
-     * @returns {void}
-     */
-    unbindChartEvents() {
-      if (!this.chartInstance) return;
-      this.chartInstance.off("mouseover", this.handleMouseOver);
-      this.chartInstance.off("mouseout", this.handleMouseOut);
-    },
-
-    /**
-     * 鼠标悬停轨迹点时，连接同一时刻的两颗卫星点
-     * @param {object} params - ECharts 事件参数
-     * @returns {void}
-     */
-    handleMouseOver(params) {
-      if (!this.chartInstance) return;
-      if (params.componentType !== "series" || (params.seriesIndex !== 0 && params.seriesIndex !== 1)) return;
-
-      const i = params.dataIndex;
-      const threat = this.threatTrack[i];
-      const importSat = this.importTrack[i];
-      if (!threat || !importSat) return;
-
-      // series 按数组下标合并，前两条用空对象占位，仅更新下标 2 的连线
-      this.chartInstance.setOption({
-        series: [
-          {},
-          {},
-          {
-            data: [
-              [threat.lon, threat.heightDiff],
-              [importSat.lon, importSat.heightDiff],
-            ],
-          },
-        ],
-      });
-    },
-
-    /**
-     * 鼠标移出时清空连线
-     * @returns {void}
-     */
-    handleMouseOut() {
-      if (!this.chartInstance) return;
-      this.chartInstance.setOption({ series: [{}, {}, { data: [] }] });
-    },
   },
   beforeUnmount() {
-    this.unbindChartEvents();
     if (this.chartInstance) {
       this.chartInstance.dispose();
       this.chartInstance = null;

@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
 import { markRaw } from "vue";
-import { satRelativeData2 } from "./test.js";
 
 export const useGeoMapStore = defineStore("geoMap", {
   state: () => ({
@@ -89,10 +88,7 @@ export const useGeoMapStore = defineStore("geoMap", {
       distances: [], // 两星三维距离（km），按时间索引对齐
       sunAngles: [], // threat->import 与 threat->sun 的夹角（°），按时间索引对齐
       metrics: [], // 图表指标 [{ timeMs, time, distanceKm, sunAngleDeg }]
-      riskRanges: [], // 距离和光照角同时小于阈值的连续区间
     }),
-
-    satRelativeData2: satRelativeData2,
 
     sceneControlPlugin: false, // 场景控制插件
     sceneControlPluginBase: false, // 场景控制插件（基础）
@@ -106,6 +102,9 @@ export const useGeoMapStore = defineStore("geoMap", {
     showSatelliteTrajectory: true, // 显示轨迹线
     showSatelliteName: true, // 显示卫星名称
     showSatelliteModel: true, // 显示卫星模型
+
+    currentSceneTimeMs: 0, // web 球 clock 当前时刻（ms 时间戳）
+    currentSceneConfig: {}, // 当前场景配置
   }),
   getters: {
     getMenuBarVisible: (state) => {
@@ -179,7 +178,6 @@ export const useGeoMapStore = defineStore("geoMap", {
      * @param {Array} data.distances - 两星距离（km）
      * @param {Array} data.sunAngles - 光照角（°）
      * @param {Array} data.metrics - 图表指标
-     * @param {Array} data.riskRanges - 阈值命中区间
      */
     SET_SAT_RELATIVE_DATA(data) {
       this.satRelativeData = markRaw({ ...data });
