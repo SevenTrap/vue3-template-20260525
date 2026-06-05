@@ -84,7 +84,7 @@ export const useGeoMapStore = defineStore("geoMap", {
     sceneControlPlugin: false, // 场景控制插件
     sceneControlPluginBase: false, // 场景控制插件（基础）
 
-    showSatellitePoint: true, // 显示星下点
+    showSatellitePoint: true, // 显示卫星当前实时点位
     showSatelliteOrbit: true, // 显示轨道线
     showSatelliteTrajectory: true, // 显示轨迹线
     showSatelliteName: true, // 显示卫星名称

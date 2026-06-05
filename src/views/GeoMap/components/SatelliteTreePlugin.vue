@@ -82,8 +82,7 @@ export default {
 
       for (let i = 0, len = addedNorads.length; i < len; i++) {
         try {
-          const norad = addedNorads[i];
-          const satelliteModel = this.satelliteModels.get(norad);
+          const satelliteModel = this.satelliteModels.get(addedNorads[i]);
           if (satelliteModel) addSatellite(satelliteLayer, satelliteModel);
         } catch (e) {
           console.error(e);
@@ -115,10 +114,7 @@ export default {
 
     removeSatelliteById(id) {
       const sateGraphic = satelliteLayer.getGraphicById(id);
-      const pathGraphic = satelliteLayer.getGraphicById(`${id}-path`);
-      const trajectoryGraphic = satelliteLayer.getGraphicById(`${id}-orbit-trajectory`);
-      if (trajectoryGraphic) satelliteLayer.removeGraphic(trajectoryGraphic);
-      if (pathGraphic) satelliteLayer.removeGraphic(pathGraphic);
+
       if (sateGraphic) satelliteLayer.removeGraphic(sateGraphic);
     },
 

@@ -162,7 +162,7 @@ export default {
     },
     showSatelliteTrajectory(newVal) {
       // console.log("showSatelliteTrajectory", newVal);
-      toggleSatelliteTrajectory(satelliteLayer, newVal);
+      // toggleSatelliteTrajectory(satelliteLayer, newVal);
     },
     showSatelliteName(newVal) {
       // console.log("showSatelliteName", newVal);
@@ -172,16 +172,6 @@ export default {
       // console.log("showSatelliteModel", newVal);
       toggleSatelliteModel(satelliteLayer, newVal);
     },
-
-    // coordinate(newVal) {
-    //   console.log(newVal, "333");
-
-    //   if (newVal === "ECEF") {
-    //     toggleSatelliteCoordinate(satelliteLayer, true);
-    //   } else {
-    //     toggleSatelliteCoordinate(satelliteLayer, false);
-    //   }
-    // },
   },
   methods: {
     handleCoordinateChange(value) {
@@ -393,7 +383,6 @@ export default {
     },
 
     handleToggleSate(state) {
-      // console.log("handleToggleSate", state);
       geoMapStore.TOGGLE_COMPONENT_VISIBLE(state);
     },
 

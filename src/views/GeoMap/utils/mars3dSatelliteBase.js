@@ -3,9 +3,6 @@ import { useGeoMapStore } from "@/store/useGeoMapStore";
 
 const geoMapStore = useGeoMapStore();
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-const ONE_HOUR_MS = 1 * 60 * 1000;
-
 /**
  * 创建卫星 graphic
  * @param {object} satelliteModel - 卫星模型对象
@@ -174,51 +171,5 @@ export function toggleSatellitePoint(satelliteLayer, showSatellitePoint) {
     if (!graphic._isSateLine) return;
 
     graphic.point.show = showSatellitePoint;
-  });
-}
-
-/**
- * 切换卫星模型朝向：启用时模型始终指向地心（nadir），禁用时还原沿速度方向
- * @param {object} satelliteLayer - 卫星图层
- * @param {string|number} noradID - 卫星 NORAD ID
- * @param {boolean} enable - true：朝向地球；false：还原速度朝向
- * @returns {void}
- */
-export const setSatelliteFaceEarth = (satelliteLayer, noradID, enable) => {
-  if (!satelliteLayer || !noradID) return;
-
-  const graphic = satelliteLayer.getGraphicById(noradID);
-  const entity = graphic?.entity;
-  if (!entity || !entity.position) return;
-
-  const Cesium = mars3d.Cesium;
-  const positionProperty = entity.position;
-
-  if (enable) {
-    entity.orientation = new Cesium.CallbackProperty((time, result) => {
-      const position = positionProperty.getValue(time);
-      if (!position) return undefined;
-      const hpr = new Cesium.HeadingPitchRoll(0, Cesium.Math.toRadians(-90), 0);
-      return Cesium.Transforms.headingPitchRollQuaternion(position, hpr, Cesium.Ellipsoid.WGS84, undefined, result);
-    }, false);
-  } else {
-    entity.orientation = new Cesium.VelocityOrientationProperty(positionProperty);
-  }
-};
-
-/**
- * 切换卫星轨迹线显示状态
- * @param {object} satelliteLayer - 卫星图层
- * @param {boolean} showSatelliteTrajectory - 是否显示轨迹线
- * @returns {void}
- */
-export function toggleSatelliteTrajectory(satelliteLayer, showSatelliteTrajectory) {
-  if (!satelliteLayer) return;
-
-  satelliteLayer.eachGraphic((graphic) => {
-    if (!graphic._isSateTrajectory) return;
-
-    graphic.show = showSatelliteTrajectory;
-    graphic.opacity = showSatelliteTrajectory ? 0.5 : 0;
   });
 }

@@ -1,11 +1,11 @@
 const MAP_CONFIG_Satellite = {
   scene: {
     center: {
-      lat: -90,
+      lat: 27,
       lng: 107.5,
       alt: 160_000_000,
-      heading: 180,
-      pitch: -90,
+      heading: 360,
+      pitch: -89,
     },
     fog: false,
     fxaa: true,

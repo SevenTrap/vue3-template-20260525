@@ -1,5 +1,5 @@
 <template>
-  <aircas-panel v-show="sceneControlPluginBase" title="场景控制" width="320" height="450" bottom="100" right="20" @close="handlePanelClose">
+  <aircas-panel v-show="sceneControlPluginBase" title="场景控制" width="320" height="400" bottom="100" right="20" @close="handlePanelClose">
     <div class="scene-control-panel">
       <div class="form-item">
         <div class="form-title">坐标系</div>
@@ -34,20 +34,24 @@
         </div>
       </div>
 
-      <div class="form-item">
+      <div class="form-item" style="border-bottom: none">
         <div class="form-title">卫星控制</div>
 
         <div class="button-group">
-          <div class="button-group-item">
-            <el-checkbox size="small" :model-value="showSatelliteOrbit" @change="handleToggleSate('showSatelliteOrbit')" label="显示轨道"></el-checkbox>
-          </div>
-
           <div class="button-group-item">
             <el-checkbox size="small" :model-value="showSatelliteName" @change="handleToggleSate('showSatelliteName')" label="显示卫星名称"></el-checkbox>
           </div>
 
           <div class="button-group-item">
             <el-checkbox size="small" :model-value="showSatelliteModel" @change="handleToggleSate('showSatelliteModel')" label="显示卫星模型"></el-checkbox>
+          </div>
+
+          <div class="button-group-item">
+            <el-checkbox size="small" :model-value="showSatellitePoint" @change="handleToggleSate('showSatellitePoint')" label="显示卫星点位"></el-checkbox>
+          </div>
+
+          <div class="button-group-item">
+            <el-checkbox size="small" :model-value="showSatelliteOrbit" @change="handleToggleSate('showSatelliteOrbit')" label="显示卫星轨道"></el-checkbox>
           </div>
         </div>
       </div>
@@ -72,12 +76,11 @@ import {
 } from "@/utils/mars3d/mars3dGeoStyle.js";
 import {
   toggleSatelliteOribit,
-  toggleSatelliteTrajectory,
   toggleSatelliteName,
   toggleSatelliteModel,
   toggleSatellitePoint,
-  setSatelliteFaceEarth,
-} from "../utils/mars3dSatellite.js";
+  rebuildSatelliteReferenceFrame,
+} from "../utils/mars3dSatelliteBase.js";
 import { lockCameraToInertial, unlockCameraFromInertial } from "../utils/mars3dOrbitDynamics.js";
 import { BASE_VIEW_PRESETS, GLOBAL_VIEW_ALT } from "../configs/index.js";
 
@@ -103,26 +106,18 @@ export default {
     ...mapState(useGeoMapStore, [
       "sceneControlPluginBase",
       "coordinate",
-
-      "threatTargetID",
-      "importTargetID",
-
-      "showSatellitePoint",
       "showSatelliteOrbit",
-      "showSatelliteTrajectory",
       "showSatelliteName",
       "showSatelliteModel",
+      "showSatellitePoint",
     ]),
   },
   watch: {
-    showSatellitePoint(newVal) {
-      toggleSatellitePoint(satelliteLayer, newVal);
-    },
     showSatelliteOrbit(newVal) {
       toggleSatelliteOribit(satelliteLayer, newVal);
     },
-    showSatelliteTrajectory(newVal) {
-      toggleSatelliteTrajectory(satelliteLayer, newVal);
+    showSatellitePoint(newVal) {
+      toggleSatellitePoint(satelliteLayer, newVal);
     },
     showSatelliteName(newVal) {
       toggleSatelliteName(satelliteLayer, newVal);
@@ -138,6 +133,8 @@ export default {
       geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
 
       this.applyCameraLock(); // 应用相机锁定
+      this.handleApplyView(this.viewMode);
+      this.handleToggleSatelliteOrbit();
     },
 
     /**
@@ -145,37 +142,23 @@ export default {
      * @returns {void}
      */
     applyCameraLock() {
-      if (!globalViewer) return;
-
       if (this.coordinate === "ECI") {
         lockCameraToInertial(globalViewer);
       } else {
         unlockCameraFromInertial(globalViewer);
       }
-
-      this.handleToggleSatelliteOrbit();
     },
 
     /**
-     * 切换卫星轨道显示状态
+     * 切换卫星参考坐标系
      * @returns {void}
      */
     handleToggleSatelliteOrbit() {
-      if (this.coordinate === "ECI") {
-        satelliteLayer.eachGraphic((graphic) => {
-          console.log(graphic, "graphic");
-          if (!graphic._isSate) return;
-          graphic.referenceFrame = mars3d.Cesium.ReferenceFrame.INERTIAL;
-          return graphic;
-        });
-      } else {
-        satelliteLayer.eachGraphic((graphic) => {
-          console.log(graphic, "graphic");
-          if (!graphic._isSate) return;
-          graphic.referenceFrame = mars3d.Cesium.ReferenceFrame.FIXED;
-          return graphic;
-        });
-      }
+      rebuildSatelliteReferenceFrame(satelliteLayer);
+    },
+
+    handleToggleSate(state) {
+      geoMapStore.TOGGLE_COMPONENT_VISIBLE(state);
     },
 
     /**
@@ -186,30 +169,22 @@ export default {
     handleApplyView(presetId) {
       switch (presetId) {
         case "default":
-          this.flyToGlobal(104, 27, GLOBAL_VIEW_ALT, -90); // 默认视角
+          this.flyToGlobal(107.5, 27, GLOBAL_VIEW_ALT, 360, -89); // 默认视角
           break;
         case "southPole":
-          this.flyToGlobal(0, -90, GLOBAL_VIEW_ALT, -90); // 南极视角
+          this.flyToGlobal(107.5, -90, GLOBAL_VIEW_ALT, 180, -90); // 南极视角
           break;
         case "equator":
-          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, -90); // 赤道视角
+          this.flyToGlobal(107.5, 0, GLOBAL_VIEW_ALT, 0, -90); // 赤道视角
           break;
       }
     },
 
-    /**
-     * 按经纬高 / 俯仰飞行到指定全球视角
-     * @param {number} lon - 经度（度）
-     * @param {number} lat - 纬度（度）
-     * @param {number} alt - 高度（米）
-     * @param {number} pitchDeg - 俯仰（度，负值朝下）
-     * @returns {void}
-     */
-    flyToGlobal(lon, lat, alt, pitchDeg) {
+    flyToGlobal(lon, lat, alt, heading, pitchDeg) {
       globalViewer.camera.flyTo({
         destination: mars3d.Cesium.Cartesian3.fromDegrees(lon, lat, alt),
         orientation: {
-          heading: mars3d.Cesium.Math.toRadians(0),
+          heading: mars3d.Cesium.Math.toRadians(heading),
           pitch: mars3d.Cesium.Math.toRadians(pitchDeg),
           roll: 0,
         },
