@@ -8,7 +8,7 @@
 import * as echarts from "echarts";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
-import { computeLngHeightData } from "@/views/GeoMap/utils/satelliteLngHeight";
+import { GEO_ALTITUDE_KM } from "@/views/GeoMap/utils/satelliteLngHeight";
 
 const geoMapStore = useGeoMapStore();
 
@@ -16,12 +16,21 @@ const THREAT_COLOR = "#2f6bff"; // 威胁目标：蓝色
 const IMPORT_COLOR = "#ff4d4f"; // 被威胁目标：红色
 const LINK_COLOR = "#faad14"; // 同时刻连线：橙色虚线
 
+/**
+ * 为轨迹点补充相对同步轨道高度差
+ * @param {Array} track - 卫星轨迹点列表
+ * @returns {Array} 含 heightDiff 的轨迹点列表
+ */
+const toTrackWithHeightDiff = (track) =>
+  (track || []).map((p) => ({
+    ...p,
+    heightDiff: Number.isFinite(p.altKm) ? Number((p.altKm - GEO_ALTITUDE_KM).toFixed(2)) : null,
+  }));
+
 export default {
   name: "GeoLngHeightEchartsPlugin",
   data() {
     return {
-      // pluginTitle: "卫星经度和高度图",
-      chartInstance: null,
       threatTrack: [],
       importTrack: [],
       distances: [],
@@ -29,19 +38,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(useGeoMapStore, [
-      "geoLngHeightEchartsPlugin",
-      "threatTargetName",
-      "importTargetName",
-      "threatTles",
-      "importTles",
-      "threatTargetID",
-      "importTargetID",
-      "closeTime",
-      "timeFront",
-      "timeBack",
-      "timeStep",
-    ]),
+    ...mapState(useGeoMapStore, ["geoLngHeightEchartsPlugin", "satRelativeData", "threatTargetName", "importTargetName", "threatTargetID", "importTargetID"]),
 
     pluginTitle() {
       if (!this.threatTargetName || !this.importTargetName) return "经高图";
@@ -78,25 +75,15 @@ export default {
     },
 
     /**
-     * 计算轨迹数据并写入 store、组件缓存
+     * 从 store 的 satRelativeData 加载轨迹并补充相对同步轨道高度差
      * @returns {void}
      */
-    computeSeries() {
-      const result = computeLngHeightData({
-        threatTles: this.threatTles,
-        importTles: this.importTles,
-        closeTime: this.closeTime,
-        timeFront: this.timeFront,
-        timeBack: this.timeBack,
-        timeStep: this.timeStep,
-      });
-
-      this.threatTrack = result.threatTrack;
-      this.importTrack = result.importTrack;
-      this.distances = result.distances;
-      this.sunAngles = result.sunAngles;
-
-      geoMapStore.SET_LNG_HEIGHT_DATA(result);
+    loadChartData() {
+      const data = this.satRelativeData || {};
+      this.threatTrack = toTrackWithHeightDiff(data.threatTrack);
+      this.importTrack = toTrackWithHeightDiff(data.importTrack);
+      this.distances = data.distances || [];
+      this.sunAngles = data.sunAngles || [];
     },
 
     /**
@@ -104,24 +91,83 @@ export default {
      * @returns {void}
      */
     initChart() {
-      this.computeSeries();
+      this.loadChartData();
 
       if (!this.chartInstance) return;
       this.chartInstance.resize();
 
       const threatData = this.threatTrack.map((p) => [p.lon, p.heightDiff]);
+
       const importData = this.importTrack.map((p) => [p.lon, p.heightDiff]);
+
+      console.log("threatData", threatData);
+      console.log("importData", importData);
 
       const option = {
         legend: {
           data: [`威胁目标 ${this.threatTargetID}`, `被威胁目标 ${this.importTargetID}`],
           top: 8,
         },
+        toolbox: {
+          show: true,
+          right: 12,
+          top: 6,
+          feature: {
+            dataZoom: {
+              yAxisIndex: "none",
+            },
+            restore: {},
+            saveAsImage: {
+              type: "png",
+              name: `经高图_${this.threatTargetID || "threat"}_${this.importTargetID || "import"}`,
+            },
+          },
+        },
         tooltip: {
-          trigger: "item",
+          trigger: "axis",
+          axisPointer: {
+            type: "cross",
+            label: {
+              backgroundColor: "#505765",
+            },
+          },
           formatter: (params) => this.formatTooltip(params),
         },
-        grid: [{ left: 70, right: 60, top: 50, bottom: 60 }],
+        grid: [{ left: 70, right: 90, top: 50, bottom: 84 }],
+        dataZoom: [
+          // x 轴：鼠标滚轮/拖拽缩放
+          {
+            type: "inside",
+            xAxisIndex: 0,
+            filterMode: "none",
+            zoomOnMouseWheel: true,
+            moveOnMouseWheel: false,
+            moveOnMouseMove: true,
+          },
+          {
+            type: "slider",
+            xAxisIndex: 0,
+            height: 22,
+            bottom: 46,
+            filterMode: "none",
+          },
+          // y 轴：鼠标滚轮/拖拽缩放（垂直）
+          {
+            type: "inside",
+            yAxisIndex: 0,
+            filterMode: "none",
+            zoomOnMouseWheel: true,
+            moveOnMouseWheel: false,
+            moveOnMouseMove: true,
+          },
+          {
+            type: "slider",
+            yAxisIndex: 0,
+            width: 18,
+            right: 28,
+            filterMode: "none",
+          },
+        ],
         xAxis: {
           type: "value",
           name: "经度 / °",
@@ -137,6 +183,7 @@ export default {
             name: `威胁目标 ${this.threatTargetID}`,
             type: "line",
             showSymbol: false,
+            smooth: true,
             itemStyle: { color: THREAT_COLOR },
             lineStyle: { color: THREAT_COLOR, width: 1.5 },
             data: threatData,
@@ -145,21 +192,22 @@ export default {
             name: `被威胁目标 ${this.importTargetID}`,
             type: "line",
             showSymbol: false,
+            smooth: true,
             itemStyle: { color: IMPORT_COLOR },
             lineStyle: { color: IMPORT_COLOR, width: 1.5 },
             data: importData,
           },
-          {
-            name: "同时刻连线",
-            type: "line",
-            silent: true,
-            showSymbol: true,
-            symbolSize: 6,
-            tooltip: { show: false },
-            itemStyle: { color: LINK_COLOR },
-            lineStyle: { color: LINK_COLOR, width: 1.5, type: "dashed" },
-            data: [],
-          },
+          // {
+          //   name: "同时刻连线",
+          //   type: "line",
+          //   silent: true,
+          //   showSymbol: true,
+          //   symbolSize: 6,
+          //   tooltip: { show: false },
+          //   itemStyle: { color: LINK_COLOR },
+          //   lineStyle: { color: LINK_COLOR, width: 1.5, type: "dashed" },
+          //   data: [],
+          // },
         ],
       };
 
@@ -169,11 +217,12 @@ export default {
 
     /**
      * 生成 tooltip 内容
-     * @param {object} params - ECharts tooltip 回调参数
+     * @param {object|Array} params - ECharts tooltip 回调参数（axis 触发时为数组）
      * @returns {string} HTML 字符串
      */
     formatTooltip(params) {
-      const i = params.dataIndex;
+      const firstParam = Array.isArray(params) ? params[0] : params;
+      const i = firstParam && firstParam.dataIndex;
       const threat = this.threatTrack[i];
       const importSat = this.importTrack[i];
       if (!threat || !importSat) return "";

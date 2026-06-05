@@ -20,6 +20,12 @@ const DEFAULT_STEP_MS = 60 * 1000;
  * @returns {number|null} 保留 2 位小数后的数值，非法值返回 null
  */
 const round2 = (value) => (Number.isFinite(value) ? Number(value.toFixed(2)) : null);
+/**
+ * 保留 6 位小数
+ * @param {number} value - 原始数值
+ * @returns {number|null} 保留 6 位小数后的数值，非法值返回 null
+ */
+const round6 = (value) => (Number.isFinite(value) ? Number(value.toFixed(6)) : null);
 
 /**
  * 校验三维向量是否有效
@@ -206,8 +212,8 @@ const buildTrackPoint = (sat, date, timeMs, time, name) => {
     name,
     eciKm: roundVec2(eci),
     ecefKm: roundVec2(ecef),
-    lon: round2(lla.lon),
-    lat: round2(lla.lat),
+    lon: round6(lla.lon),
+    lat: round6(lla.lat),
     altKm: round2(lla.altKm),
   };
 };
@@ -278,16 +284,16 @@ export const computeLngHeightData = ({ threatTles, importTles, closeTime, timeFr
     threatTrack.push({
       timeMs: t,
       time,
-      lon: round2(threatLla.lon),
-      lat: round2(threatLla.lat),
+      lon: round6(threatLla.lon),
+      lat: round6(threatLla.lat),
       altKm: round2(threatLla.altKm),
       heightDiff: round2(threatLla.altKm - GEO_ALTITUDE_KM),
     });
     importTrack.push({
       timeMs: t,
       time,
-      lon: round2(importLla.lon),
-      lat: round2(importLla.lat),
+      lon: round6(importLla.lon),
+      lat: round6(importLla.lat),
       altKm: round2(importLla.altKm),
       heightDiff: round2(importLla.altKm - GEO_ALTITUDE_KM),
     });

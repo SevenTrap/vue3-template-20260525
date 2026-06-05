@@ -56,7 +56,7 @@ export const useGeoMapStore = defineStore("geoMap", {
     besideTargetIDs: [], // 旁观目标ID
     besideTles: {}, // 旁观目标TLE { ID: [{ tle1: "", tle2: "" }] }
     startTime: "2026-02-04 00:00:00", // 开始时间
-    endTime: "2026-02-04 23:59:59", // 结束时间
+    endTime: "2026-02-10 23:59:59", // 结束时间
     closeTime: "2026-02-07 10:23:34", // 接近时间
     timeStep: 1 * 60 * 1000, // 默认时间步长：1分钟
     timeFront: 3 * 24 * 60 * 60 * 1000, // 前轨时间：1天
