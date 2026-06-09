@@ -221,19 +221,20 @@ const buildTrackPoint = (sat, date, timeMs, time, name) => {
 
 /**
  * 计算指定时刻两星相对指标
- * @param {{x:number,y:number,z:number}} threatEci - 主动卫星 ECI 位置（km）
- * @param {{x:number,y:number,z:number}} importEci - 从动卫星 ECI 位置（km）
+ * @param {{x:number,y:number,z:number}} threatEci - 主动卫星 T 的 ECI 位置（km）
+ * @param {{x:number,y:number,z:number}} importEci - 从动卫星 I 的 ECI 位置（km）
  * @param {Date} date - 计算时刻
- * @returns {{distanceKm:number|null,sunAngleDeg:number|null,sunEci:Object|null}} 距离与光照角
+ * @returns {{distanceKm:number|null,sunAngleDeg:number|null,sunEci:Object|null}} 距离与光照角（∠TIS，顶点在 I）
  */
 const computeRelativeMetric = (threatEci, importEci, date) => {
-  const satToImport = subtractVec(importEci, threatEci);
-  const distanceKm = round2(getVecLength(satToImport));
+  const threatToImport = subtractVec(importEci, threatEci);
+  const distanceKm = round2(getVecLength(threatToImport));
   const sunEci = getSunEci(date);
   let sunAngleDeg = null;
   if (sunEci) {
-    const satToSun = subtractVec(sunEci, threatEci);
-    sunAngleDeg = round2(computeAngleDeg(satToImport, satToSun));
+    const importToThreat = subtractVec(threatEci, importEci);
+    const importToSun = subtractVec(sunEci, importEci);
+    sunAngleDeg = round2(computeAngleDeg(importToThreat, importToSun));
   }
   return { distanceKm, sunAngleDeg, sunEci };
 };
@@ -299,28 +300,16 @@ export const computeLngHeightData = ({ threatTles, importTles, closeTime, timeFr
       heightDiff: round2(importLla.altKm - GEO_ALTITUDE_KM),
     });
 
-    const dx = importEci.x - threatEci.x;
-    const dy = importEci.y - threatEci.y;
-    const dz = importEci.z - threatEci.z;
-    const distanceKm = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    distances.push(round2(distanceKm));
-
-    // threat -> import 方向 与 threat -> sun 方向 的夹角（太阳光照角）
-    const satToImport = { x: dx, y: dy, z: dz };
-    const sunEci = getSunEci(date);
-    let sunAngle = NaN;
-    if (sunEci) {
-      const satToSun = { x: sunEci.x - threatEci.x, y: sunEci.y - threatEci.y, z: sunEci.z - threatEci.z };
-      sunAngle = computeAngleDeg(satToImport, satToSun);
-    }
-    sunAngles.push(round2(sunAngle));
+    const { distanceKm, sunAngleDeg } = computeRelativeMetric(threatEci, importEci, date);
+    distances.push(distanceKm);
+    sunAngles.push(sunAngleDeg);
   }
 
   return { startTime, endTime, threatTrack, importTrack, distances, sunAngles };
 };
 
 /**
- * 计算两颗卫星在指定时间段内的 ECI/ECEF 实时位置、距离和主动星视角太阳光照角
+ * 计算两颗卫星在指定时间段内的 ECI/ECEF 实时位置、距离和从动星视角太阳光照角（∠TIS）
  * @param {object} params - 入参
  * @param {Array} params.threatTles - 主动卫星两行根数列表
  * @param {Array} params.importTles - 从动卫星两行根数列表
