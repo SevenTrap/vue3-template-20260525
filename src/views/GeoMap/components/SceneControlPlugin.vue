@@ -329,6 +329,10 @@ export default {
         unlockCameraFromInertial(globalViewer);
         addSatelliteScene(satelliteSceneLayer, this.satRelativeData);
       }
+
+      if (this.showSatelliteLightDirectionScene) {
+        toggleSatelliteLightDirection(satelliteSceneLayer, true);
+      }
     },
 
     /**

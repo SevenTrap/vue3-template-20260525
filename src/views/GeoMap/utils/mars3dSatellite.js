@@ -1,5 +1,13 @@
 import * as mars3d from "mars3d";
+import * as satellite from "satellite.js";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
+
+/** 天文单位（km），用于将 sunPos 的 rsun(AU) 换算为 km */
+const AU_KM = 149597870.7;
+/** 光照来向线段长度（m） */
+const LIGHT_DIRECTION_LINE_LENGTH = 5_000_000;
+/** 光照来向线段颜色 */
+const LIGHT_DIRECTION_COLOR = "#ffff00";
 
 const geoMapStore = useGeoMapStore();
 
@@ -512,14 +520,111 @@ export function toggleSatelliteBodyCoordinate(satelliteSceneLayer, showSatellite
   }
 }
 
+/**
+ * 获取太阳在 ECI 坐标系下的位置（km）
+ * @param {Date} date - UTC 时间
+ * @returns {{x:number,y:number,z:number}|null} 太阳 ECI 位置
+ */
+const getSunEciKm = (date) => {
+  const jd = satellite.jday(date);
+  const sunPos = satellite.sunPos(jd);
+  const rsun = sunPos && sunPos.rsun;
+  if (!rsun) return null;
+
+  const sunEci = {
+    x: (rsun.x ?? rsun[0]) * AU_KM,
+    y: (rsun.y ?? rsun[1]) * AU_KM,
+    z: (rsun.z ?? rsun[2]) * AU_KM,
+  };
+  const magnitude = Math.sqrt(sunEci.x * sunEci.x + sunEci.y * sunEci.y + sunEci.z * sunEci.z);
+  return magnitude ? sunEci : null;
+};
+
+/**
+ * 将惯性系坐标转换到地固系（与 mars3d 卫星 positionShow 的渲染坐标系一致）
+ * @param {object} position - 惯性系坐标（Cartesian3）
+ * @param {object} time - Cesium JulianDate
+ * @returns {object|null} 地固系坐标
+ */
+const inertialToFixed = (position, time) => {
+  const Cesium = mars3d.Cesium;
+  const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
+  if (!icrfToFixed) return null;
+  return Cesium.Matrix3.multiplyByVector(icrfToFixed, position, new Cesium.Cartesian3());
+};
+
+/**
+ * 计算光照来向线段端点：起点沿太阳方向偏移，终点为卫星实时显示位置
+ * @param {object} time - Cesium JulianDate
+ * @param {object} satPosition - 卫星实时显示位置（Cartesian3，地固系）
+ * @returns {Array} 线段端点数组
+ */
+const buildLightDirectionPositions = (time, satPosition) => {
+  const Cesium = mars3d.Cesium;
+  if (!satPosition) return [];
+
+  const sunEciKm = getSunEciKm(Cesium.JulianDate.toDate(time));
+  if (!sunEciKm) return [];
+
+  const sunInertialM = new Cesium.Cartesian3(sunEciKm.x * 1000, sunEciKm.y * 1000, sunEciKm.z * 1000);
+  const sunPosition = inertialToFixed(sunInertialM, time);
+  if (!sunPosition) return [];
+
+  const sunToSat = Cesium.Cartesian3.subtract(satPosition, sunPosition, new Cesium.Cartesian3());
+  const magnitude = Cesium.Cartesian3.magnitude(sunToSat);
+  if (!magnitude) return [];
+
+  const direction = Cesium.Cartesian3.divideByScalar(sunToSat, magnitude, new Cesium.Cartesian3());
+  const offset = Cesium.Cartesian3.multiplyByScalar(direction, LIGHT_DIRECTION_LINE_LENGTH, new Cesium.Cartesian3());
+  const startPosition = Cesium.Cartesian3.subtract(satPosition, offset, new Cesium.Cartesian3());
+
+  return [startPosition, satPosition];
+};
+
+/**
+ * 切换卫星光照来向显示状态
+ * @param {object} satelliteSceneLayer - 卫星场景图层
+ * @param {boolean} showSatelliteLightDirection - 是否显示光照来向
+ * @returns {void}
+ */
 export function toggleSatelliteLightDirection(satelliteSceneLayer, showSatelliteLightDirection) {
   if (!satelliteSceneLayer) return;
 
-  if (showSatelliteLightDirection) {
-    if (satelliteSceneLayer.getGraphicById("satelliteLightDirection")) return;
-
-    const importGraphicLine = satelliteSceneLayer.getGraphicById("importSatellite");
-    if (!importGraphicLine) return;
-  } else {
+  const existingLine = satelliteSceneLayer.getGraphicById("satelliteLightDirection");
+  if (existingLine) {
+    satelliteSceneLayer.removeGraphic(existingLine);
   }
+
+  if (!showSatelliteLightDirection) return;
+
+  const importGraphicLine = satelliteSceneLayer.getGraphicById("importSatellite");
+  if (!importGraphicLine) return;
+
+  const Cesium = mars3d.Cesium;
+
+  const lightDirectionLine = new mars3d.graphic.PolylineEntity({
+    id: "satelliteLightDirection",
+    name: "satelliteLightDirection",
+    positions: new Cesium.CallbackProperty((time) => {
+      const satPosition = importGraphicLine.positionShow;
+      return buildLightDirectionPositions(time, satPosition);
+    }, false),
+    style: {
+      width: 8,
+      opacity: 1,
+      arcType: Cesium.ArcType.NONE,
+      material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(LIGHT_DIRECTION_COLOR)),
+      label: {
+        text: "光照",
+        font_size: 16,
+        font_family: "楷体",
+        color: LIGHT_DIRECTION_COLOR,
+        outline: true,
+        outlineColor: "#000000",
+        outlineWidth: 2,
+      },
+    },
+  });
+
+  satelliteSceneLayer.addGraphic(lightDirectionLine);
 }
