@@ -43,6 +43,8 @@ import SceneControlPlugin from "./components/SceneControlPlugin.vue";
 import SceneControlPluginBase from "./components/SceneControlPluginBase.vue";
 import HistoryCasePlugin from "./components/HistoryCasePlugin.vue";
 
+import { initMars3dLayers, satelliteSceneLayer } from "./utils/initMars3dLayers.js";
+import { addSatelliteScene } from "./utils/mars3dSatellite.js";
 import { computeSatRelativeData } from "./utils/satelliteLngHeight";
 import { julianDateToTimeMs } from "./utils/mars3dRelativeTrajectory";
 import { SCENE_LISTS } from "./configs/index";
@@ -81,7 +83,9 @@ export default {
       addGeoCircleLabel(globalViewer);
       addGeoCirclePositions(globalViewer);
       addPatrolArea(globalViewer);
+      initMars3dLayers();
       this.initScene();
+      this.initSatelliteScene();
     });
 
     this.timer = setInterval(() => {
@@ -101,6 +105,7 @@ export default {
       "startTime",
       "endTime",
       "timeStep",
+      "satRelativeData",
     ]),
   },
 
@@ -109,14 +114,20 @@ export default {
       if (!this.currentScene?.sceneID || this.currentScene.sceneID !== this.sceneId) return;
 
       const result = computeSatRelativeData(this.currentScene);
-      // globalViewer.currentTime = mars3d.Cesium.JulianDate.fromDate(new Date(this.currentScene.startTime));
+
+      console.log("result", result);
 
       globalViewer.clock.stopTime = mars3d.Cesium.JulianDate.fromDate(new Date(this.currentScene.endTime));
       globalViewer.clock.startTime = mars3d.Cesium.JulianDate.fromDate(new Date(this.currentScene.startTime));
       globalViewer.clock.currentTime = mars3d.Cesium.JulianDate.fromDate(new Date(this.currentScene.startTime));
       globalViewer.clock.clockRange = mars3d.Cesium.ClockRange.LOOP_STOP;
       globalViewer.clock.shouldAnimate = true;
+      globalViewer.control.timeline.zoomTo(this.currentScene.startTime, this.currentScene.endTime);
       geoMapStore.SET_STATE_DATA({ key: "satRelativeData", value: result });
+    },
+
+    initSatelliteScene() {
+      addSatelliteScene(satelliteSceneLayer, this.satRelativeData);
     },
 
     updateSceneTime() {

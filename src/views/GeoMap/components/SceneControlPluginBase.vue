@@ -23,13 +23,14 @@
 
         <div class="button-group">
           <div class="button-group-item">
-            <el-checkbox size="small" v-model="showGeoCirclePositions" @change="handleToggleGeoCirclePositions" label="显示同步轨道"></el-checkbox>
+            <el-checkbox size="small" :model-value="showGeoCirclePositions" @change="handleToggleSate('showGeoCirclePositions')" label="显示同步轨道">
+            </el-checkbox>
           </div>
           <div class="button-group-item">
-            <el-checkbox size="small" v-model="showGeoCircleLabel" @change="handleToggleGeoCircleLabel" label="显示经度标签"></el-checkbox>
+            <el-checkbox size="small" :model-value="showGeoCircleLabel" @change="handleToggleSate('showGeoCircleLabel')" label="显示经度标签"></el-checkbox>
           </div>
           <div class="button-group-item">
-            <el-checkbox size="small" v-model="showPatrolArea" @change="handleTogglePatrolArea" label="显示巡视区域"></el-checkbox>
+            <el-checkbox size="small" :model-value="showPatrolArea" @change="handleToggleSate('showPatrolArea')" label="显示巡视区域"></el-checkbox>
           </div>
         </div>
       </div>
@@ -39,19 +40,39 @@
 
         <div class="button-group">
           <div class="button-group-item">
-            <el-checkbox size="small" :model-value="showSatelliteName" @change="handleToggleSate('showSatelliteName')" label="显示卫星名称"></el-checkbox>
+            <el-checkbox
+              size="small"
+              :model-value="showSatelliteNameBase"
+              @change="handleToggleSate('showSatelliteNameBase')"
+              label="显示卫星名称"
+            ></el-checkbox>
           </div>
 
           <div class="button-group-item">
-            <el-checkbox size="small" :model-value="showSatelliteModel" @change="handleToggleSate('showSatelliteModel')" label="显示卫星模型"></el-checkbox>
+            <el-checkbox
+              size="small"
+              :model-value="showSatelliteModelBase"
+              @change="handleToggleSate('showSatelliteModelBase')"
+              label="显示卫星模型"
+            ></el-checkbox>
           </div>
 
           <div class="button-group-item">
-            <el-checkbox size="small" :model-value="showSatellitePoint" @change="handleToggleSate('showSatellitePoint')" label="显示卫星点位"></el-checkbox>
+            <el-checkbox
+              size="small"
+              :model-value="showSatellitePointBase"
+              @change="handleToggleSate('showSatellitePointBase')"
+              label="显示卫星点位"
+            ></el-checkbox>
           </div>
 
           <div class="button-group-item">
-            <el-checkbox size="small" :model-value="showSatelliteOrbit" @change="handleToggleSate('showSatelliteOrbit')" label="显示卫星轨道"></el-checkbox>
+            <el-checkbox
+              size="small"
+              :model-value="showSatelliteOrbitBase"
+              @change="handleToggleSate('showSatelliteOrbitBase')"
+              label="显示卫星轨道"
+            ></el-checkbox>
           </div>
         </div>
       </div>
@@ -92,10 +113,6 @@ export default {
     return {
       basePresets: BASE_VIEW_PRESETS,
       viewMode: "default",
-
-      showGeoCirclePositions: true, // 显示同步轨道带
-      showGeoCircleLabel: true, // 显示经度标签
-      showPatrolArea: true, // 显示巡视区域
       startDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       endDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
       stepSec: 3600,
@@ -106,23 +123,47 @@ export default {
     ...mapState(useGeoMapStore, [
       "sceneControlPluginBase",
       "coordinate",
-      "showSatelliteOrbit",
-      "showSatelliteName",
-      "showSatelliteModel",
-      "showSatellitePoint",
+      "showGeoCirclePositions",
+      "showGeoCircleLabel",
+      "showPatrolArea",
+      "showSatelliteOrbitBase",
+      "showSatelliteNameBase",
+      "showSatelliteModelBase",
+      "showSatellitePointBase",
     ]),
   },
   watch: {
-    showSatelliteOrbit(newVal) {
+    showGeoCirclePositions(newVal) {
+      if (newVal) {
+        addGeoCirclePositions(globalViewer);
+      } else {
+        removeGeoCirclePositions(globalViewer);
+      }
+    },
+    showGeoCircleLabel(newVal) {
+      if (newVal) {
+        addGeoCircleLabel(globalViewer);
+      } else {
+        removeGeoCircleLabel(globalViewer);
+      }
+    },
+    showPatrolArea(newVal) {
+      if (newVal) {
+        addPatrolArea(globalViewer);
+      } else {
+        removePatrolArea(globalViewer);
+      }
+    },
+    showSatelliteOrbitBase(newVal) {
       toggleSatelliteOribit(satelliteLayer, newVal);
     },
-    showSatellitePoint(newVal) {
+    showSatellitePointBase(newVal) {
       toggleSatellitePoint(satelliteLayer, newVal);
     },
-    showSatelliteName(newVal) {
+    showSatelliteNameBase(newVal) {
       toggleSatelliteName(satelliteLayer, newVal);
     },
-    showSatelliteModel(newVal) {
+    showSatelliteModelBase(newVal) {
       toggleSatelliteModel(satelliteLayer, newVal);
     },
   },
@@ -131,6 +172,10 @@ export default {
       if (value === this.coordinate) return;
 
       geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
+      geoMapStore.SET_STATE_DATA({ key: "showSatelliteOrbitBase", value: true });
+      geoMapStore.SET_STATE_DATA({ key: "showSatellitePointBase", value: true });
+      geoMapStore.SET_STATE_DATA({ key: "showSatelliteNameBase", value: true });
+      geoMapStore.SET_STATE_DATA({ key: "showSatelliteModelBase", value: true });
 
       this.applyCameraLock(); // 应用相机锁定
       this.handleApplyView(this.viewMode);
@@ -190,42 +235,6 @@ export default {
         },
         duration: 1.5,
       });
-    },
-
-    /**
-     * 切换同步轨道显示状态
-     * @returns {void}
-     */
-    handleToggleGeoCirclePositions() {
-      if (this.showGeoCirclePositions) {
-        addGeoCirclePositions(globalViewer);
-      } else {
-        removeGeoCirclePositions(globalViewer);
-      }
-    },
-
-    /**
-     * 切换经度标签显示状态
-     * @returns {void}
-     */
-    handleToggleGeoCircleLabel() {
-      if (this.showGeoCircleLabel) {
-        addGeoCircleLabel(globalViewer);
-      } else {
-        removeGeoCircleLabel(globalViewer);
-      }
-    },
-
-    /**
-     * 切换巡视区域显示状态
-     * @returns {void}
-     */
-    handleTogglePatrolArea() {
-      if (this.showPatrolArea) {
-        addPatrolArea(globalViewer);
-      } else {
-        removePatrolArea(globalViewer);
-      }
     },
 
     handlePanelClose() {

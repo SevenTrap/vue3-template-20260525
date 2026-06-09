@@ -3,9 +3,6 @@ import { useGeoMapStore } from "@/store/useGeoMapStore";
 
 const geoMapStore = useGeoMapStore();
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-const ONE_HOUR_MS = 1 * 60 * 1000;
-
 /**
  * 创建卫星 graphic
  * @param {object} satelliteModel - 卫星模型对象
@@ -171,7 +168,7 @@ export function toggleSatellitePoint(satelliteLayer, showSatellitePoint) {
   if (!satelliteLayer) return;
 
   satelliteLayer.eachGraphic((graphic) => {
-    if (!graphic._isSateLine) return;
+    if (!graphic._isSate) return;
 
     graphic.point.show = showSatellitePoint;
   });
@@ -221,4 +218,308 @@ export function toggleSatelliteTrajectory(satelliteLayer, showSatelliteTrajector
     graphic.show = showSatelliteTrajectory;
     graphic.opacity = showSatelliteTrajectory ? 0.5 : 0;
   });
+}
+
+export function addSatelliteScene(satelliteSceneLayer, satRelativeData) {
+  if (!satelliteSceneLayer || !satRelativeData) return;
+
+  satelliteSceneLayer.clear();
+
+  const { threatTrack, importTrack } = satRelativeData;
+  const threatPositionsECEF = [];
+  const importPositionsECEF = [];
+
+  for (let i = 0; i < threatTrack.length; i += 1) {
+    const item = threatTrack[i];
+    const position = {
+      timeMs: item.time,
+      lng: item.lon,
+      lat: item.lat,
+      alt: item.altKm * 1000,
+    };
+    threatPositionsECEF.push(position);
+  }
+
+  for (let i = 0; i < importTrack.length; i += 1) {
+    const item = importTrack[i];
+    const position = {
+      timeMs: item.time,
+      lng: item.lon,
+      lat: item.lat,
+      alt: item.altKm * 1000,
+    };
+    importPositionsECEF.push(position);
+  }
+
+  const threatGraphicLine = new mars3d.graphic.Satellite({
+    id: "threatSatellite",
+    name: "threatSatellite",
+    position: {
+      type: "time",
+      list: threatPositionsECEF,
+      timeField: "timeMs",
+      forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
+    },
+    referenceFrame: mars3d.Cesium.ReferenceFrame.FIXED,
+    model: {
+      show: true,
+      url: "/assets/gltf/weixin.gltf",
+      scale: 1,
+      minimumPixelSize: 90,
+      silhouette: false,
+      mergeOrientation: false,
+      heading: 90,
+      pitch: 0,
+      roll: 0,
+    },
+    path: {
+      show: true,
+      width: 1,
+      color: mars3d.Cesium.Color.BLUE,
+      opacity: 1,
+    },
+    point: {
+      show: true,
+      color: mars3d.Cesium.Color.BLUE,
+      pixelSize: 10,
+      debugAxis: true,
+      debugAxisLength: 1000000,
+    },
+    label: {
+      show: true,
+      text: "主动卫星",
+      font_size: 16,
+      font_family: "楷体",
+      color: "#ffffff",
+      opacity: 1,
+    },
+  });
+  const importGraphicLine = new mars3d.graphic.Satellite({
+    id: "importSatellite",
+    name: "importSatellite",
+    referenceFrame: mars3d.Cesium.ReferenceFrame.FIXED,
+    position: {
+      type: "time",
+      list: importPositionsECEF,
+      timeField: "timeMs",
+      forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
+    },
+    model: {
+      show: true,
+      url: "/assets/gltf/weixin.gltf",
+      scale: 1,
+      minimumPixelSize: 90,
+      silhouette: false,
+      mergeOrientation: false,
+      heading: 90,
+      pitch: 0,
+      roll: 0,
+    },
+    path: {
+      show: true,
+      width: 1,
+      color: mars3d.Cesium.Color.RED,
+      opacity: 1,
+    },
+    point: {
+      show: true,
+      color: mars3d.Cesium.Color.RED,
+      pixelSize: 10,
+      debugAxis: true,
+      debugAxisLength: 1000000,
+    },
+    label: {
+      show: true,
+      text: "从动卫星",
+      font_size: 16,
+      font_family: "楷体",
+      color: "#ffffff",
+      opacity: 1,
+    },
+  });
+
+  satelliteSceneLayer.addGraphic(threatGraphicLine);
+  satelliteSceneLayer.addGraphic(importGraphicLine);
+
+  threatGraphicLine._isSate = true;
+  importGraphicLine._isSate = true;
+}
+
+export function addSatelliteSceneByTle(satelliteSceneLayer, currentSceneConfig) {
+  if (!satelliteSceneLayer || !currentSceneConfig) return;
+
+  satelliteSceneLayer.clear();
+
+  const { threatTles, importTles } = currentSceneConfig;
+
+  const threatGraphicLine = new mars3d.graphic.Satellite({
+    id: "threatSatellite",
+    name: "threatSatellite",
+    tle1: threatTles[0].tle1,
+    tle2: threatTles[0].tle2,
+    referenceFrame: mars3d.Cesium.ReferenceFrame.INERTIAL,
+    model: {
+      show: true,
+      url: "/assets/gltf/weixin.gltf",
+      scale: 1,
+      minimumPixelSize: 90,
+      silhouette: false,
+      mergeOrientation: false,
+      heading: 90,
+      pitch: 0,
+      roll: 0,
+    },
+    path: {
+      show: true,
+      color: "#00ff00",
+      width: 1,
+      opacity: 0.5,
+    },
+    point: {
+      show: true,
+      color: "#ff0000",
+      pixelSize: 10,
+      debugAxis: true,
+      debugAxisLength: 1000000,
+    },
+    label: {
+      show: true,
+      text: "主动卫星",
+      font_size: 16,
+      font_family: "楷体",
+      color: "#ffffff",
+      opacity: 1,
+    },
+  });
+
+  const importGraphicLine = new mars3d.graphic.Satellite({
+    id: "importSatellite",
+    name: "importSatellite",
+    tle1: importTles[0].tle1,
+    tle2: importTles[0].tle2,
+    referenceFrame: mars3d.Cesium.ReferenceFrame.INERTIAL,
+    model: {
+      show: true,
+      url: "/assets/gltf/weixin.gltf",
+      scale: 1,
+      minimumPixelSize: 90,
+      silhouette: false,
+      mergeOrientation: false,
+      heading: 90,
+      pitch: 0,
+      roll: 0,
+    },
+    path: {
+      show: true,
+      color: "#00ff00",
+      width: 1,
+      opacity: 0.5,
+    },
+
+    point: {
+      show: true,
+      color: "#ff0000",
+      pixelSize: 10,
+      debugAxis: true,
+      debugAxisLength: 1000000,
+    },
+    label: {
+      show: true,
+      text: "从动卫星",
+      font_size: 16,
+      font_family: "楷体",
+      color: "#ffffff",
+      opacity: 1,
+    },
+  });
+
+  satelliteSceneLayer.addGraphic(threatGraphicLine);
+  satelliteSceneLayer.addGraphic(importGraphicLine);
+
+  threatGraphicLine._isSate = true;
+  importGraphicLine._isSate = true;
+}
+
+// 切换卫星传感器显示状态
+export function toggleSatelliteSensor(satelliteSceneLayer, showSatelliteSensor) {
+  if (!satelliteSceneLayer) return;
+
+  if (showSatelliteSensor) {
+    if (satelliteSceneLayer.getGraphicById("satelliteSensor")) return;
+
+    const threatGraphicLine = satelliteSceneLayer.getGraphicById("threatSatellite");
+    const importGraphicLine = satelliteSceneLayer.getGraphicById("importSatellite");
+    if (!threatGraphicLine || !importGraphicLine) return;
+
+    const satelliteSensor = new mars3d.graphic.ConicSensor({
+      id: "satelliteSensor",
+      name: "satelliteSensor",
+      position: threatGraphicLine.property,
+      lookAt: importGraphicLine.property,
+      style: {
+        angle: 10,
+        opacity: 0.5,
+        color: "#7ef500",
+        slices: 10,
+        slicesR: 6,
+      },
+    });
+    satelliteSceneLayer.addGraphic(satelliteSensor);
+  } else {
+    const satelliteSensor = satelliteSceneLayer.getGraphicById("satelliteSensor");
+    if (!satelliteSensor) return;
+    satelliteSceneLayer.removeGraphic(satelliteSensor);
+  }
+}
+
+// 切换卫星成像方向显示状态 TODO
+export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatelliteImageDirection) {
+  if (!satelliteSceneLayer) return;
+
+  if (showSatelliteImageDirection) {
+    if (satelliteSceneLayer.getGraphicById("satelliteImageDirection")) return;
+  }
+}
+
+// 切换卫星本体坐标系显示状态
+export function toggleSatelliteBodyCoordinate(satelliteSceneLayer, showSatelliteBodyCoordinate) {
+  if (!satelliteSceneLayer) return;
+
+  if (showSatelliteBodyCoordinate) {
+    if (satelliteSceneLayer.getGraphicById("satelliteBodyCoordinate")) return;
+
+    const importGraphicLine = satelliteSceneLayer.getGraphicById("importSatellite");
+
+    if (!importGraphicLine) return;
+
+    importGraphicLine.debugAxis = true;
+    importGraphicLine.debugAxisLength = 10000000;
+    importGraphicLine.debugAxisColor = "#ff0000";
+    importGraphicLine.debugAxisWidth = 1;
+    importGraphicLine.debugAxisOpacity = 1;
+    importGraphicLine.debugAxisFontSize = 16;
+    importGraphicLine.debugAxisFontFamily = "楷体";
+    importGraphicLine.debugAxisFontColor = "#ffffff";
+    importGraphicLine.debugAxisFontOpacity = 1;
+  } else {
+    const importGraphicLine = satelliteSceneLayer.getGraphicById("importSatellite");
+    if (!importGraphicLine) return;
+    importGraphicLine.debugAxis = false;
+    importGraphicLine.debugAxisLength = 0;
+    importGraphicLine.debugAxisColor = "#ff0000";
+    importGraphicLine.debugAxisWidth = 0;
+    importGraphicLine.debugAxisOpacity = 0;
+  }
+}
+
+export function toggleSatelliteLightDirection(satelliteSceneLayer, showSatelliteLightDirection) {
+  if (!satelliteSceneLayer) return;
+
+  if (showSatelliteLightDirection) {
+    if (satelliteSceneLayer.getGraphicById("satelliteLightDirection")) return;
+
+    const importGraphicLine = satelliteSceneLayer.getGraphicById("importSatellite");
+    if (!importGraphicLine) return;
+  } else {
+  }
 }

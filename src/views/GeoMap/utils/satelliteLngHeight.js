@@ -210,8 +210,8 @@ const buildTrackPoint = (sat, date, timeMs, time, name) => {
     timeMs,
     time,
     name,
-    eciKm: roundVec2(eci),
-    ecefKm: roundVec2(ecef),
+    eciKm: eci,
+    ecefKm: ecef,
     lon: round6(lla.lon),
     lat: round6(lla.lat),
     altKm: round2(lla.altKm),
@@ -224,7 +224,7 @@ const buildTrackPoint = (sat, date, timeMs, time, name) => {
  * @param {{x:number,y:number,z:number}} threatEci - 主动卫星 ECI 位置（km）
  * @param {{x:number,y:number,z:number}} importEci - 从动卫星 ECI 位置（km）
  * @param {Date} date - 计算时刻
- * @returns {{distanceKm:number|null,sunAngleDeg:number|null}} 距离与光照角
+ * @returns {{distanceKm:number|null,sunAngleDeg:number|null,sunEci:Object|null}} 距离与光照角
  */
 const computeRelativeMetric = (threatEci, importEci, date) => {
   const satToImport = subtractVec(importEci, threatEci);
@@ -235,7 +235,7 @@ const computeRelativeMetric = (threatEci, importEci, date) => {
     const satToSun = subtractVec(sunEci, threatEci);
     sunAngleDeg = round2(computeAngleDeg(satToImport, satToSun));
   }
-  return { distanceKm, sunAngleDeg };
+  return { distanceKm, sunAngleDeg, sunEci };
 };
 
 /**
@@ -351,11 +351,12 @@ export const computeSatRelativeData = ({
   const importHeightDiffs = [];
   const threatLngHeightDiffs = [];
   const importLngHeightDiffs = [];
-
+  const sunEcis = [];
   const distances = [];
   const sunAngles = [];
   const metrics = [];
   const times = [];
+  const julianDates = [];
 
   if (!Number.isFinite(startTimeMs) || !Number.isFinite(endTimeMs) || startTimeMs > endTimeMs) {
     return { startTime: startTimeMs, endTime: endTimeMs, threatTrack, importTrack, distances, sunAngles, metrics };
@@ -383,8 +384,9 @@ export const computeSatRelativeData = ({
     const importPoint = buildTrackPoint(importSat, date, t, time, importName);
     if (!threatPoint || !importPoint) continue;
 
-    const { distanceKm, sunAngleDeg } = computeRelativeMetric(threatEci, importEci, date);
+    const { distanceKm, sunAngleDeg, sunEci } = computeRelativeMetric(threatEci, importEci, date);
 
+    sunEcis.push(sunEci);
     times.push(time);
     threatTrack.push(threatPoint);
     importTrack.push(importPoint);
@@ -396,6 +398,7 @@ export const computeSatRelativeData = ({
     importHeightDiffs.push(importPoint.heightDiff);
     threatLngHeightDiffs.push([threatPoint.lon, threatPoint.heightDiff]);
     importLngHeightDiffs.push([importPoint.lon, importPoint.heightDiff]);
+    julianDates.push(Cesium.JulianDate.fromDate(date));
 
     metrics.push({
       timeMs: t,
@@ -409,6 +412,9 @@ export const computeSatRelativeData = ({
     startTime: startTimeMs,
     endTime: endTimeMs,
     times,
+    julianDates,
+    threatTrack,
+    importTrack,
     threatLons,
     importLons,
     threatHeightDiffs,
@@ -417,6 +423,7 @@ export const computeSatRelativeData = ({
     importLngHeightDiffs,
     distances,
     sunAngles,
+    sunEcis,
     metrics,
   };
 };

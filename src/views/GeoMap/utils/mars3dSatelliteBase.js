@@ -168,8 +168,7 @@ export function toggleSatellitePoint(satelliteLayer, showSatellitePoint) {
   if (!satelliteLayer) return;
 
   satelliteLayer.eachGraphic((graphic) => {
-    if (!graphic._isSateLine) return;
-
+    if (!graphic._isSate) return;
     graphic.point.show = showSatellitePoint;
   });
 }

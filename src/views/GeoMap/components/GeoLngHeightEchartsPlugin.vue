@@ -16,7 +16,6 @@ const geoMapStore = useGeoMapStore();
 
 const THREAT_COLOR = "#2f6bff"; // 威胁目标：蓝色
 const IMPORT_COLOR = "#ff4d4f"; // 被威胁目标：红色
-const LINK_COLOR = "#faad14"; // 同时刻连线：橙色虚线
 
 /**
  * 为轨迹点补充相对同步轨道高度差

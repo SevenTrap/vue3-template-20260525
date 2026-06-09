@@ -91,20 +91,36 @@ export const useGeoMapStore = defineStore("geoMap", {
     }),
 
     sceneControlPlugin: false, // 场景控制插件
-    sceneControlPluginBase: false, // 场景控制插件（基础）
     historyCasePlugin: false, // 历史案例插件
 
-    // 卫星可视化插件
+    // 基础场景的通用配置
+    sceneControlPluginBase: false, // 场景控制插件（基础）
+    showSatellitePointBase: true, // 显示卫星当前实时点位
+    showSatelliteOrbitBase: true, // 显示轨道线
+    showSatelliteNameBase: true, // 显示卫星名称
+    showSatelliteModelBase: true, // 显示卫星模型
+
+    // 场景案例的特殊配置
+    showSatellitePointScene: true, // 显示卫星当前实时点位
+    showSatelliteOrbitScene: true, // 显示轨道线
+    showImportSatelliteOrbitScene: true, // 显示从星轨道线
+    showThreatSatelliteOrbitScene: true, // 显示主星轨道线
+    showSatelliteNameScene: true, // 显示卫星名称
+    showSatelliteModelScene: true, // 显示卫星模型
+    showSatelliteSensorScene: false, // 显示卫星传感器
+    showSatelliteBodyCoordinateScene: false, // 显示卫星本体坐标系
+    showSatelliteOrbitCoordinateScene: false, // 显示卫星轨道坐标系
+    showSatelliteLightDirectionScene: false, // 显示卫星光照方向
+    showSatelliteImageDirectionScene: false, // 显示卫星成像方向
+
+    // 场景案例和基础场景的通用配置
     focusedNorad: "", // 当前视角聚焦的卫星 NORAD ID
     coordinate: "ECEF", // 坐标系
-    showSatellitePoint: true, // 显示卫星当前实时点位
-    showSatelliteOrbit: true, // 显示轨道线
-    showSatelliteTrajectory: true, // 显示轨迹线
-    showSatelliteName: true, // 显示卫星名称
-    showSatelliteModel: true, // 显示卫星模型
-
     currentSceneTimeMs: 0, // web 球 clock 当前时刻（ms 时间戳）
     currentSceneConfig: {}, // 当前场景配置
+    showGeoCirclePositions: true, // 显示同步轨道带
+    showGeoCircleLabel: true, // 显示经度标签
+    showPatrolArea: true, // 显示巡视区域
   }),
   getters: {
     getMenuBarVisible: (state) => {
