@@ -8,6 +8,8 @@ const AU_KM = 149597870.7;
 const LIGHT_DIRECTION_LINE_LENGTH = 5_000_000;
 /** 光照来向线段颜色 */
 const LIGHT_DIRECTION_COLOR = "#ffff00";
+/** 成像方向线段颜色 */
+const IMAGE_DIRECTION_COLOR = "#00ccff";
 
 const geoMapStore = useGeoMapStore();
 
@@ -480,13 +482,65 @@ export function toggleSatelliteSensor(satelliteSceneLayer, showSatelliteSensor) 
   }
 }
 
-// 切换卫星成像方向显示状态 TODO
+/**
+ * 计算成像方向线段端点：起点为主动星，终点为从动星（箭头指向从动星）
+ * @param {object} threatPosition - 主动星实时显示位置（Cartesian3）
+ * @param {object} importPosition - 从动星实时显示位置（Cartesian3）
+ * @returns {Array} 线段端点数组
+ */
+const buildImageDirectionPositions = (threatPosition, importPosition) => {
+  if (!threatPosition || !importPosition) return [];
+  return [threatPosition, importPosition];
+};
+
+/**
+ * 切换卫星成像方向显示状态
+ * @param {object} satelliteSceneLayer - 卫星场景图层
+ * @param {boolean} showSatelliteImageDirection - 是否显示成像方向
+ * @returns {void}
+ */
 export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatelliteImageDirection) {
   if (!satelliteSceneLayer) return;
 
-  if (showSatelliteImageDirection) {
-    if (satelliteSceneLayer.getGraphicById("satelliteImageDirection")) return;
+  const existingLine = satelliteSceneLayer.getGraphicById("satelliteImageDirection");
+  if (existingLine) {
+    satelliteSceneLayer.removeGraphic(existingLine);
   }
+
+  if (!showSatelliteImageDirection) return;
+
+  const threatGraphicLine = satelliteSceneLayer.getGraphicById("threatSatellite");
+  const importGraphicLine = satelliteSceneLayer.getGraphicById("importSatellite");
+  if (!threatGraphicLine || !importGraphicLine) return;
+
+  const Cesium = mars3d.Cesium;
+
+  const imageDirectionLine = new mars3d.graphic.PolylineEntity({
+    id: "satelliteImageDirection",
+    name: "satelliteImageDirection",
+    positions: new Cesium.CallbackProperty(() => {
+      const threatPosition = threatGraphicLine.positionShow;
+      const importPosition = importGraphicLine.positionShow;
+      return buildImageDirectionPositions(threatPosition, importPosition);
+    }, false),
+    style: {
+      width: 6,
+      opacity: 1,
+      arcType: Cesium.ArcType.NONE,
+      material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(IMAGE_DIRECTION_COLOR)),
+      label: {
+        text: "成像",
+        font_size: 16,
+        font_family: "楷体",
+        color: IMAGE_DIRECTION_COLOR,
+        outline: true,
+        outlineColor: "#000000",
+        outlineWidth: 2,
+      },
+    },
+  });
+
+  satelliteSceneLayer.addGraphic(imageDirectionLine);
 }
 
 // 切换卫星本体坐标系显示状态

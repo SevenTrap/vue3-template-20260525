@@ -178,6 +178,7 @@ import {
   toggleSatelliteSensor,
   toggleSatelliteBodyCoordinate,
   toggleSatelliteLightDirection,
+  toggleSatelliteImageDirection,
 } from "../utils/mars3dSatellite.js";
 import { lockCameraToInertial, unlockCameraFromInertial } from "../utils/mars3dOrbitDynamics.js";
 import {
@@ -270,8 +271,14 @@ export default {
       toggleSatelliteOribit(satelliteSceneLayer, newVal);
     },
 
+    // 显示光照方向
     showSatelliteLightDirectionScene(newVal) {
       toggleSatelliteLightDirection(satelliteSceneLayer, newVal);
+    },
+
+    // 显示成像方向
+    showSatelliteImageDirectionScene(newVal) {
+      toggleSatelliteImageDirection(satelliteSceneLayer, newVal);
     },
 
     // 显示变轨点
@@ -332,6 +339,9 @@ export default {
 
       if (this.showSatelliteLightDirectionScene) {
         toggleSatelliteLightDirection(satelliteSceneLayer, true);
+      }
+      if (this.showSatelliteImageDirectionScene) {
+        toggleSatelliteImageDirection(satelliteSceneLayer, true);
       }
     },
 
