@@ -158,7 +158,7 @@ import dayjs from "dayjs";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { globalViewer } from "@/utils/initEarth";
-import { satelliteLayer, satelliteSceneLayer } from "../utils/initMars3dLayers.js";
+import { satelliteSceneLayer } from "../utils/initMars3dLayers.js";
 import {
   addGeoCirclePositions,
   removeGeoCirclePositions,
@@ -188,6 +188,15 @@ import {
   julianDateToTimeMs,
 } from "../utils/mars3dRelativeTrajectory.js";
 import { ECEF_PRESETS, ECI_PRESETS, GLOBAL_VIEW_ALT } from "../configs/index.js";
+import {
+  setSouthPoleFrontECEF,
+  setSouthPoleSideECEF,
+  setStarPoleECEF,
+  setDefaultPoleECEF,
+  setDefaultPoleECI,
+  setSouthPoleFrontECI,
+  setSouthPoleSideECI,
+} from "../utils/satelliteViewConfig.js";
 
 const geoMapStore = useGeoMapStore();
 
@@ -235,7 +244,11 @@ export default {
       "showSatelliteOrbitCoordinateScene",
     ]),
   },
-  mounted() {},
+  mounted() {
+    setTimeout(() => {
+      this.applyEcefView("default");
+    }, 1000);
+  },
   beforeUnmount() {
     destroyRelativeTrajectoryLayer(globalViewer);
   },
@@ -302,41 +315,16 @@ export default {
     handleCoordinateChange(value) {
       geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
 
-      globalViewer.trackedEntity = undefined;
-      this.applyCameraLock();
-      this.handleApplyView("default");
-      this.viewMode = "default";
-    },
-
-    handleApplyView(presetId) {
-      if (!globalViewer) return;
-
-      if (this.coordinate === "ECI") {
-        this.applyEciView(presetId); // 应用 ECI 视角
-        geoMapStore.SET_COMPONENT_VISIBLE_TRUE("showSatelliteOrbit");
-        geoMapStore.SET_COMPONENT_VISIBLE_FALSE("showChangePoints");
-      } else {
-        this.applyEcefView(presetId); // 应用 ECEF 视角
-        geoMapStore.SET_COMPONENT_VISIBLE_FALSE("showSatelliteOrbit");
-        geoMapStore.SET_COMPONENT_VISIBLE_TRUE("showChangePoints");
-      }
-    },
-
-    /**
-     * 根据当前坐标系决定是否锁定惯性相机
-     * @returns {void}
-     */
-    applyCameraLock() {
-      if (!globalViewer) return;
-
-      if (this.coordinate === "ECI") {
+      if (value === "ECI") {
         lockCameraToInertial(globalViewer);
         addSatelliteSceneByTle(satelliteSceneLayer, this.currentSceneConfig);
       } else {
         unlockCameraFromInertial(globalViewer);
         addSatelliteScene(satelliteSceneLayer, this.satRelativeData);
       }
+      this.handleApplyView("default");
 
+      // 重置图层控制显示状态
       if (this.showSatelliteLightDirectionScene) {
         toggleSatelliteLightDirection(satelliteSceneLayer, true);
       }
@@ -345,90 +333,78 @@ export default {
       }
     },
 
-    /**
-     * ECEF 视角预设分派
-     * @param {string} presetId - 预设 id
-     * @returns {void}
-     */
-    applyEcefView(presetId) {
-      switch (presetId) {
-        case "default":
-          this.flyToGlobal(104, 27, GLOBAL_VIEW_ALT, -90); // 默认视角
-          break;
-        case "southPole":
-          this.flyToGlobal(0, -90, GLOBAL_VIEW_ALT, -90); // 南极视角
-          break;
-        case "starPole":
-          // this.flyToGlobal(0, 90, GLOBAL_VIEW_ALT, -90); // 恒星视角
-          this.flyToStarPole();
-          break;
-        case "equator":
-          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, -90); // 赤道视角
-          break;
-        default:
-          break;
+    handleApplyView(presetId) {
+      this.viewMode = presetId;
+
+      if (this.coordinate === "ECI") {
+        this.applyEciView(presetId); // 应用 ECI 视角
+      } else {
+        this.applyEcefView(presetId); // 应用 ECEF 视角
       }
     },
 
-    flyToStarPole() {
-      if (!globalViewer) return;
+    // 应用 ECEF 视角预设
+    applyEcefView(presetId) {
+      globalViewer.trackedEntity = null;
+      globalViewer.clock.shouldAnimate = false;
 
-      const importGraphicLine = satelliteSceneLayer.getGraphicById("importSatellite");
-      if (!importGraphicLine) return;
-      // importGraphicLine.path.show = true;
-      importGraphicLine.flyToPoint({
-        complete: () => {
-          globalViewer.trackedEntity = importGraphicLine.trackedEntity;
-        },
-      });
-
-      // importGraphicLine.flyTo();
-      // const positionShow = importGraphicLine.positionShow;
-
-      // const positionShowLLA = mars3d.Cesium.Cartographic.fromCartesian(positionShow);
-      // globalViewer.flyToPoint();
-
-      // console.log(positionShowLLA, "positionShowLLA");
-
-      // setTimeout(() => {
-      //   globalViewer.flyToGraphic(importGraphicLine, {
-      //     radius: 100000,
-      //     heading: 60,
-      //     pitch: -89,
-      //     roll: 90,
-      //     duration: 1.5,
-      //   });
-      // }, 1000);
-    },
-
-    /**
-     * ECI 视角预设分派
-     * @param {string} presetId - 预设 id
-     * @returns {void}
-     */
-    applyEciView(presetId) {
       switch (presetId) {
         case "default":
-          this.flyToGlobal(104, 27, GLOBAL_VIEW_ALT, -90); // 默认视角
+          setDefaultPoleECEF(satelliteSceneLayer, "importSatellite");
           break;
-        case "southPole":
-          this.flyToGlobal(0, -90, GLOBAL_VIEW_ALT, -90); // 南极视角
+
+        // 南极正视
+        case "southPoleFront":
+          setSouthPoleFrontECEF(satelliteSceneLayer);
+          break;
+
+        // 南极侧视
+        case "southPoleSide":
+          setSouthPoleSideECEF(satelliteSceneLayer, "importSatellite");
+          break;
+
+        // 恒星视角
+        case "starPole":
+          setStarPoleECEF(satelliteSceneLayer, "importSatellite");
+          break;
+
+        default:
+          console.log("未找到对应的视角");
+          break;
+      }
+
+      globalViewer.clock.shouldAnimate = true;
+    },
+
+    // 应用 ECI 视角预设
+    applyEciView(presetId) {
+      globalViewer.trackedEntity = null;
+      globalViewer.clock.shouldAnimate = false;
+
+      switch (presetId) {
+        case "default":
+          setDefaultPoleECI(satelliteSceneLayer, "importSatellite");
+          break;
+
+        case "southPoleFront":
+          setSouthPoleFrontECI(satelliteSceneLayer);
+          break;
+
+        case "southPoleSide":
+          setSouthPoleSideECI(satelliteSceneLayer, "importSatellite");
+          break;
+
+        case "importSatellite":
+          this.flyToImportSatellite(); // 从星固定
           break;
         case "firstSatPole":
-          this.flyToFirstPerson(); // 主星视角
-          break;
-        case "secondSatPole":
-          this.flyToThirdPerson(); // 从星视角
-          break;
-        case "orbitalPlanePole":
-          this.flyToOrbitalPlane(); // 轨道平面
-          break;
-        case "equatorPlanePole":
-          this.flyToGlobal(0, 0, GLOBAL_VIEW_ALT, 0); // 赤道平面
+          this.flyToFirstPerson(); // 第一视角
           break;
         default:
           break;
       }
+
+      globalViewer.clock.shouldAnimate = true;
     },
 
     /**
@@ -449,94 +425,6 @@ export default {
         },
         duration: 1.5,
       });
-    },
-
-    /**
-     * 主星视角：相机定位并持续跟随威胁目标卫星
-     * @returns {void}
-     */
-    flyToFirstPerson() {
-      this.trackSatellite(this.threatTargetID);
-    },
-
-    /**
-     * 从星视角：相机定位并持续跟随被威胁目标卫星
-     * @returns {void}
-     */
-    flyToThirdPerson() {
-      this.trackSatellite(this.importTargetID);
-    },
-
-    /**
-     * 持续跟随指定卫星，并让卫星模型朝向地球
-     * @param {string|number} noradID - 卫星 NORAD ID
-     * @returns {void}
-     */
-    trackSatellite(noradID) {
-      if (!globalViewer || !noradID) return;
-
-      console.log(noradID, "trackSatellite");
-
-      // satelliteLayer.getGraphics().map((graphic) => console.log(graphic.id, "graphicid"));
-
-      const graphic = satelliteLayer?.getGraphics().find((graphic) => graphic.id === "20253");
-
-      if (!graphic) {
-        this.$message.warning("未找到该卫星，请先在卫星树中勾选该卫星");
-        return;
-      }
-
-      unlockCameraFromInertial(globalViewer); // 解除 ECI 锁定，避免与跟随冲突
-      setSatelliteFaceEarth(satelliteLayer, noradID, true); // 模型朝向地球
-
-      console.log(graphic.trackedEntity, "graphic.entity");
-
-      globalViewer.trackedEntity = graphic.trackedEntity; // 持续跟随
-
-      this.trackedNorad = noradID;
-    },
-
-    /**
-     * 释放卫星跟随并还原模型朝向
-     * @returns {void}
-     */
-    releaseTracking() {
-      if (!globalViewer) return;
-
-      globalViewer.trackedEntity = undefined;
-
-      if (this.trackedNorad) {
-        setSatelliteFaceEarth(satelliteLayer, this.trackedNorad, false);
-        this.trackedNorad = "";
-      }
-    },
-
-    handleToggleGeoCirclePositions() {
-      if (this.showGeoCirclePositions) {
-        addGeoCirclePositions(globalViewer);
-      } else {
-        removeGeoCirclePositions(globalViewer);
-      }
-    },
-
-    handleToggleGeoCircleLabel() {
-      if (this.showGeoCircleLabel) {
-        addGeoCircleLabel(globalViewer);
-      } else {
-        removeGeoCircleLabel(globalViewer);
-      }
-    },
-
-    /**
-     * 切换巡视区域显示状态
-     * @returns {void}
-     */
-    handleTogglePatrolArea() {
-      if (this.showPatrolArea) {
-        addPatrolArea(globalViewer);
-      } else {
-        removePatrolArea(globalViewer);
-      }
     },
 
     handleToggleSate(state) {

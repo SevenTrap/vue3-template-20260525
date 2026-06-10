@@ -90,7 +90,7 @@ export const useGeoMapStore = defineStore("geoMap", {
       metrics: [], // 图表指标 [{ timeMs, time, distanceKm, sunAngleDeg }]
     }),
 
-    sceneControlPlugin: false, // 场景控制插件
+    sceneControlPlugin: true, // 场景控制插件
     historyCasePlugin: false, // 历史案例插件
 
     // 基础场景的通用配置

@@ -141,9 +141,9 @@ export default {
 
       if (currentSceneTime) {
         const currentSceneTimeMs = dayjs(currentSceneTime).valueOf();
-        console.log("currentSceneTimeMs", currentSceneTimeMs);
-        console.log("this.satRelativeData.startTime", this.satRelativeData.startTime);
-        console.log("this.satRelativeData.endTime", this.satRelativeData.endTime);
+        // console.log("currentSceneTimeMs", currentSceneTimeMs);
+        // console.log("this.satRelativeData.startTime", this.satRelativeData.startTime);
+        // console.log("this.satRelativeData.endTime", this.satRelativeData.endTime);
         if (currentSceneTimeMs < this.satRelativeData.startTime) {
           metricThreat = threatLngHeightDiffs[0];
           metricImport = importLngHeightDiffs[0];
@@ -170,6 +170,16 @@ export default {
         legend: {
           data: [`威胁目标 ${this.currentSceneConfig.threatName}`, `被威胁目标 ${this.currentSceneConfig.importName}`],
           top: 8,
+          itemStyle: {
+            color: "#ffffff",
+            fontSize: 14,
+            fontWeight: 400,
+          },
+          textStyle: {
+            color: "#ffffff",
+            fontSize: 14,
+            fontWeight: 400,
+          },
         },
         toolbox: {
           show: true,
@@ -182,7 +192,7 @@ export default {
             restore: {},
             saveAsImage: {
               type: "png",
-              name: `经高图_${this.threatTargetID || "threat"}_${this.importTargetID || "import"}`,
+              name: `经高图_${this.currentSceneConfig.threatTargetID || "threat"}_${this.currentSceneConfig.importTargetID || "import"}`,
             },
           },
         },
@@ -196,7 +206,7 @@ export default {
           },
           formatter: (params) => this.formatTooltip(params),
         },
-        grid: [{ left: 70, right: 90, top: 50, bottom: 84 }],
+        grid: [{ left: 50, right: 80, top: 40, bottom: 50 }],
         dataZoom: [
           // x 轴：鼠标滚轮/拖拽缩放
           {
@@ -210,8 +220,8 @@ export default {
           {
             type: "slider",
             xAxisIndex: 0,
-            height: 22,
-            bottom: 46,
+            height: 20,
+            bottom: 5,
             filterMode: "none",
           },
           // y 轴：鼠标滚轮/拖拽缩放（垂直）
@@ -226,20 +236,64 @@ export default {
           {
             type: "slider",
             yAxisIndex: 0,
-            width: 18,
-            right: 28,
+            width: 20,
+            right: 5,
             filterMode: "none",
           },
         ],
         xAxis: {
           type: "value",
-          name: "经度 / °",
+          name: "经度/°",
           scale: true,
+          axisLine: {
+            show: true,
+            lineStyle: {
+              color: "#ffffff",
+              width: 1,
+            },
+          },
+          axisTick: {
+            show: true,
+            lineStyle: {
+              color: "#ffffff",
+              width: 1,
+            },
+          },
+          axisLabel: {
+            show: true,
+            color: "#ffffff",
+            fontSize: 14,
+            fontWeight: 600,
+            formatter: (value) => {
+              if (Math.abs(value) === 180) return "";
+              if (Math.abs(value) === 0) return "0°";
+              let sign = value > 0 ? "E" : "W";
+              return Math.abs(value) + "°" + sign;
+            },
+          },
         },
         yAxis: {
           type: "value",
-          name: "相对同步轨道高度 / km",
+          name: "相对高度/km",
           scale: true,
+          axisLine: {
+            show: true,
+            lineStyle: {
+              color: "#ffffff",
+              width: 1,
+            },
+          },
+          axisTick: {
+            show: true,
+            lineStyle: {
+              color: "#ffffff",
+              width: 1,
+            },
+          },
+          axisLabel: {
+            show: true,
+            color: "#ffffff",
+          },
         },
         series: [
           {
@@ -267,8 +321,8 @@ export default {
             type: "scatter",
             showSymbol: true,
             symbolSize: 10,
-            itemStyle: { color: IMPORT_COLOR },
-            lineStyle: { color: IMPORT_COLOR, width: 1.5 },
+            itemStyle: { color: THREAT_COLOR },
+            lineStyle: { color: THREAT_COLOR, width: 1.5 },
             data: [metricThreat],
             zlevel: 10,
           },
@@ -277,8 +331,8 @@ export default {
             type: "scatter",
             showSymbol: true,
             symbolSize: 10,
-            itemStyle: { color: THREAT_COLOR },
-            lineStyle: { color: THREAT_COLOR, width: 1.5 },
+            itemStyle: { color: IMPORT_COLOR },
+            lineStyle: { color: IMPORT_COLOR, width: 1.5 },
             data: [metricImport],
             zlevel: 10,
           },
@@ -298,18 +352,18 @@ export default {
     formatTooltip(params) {
       const firstParam = Array.isArray(params) ? params[0] : params;
       const i = firstParam && firstParam.dataIndex;
-      const threat = this.threatTrack[i];
-      const importSat = this.importTrack[i];
+      const threat = this.satRelativeData.threatTrack[i];
+      const importSat = this.satRelativeData.importTrack[i];
       if (!threat || !importSat) return "";
 
       const fmt = (v, unit = "") => (Number.isFinite(v) ? `${v.toFixed(2)}${unit}` : "--");
-      const distance = this.distances[i];
-      const sunAngle = this.sunAngles[i];
+      const distance = this.satRelativeData.distances[i];
+      const sunAngle = this.satRelativeData.sunAngles[i];
 
       return [
         `时间：${threat.time}`,
-        `威胁目标 ${this.threatTargetID}：经度 ${fmt(threat.lon, "°")}，相对高度 ${fmt(threat.heightDiff, " km")}`,
-        `被威胁目标 ${this.importTargetID}：经度 ${fmt(importSat.lon, "°")}，相对高度 ${fmt(importSat.heightDiff, " km")}`,
+        `威胁目标 ${this.currentSceneConfig.threatTargetID}：经度 ${fmt(threat.lon, "°")}，相对高度 ${fmt(threat.heightDiff, " km")}`,
+        `被威胁目标 ${this.currentSceneConfig.importTargetID}：经度 ${fmt(importSat.lon, "°")}，相对高度 ${fmt(importSat.heightDiff, " km")}`,
         `两星距离：${fmt(distance, " km")}`,
         `光照角：${fmt(sunAngle, "°")}`,
       ].join("<br/>");

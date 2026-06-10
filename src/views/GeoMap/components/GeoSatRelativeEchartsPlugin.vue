@@ -101,6 +101,16 @@ export default {
         legend: {
           data: ["两星距离", "太阳光照角"],
           top: 4,
+          itemStyle: {
+            color: "#ffffff",
+            fontSize: 14,
+            fontWeight: 400,
+          },
+          textStyle: {
+            color: "#ffffff",
+            fontSize: 14,
+            fontWeight: 400,
+          },
         },
         tooltip: {
           trigger: "axis",
@@ -112,7 +122,7 @@ export default {
           },
           formatter: (params) => this.formatTooltip(params),
         },
-        grid: [{ left: 70, right: 50, top: 50, bottom: 82 }],
+        grid: [{ left: 50, right: 50, top: 40, bottom: 50 }],
         dataZoom: [
           {
             type: "inside",
@@ -122,8 +132,8 @@ export default {
           {
             type: "slider",
             xAxisIndex: 0,
-            height: 24,
-            bottom: 28,
+            height: 20,
+            bottom: 5,
             filterMode: "none",
           },
         ],
@@ -136,6 +146,24 @@ export default {
             axisLabel: {
               hideOverlap: true,
             },
+            axisLine: {
+              show: true,
+              lineStyle: {
+                color: "#ffffff",
+                width: 1,
+              },
+            },
+            axisTick: {
+              show: true,
+              lineStyle: {
+                color: "#ffffff",
+                width: 1,
+              },
+            },
+            axisLabel: {
+              show: true,
+              color: "#ffffff",
+            },
           },
         ],
         yAxis: [
@@ -144,6 +172,24 @@ export default {
             name: "距离 / km",
             position: "left",
             scale: true,
+            axisLine: {
+              show: true,
+              lineStyle: {
+                color: "#ffffff",
+                width: 1,
+              },
+            },
+            axisTick: {
+              show: true,
+              lineStyle: {
+                color: "#ffffff",
+                width: 1,
+              },
+            },
+            axisLabel: {
+              show: true,
+              color: "#ffffff",
+            },
           },
           {
             type: "value",
@@ -151,6 +197,24 @@ export default {
             position: "right",
             min: 0,
             max: 180,
+            axisLine: {
+              show: true,
+              lineStyle: {
+                color: "#ffffff",
+                width: 1,
+              },
+            },
+            axisTick: {
+              show: true,
+              lineStyle: {
+                color: "#ffffff",
+                width: 1,
+              },
+            },
+            axisLabel: {
+              show: true,
+              color: "#ffffff",
+            },
           },
         ],
         series: [

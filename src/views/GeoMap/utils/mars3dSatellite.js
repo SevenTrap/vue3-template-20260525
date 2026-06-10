@@ -5,7 +5,7 @@ import { useGeoMapStore } from "@/store/useGeoMapStore";
 /** 天文单位（km），用于将 sunPos 的 rsun(AU) 换算为 km */
 const AU_KM = 149597870.7;
 /** 光照来向线段长度（m） */
-const LIGHT_DIRECTION_LINE_LENGTH = 5_000_000;
+const LIGHT_DIRECTION_LINE_LENGTH = 10_000_000;
 /** 光照来向线段颜色 */
 const LIGHT_DIRECTION_COLOR = "#ffff00";
 /** 成像方向线段颜色 */
@@ -38,8 +38,8 @@ const createSatelliteGraphic = (satelliteModel) => {
       scale: 1,
       minimumPixelSize: 90,
       silhouette: false,
-      mergeOrientation: false,
-      heading: 90,
+      mergeOrientation: true,
+      heading: 0,
       pitch: 0,
       roll: 0,
     },
@@ -276,7 +276,6 @@ export function addSatelliteScene(satelliteSceneLayer, satRelativeData) {
       url: "/assets/gltf/weixin.gltf",
       scale: 1,
       minimumPixelSize: 90,
-      silhouette: false,
       mergeOrientation: false,
       heading: 90,
       pitch: 0,
@@ -319,7 +318,6 @@ export function addSatelliteScene(satelliteSceneLayer, satRelativeData) {
       url: "/assets/gltf/weixin.gltf",
       scale: 1,
       minimumPixelSize: 90,
-      silhouette: false,
       mergeOrientation: false,
       heading: 90,
       pitch: 0,
@@ -468,10 +466,12 @@ export function toggleSatelliteSensor(satelliteSceneLayer, showSatelliteSensor) 
       lookAt: importGraphicLine.property,
       style: {
         angle: 10,
-        opacity: 0.5,
+        opacity: 0.3,
         color: "#7ef500",
-        slices: 10,
-        slicesR: 6,
+        outlineColor: "#e1e1e1",
+        topOutlineShow: true,
+        slices: 1,
+        slicesR: 1,
       },
     });
     satelliteSceneLayer.addGraphic(satelliteSensor);
