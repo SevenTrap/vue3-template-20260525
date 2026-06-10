@@ -168,11 +168,11 @@ import {
   removePatrolArea,
 } from "@/utils/mars3d/mars3dGeoStyle.js";
 import {
-  toggleSatelliteOribit,
+  toggleImportSatelliteOrbit,
+  toggleThreatSatelliteOrbit,
   toggleSatelliteName,
   toggleSatelliteModel,
   toggleSatellitePoint,
-  setSatelliteFaceEarth,
   addSatelliteScene,
   addSatelliteSceneByTle,
   toggleSatelliteSensor,
@@ -180,14 +180,15 @@ import {
   toggleSatelliteLightDirection,
   toggleSatelliteImageDirection,
 } from "../utils/mars3dSatellite.js";
-import { lockCameraToInertial, unlockCameraFromInertial } from "../utils/mars3dOrbitDynamics.js";
 import {
-  rebuildRelativeTrajectoriesByFrame,
-  toggleRelativeTrajectories,
-  destroyRelativeTrajectoryLayer,
-  julianDateToTimeMs,
-} from "../utils/mars3dRelativeTrajectory.js";
-import { ECEF_PRESETS, ECI_PRESETS, GLOBAL_VIEW_ALT } from "../configs/index.js";
+  lockCameraToInertial,
+  unlockCameraFromInertial,
+  lockCameraToInertialSouthPoleSide,
+  lockCameraToInertialSatellite,
+  lockCameraToInertialSatelliteThreat,
+} from "../utils/mars3dOrbitDynamics.js";
+import { toggleRelativeTrajectories, destroyRelativeTrajectoryLayer } from "../utils/mars3dRelativeTrajectory.js";
+import { ECEF_PRESETS, ECI_PRESETS } from "../configs/index.js";
 import {
   setSouthPoleFrontECEF,
   setSouthPoleSideECEF,
@@ -278,10 +279,10 @@ export default {
       toggleSatellitePoint(satelliteSceneLayer, newVal);
     },
     showImportSatelliteOrbitScene(newVal) {
-      toggleSatelliteOribit(satelliteSceneLayer, newVal);
+      toggleImportSatelliteOrbit(satelliteSceneLayer, newVal);
     },
     showThreatSatelliteOrbitScene(newVal) {
-      toggleSatelliteOribit(satelliteSceneLayer, newVal);
+      toggleThreatSatelliteOrbit(satelliteSceneLayer, newVal);
     },
 
     // 显示光照方向
@@ -314,12 +315,12 @@ export default {
   methods: {
     handleCoordinateChange(value) {
       geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
-
+      unlockCameraFromInertial(globalViewer);
       if (value === "ECI") {
-        lockCameraToInertial(globalViewer);
+        // lockCameraToInertial(globalViewer);
         addSatelliteSceneByTle(satelliteSceneLayer, this.currentSceneConfig);
       } else {
-        unlockCameraFromInertial(globalViewer);
+        // unlockCameraFromInertial(globalViewer);
         addSatelliteScene(satelliteSceneLayer, this.satRelativeData);
       }
       this.handleApplyView("default");
@@ -380,51 +381,36 @@ export default {
     applyEciView(presetId) {
       globalViewer.trackedEntity = null;
       globalViewer.clock.shouldAnimate = false;
+      unlockCameraFromInertial(globalViewer);
 
       switch (presetId) {
         case "default":
+          lockCameraToInertial(globalViewer);
           setDefaultPoleECI(satelliteSceneLayer, "importSatellite");
           break;
 
         case "southPoleFront":
+          lockCameraToInertial(globalViewer);
           setSouthPoleFrontECI(satelliteSceneLayer);
           break;
 
         case "southPoleSide":
-          setSouthPoleSideECI(satelliteSceneLayer, "importSatellite");
+          lockCameraToInertialSouthPoleSide(globalViewer);
           break;
 
         case "importSatellite":
-          this.flyToImportSatellite(); // 从星固定
+          lockCameraToInertialSatellite(globalViewer);
           break;
+
         case "firstSatPole":
-          this.flyToFirstPerson(); // 第一视角
+          lockCameraToInertialSatelliteThreat(globalViewer);
           break;
+
         default:
           break;
       }
 
       globalViewer.clock.shouldAnimate = true;
-    },
-
-    /**
-     * 按经纬高 / 俯仰飞行到指定全球视角
-     * @param {number} lon - 经度（度）
-     * @param {number} lat - 纬度（度）
-     * @param {number} alt - 高度（米）
-     * @param {number} pitchDeg - 俯仰（度，负值朝下）
-     * @returns {void}
-     */
-    flyToGlobal(lon, lat, alt, pitchDeg) {
-      globalViewer.camera.flyTo({
-        destination: mars3d.Cesium.Cartesian3.fromDegrees(lon, lat, alt),
-        orientation: {
-          heading: mars3d.Cesium.Math.toRadians(0),
-          pitch: mars3d.Cesium.Math.toRadians(pitchDeg),
-          roll: 0,
-        },
-        duration: 1.5,
-      });
     },
 
     handleToggleSate(state) {

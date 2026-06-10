@@ -123,7 +123,7 @@ export const rebuildSatelliteReferenceFrame = (satelliteLayer) => {
  * @param {boolean} showSatelliteOrbit - 是否显示轨道线
  * @returns {void}
  */
-export function toggleSatelliteOribit(satelliteLayer, showSatelliteOrbit) {
+export function toggleSatelliteOrbit(satelliteLayer, showSatelliteOrbit) {
   if (!satelliteLayer) return;
 
   satelliteLayer.eachGraphic((graphic) => {

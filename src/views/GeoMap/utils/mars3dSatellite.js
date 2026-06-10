@@ -133,7 +133,7 @@ export const rebuildSatelliteReferenceFrame = (satelliteLayer) => {
  * @param {boolean} showSatelliteOrbit - 是否显示轨道线
  * @returns {void}
  */
-export function toggleSatelliteOribit(satelliteLayer, showSatelliteOrbit) {
+export function toggleSatelliteOrbit(satelliteLayer, showSatelliteOrbit) {
   if (!satelliteLayer) return;
 
   satelliteLayer.eachGraphic((graphic) => {
@@ -144,6 +144,23 @@ export function toggleSatelliteOribit(satelliteLayer, showSatelliteOrbit) {
   });
 }
 
+export function toggleImportSatelliteOrbit(satelliteLayer, showImportSatelliteOrbit) {
+  if (!satelliteLayer) return;
+
+  const graphic = satelliteLayer.getGraphicById("importSatellite");
+  if (!graphic) return;
+  graphic.path.show = showImportSatelliteOrbit;
+  graphic.path.opacity = showImportSatelliteOrbit ? 0.5 : 0;
+}
+
+export function toggleThreatSatelliteOrbit(satelliteLayer, showThreatSatelliteOrbit) {
+  if (!satelliteLayer) return;
+
+  const graphic = satelliteLayer.getGraphicById("threatSatellite");
+  if (!graphic) return;
+  graphic.path.show = showThreatSatelliteOrbit;
+  graphic.path.opacity = showThreatSatelliteOrbit ? 0.5 : 0;
+}
 /**
  * 切换卫星名称显示状态
  * @param {object} satelliteLayer - 卫星图层

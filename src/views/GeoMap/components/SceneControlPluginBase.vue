@@ -96,7 +96,7 @@ import {
   removePatrolArea,
 } from "@/utils/mars3d/mars3dGeoStyle.js";
 import {
-  toggleSatelliteOribit,
+  toggleSatelliteOrbit,
   toggleSatelliteName,
   toggleSatelliteModel,
   toggleSatellitePoint,
@@ -155,7 +155,7 @@ export default {
       }
     },
     showSatelliteOrbitBase(newVal) {
-      toggleSatelliteOribit(satelliteLayer, newVal);
+      toggleSatelliteOrbit(satelliteLayer, newVal);
     },
     showSatellitePointBase(newVal) {
       toggleSatellitePoint(satelliteLayer, newVal);

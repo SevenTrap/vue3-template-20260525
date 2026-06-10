@@ -1,4 +1,5 @@
 import { globalViewer } from "@/utils/initEarth";
+
 import * as mars3d from "mars3d";
 
 // 设置 ECEF 默认视角
@@ -102,11 +103,11 @@ export function setSouthPoleSideECI(satelliteLayer, satelliteID) {
   if (!graphic) return;
 
   graphic.flyToPoint({
-    scale: 0.8,
-    heading: 0,
-    pitch: -90,
-    roll: 90,
+    scale: 0.6,
+    heading: 180,
+    pitch: 89,
+    roll: 0,
   });
 
-  globalViewer.trackedEntity = graphic;
+  // globalViewer.trackedEntity = graphic.trackedEntity;
 }
