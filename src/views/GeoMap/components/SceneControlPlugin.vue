@@ -190,6 +190,7 @@ import {
   addSatelliteOrbitECIScene,
   toggleSatelliteSensor,
   toggleSatelliteCoordinateAxis,
+  toggleSatelliteOrbitCoordinateAxis,
   toggleSatelliteLightDirection,
   toggleSatelliteImageDirection,
   toggleImportSatelliteTrajectory,
@@ -338,13 +339,13 @@ export default {
     showSatelliteBodyCoordinateAxisScene(newVal) {
       toggleSatelliteCoordinateAxis(satelliteSceneLayer, newVal);
 
-      if (newVal) geoMapStore.SET_STATE_DATA({ key: "showSatelliteModelScene", value: true });
+      // if (newVal) geoMapStore.SET_STATE_DATA({ key: "showSatelliteModelScene", value: true });
     },
 
     // 显示卫星轨道坐标轴
     showSatelliteOrbitCoordinateAxisScene(newVal) {
-      toggleSatelliteCoordinateAxis(satelliteSceneLayer, newVal);
-      if (newVal) geoMapStore.SET_STATE_DATA({ key: "showSatelliteModelScene", value: false });
+      toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, newVal);
+      // if (newVal) geoMapStore.SET_STATE_DATA({ key: "showSatelliteModelScene", value: false });
     },
   },
   methods: {

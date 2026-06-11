@@ -604,7 +604,7 @@ export function toggleSatelliteCoordinateAxis(satelliteSceneLayer, showSatellite
   if (!satelliteSceneLayer) return;
 
   if (showSatelliteCoordinateAxis) {
-    if (satelliteSceneLayer.getGraphicById("satelliteBodyCoordinate")) return;
+    // if (satelliteSceneLayer.getGraphicById("satelliteBodyCoordinate")) return;
 
     const importGraphicECEF = satelliteSceneLayer.getGraphicById("importSatelliteECEF");
     const importGraphicECI = satelliteSceneLayer.getGraphicById("importSatelliteECI");
@@ -621,6 +621,26 @@ export function toggleSatelliteCoordinateAxis(satelliteSceneLayer, showSatellite
     importGraphic.debugAxisFontFamily = "楷体";
     importGraphic.debugAxisFontColor = "#ffffff";
     importGraphic.debugAxisFontOpacity = 1;
+  } else {
+    const importGraphicECEF = satelliteSceneLayer.getGraphicById("importSatelliteECEF");
+    const importGraphicECI = satelliteSceneLayer.getGraphicById("importSatelliteECI");
+
+    if (importGraphicECEF) importGraphicECEF.debugAxis = false;
+    if (importGraphicECI) importGraphicECI.debugAxis = false;
+  }
+}
+
+// 显示卫星的轨道坐标轴
+export function toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, showSatelliteOrbitCoordinateAxis) {
+  if (!satelliteSceneLayer) return;
+
+  if (showSatelliteOrbitCoordinateAxis) {
+    // if (satelliteSceneLayer.getGraphicById("satelliteOrbitCoordinate")) return;
+    const importGraphicECEF = satelliteSceneLayer.getGraphicById("importSatelliteECEF");
+    const importGraphicECI = satelliteSceneLayer.getGraphicById("importSatelliteECI");
+
+    if (importGraphicECEF) importGraphicECEF.debugAxis = true;
+    if (importGraphicECI) importGraphicECI.debugAxis = true;
   } else {
     const importGraphicECEF = satelliteSceneLayer.getGraphicById("importSatelliteECEF");
     const importGraphicECI = satelliteSceneLayer.getGraphicById("importSatelliteECI");
