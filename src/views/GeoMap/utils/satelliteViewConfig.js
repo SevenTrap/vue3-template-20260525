@@ -1,6 +1,7 @@
 import * as mars3d from "mars3d";
 import { globalViewer } from "@/utils/initEarth";
 import { satelliteSceneLayer } from "./initMars3dLayers";
+import { useGeoMapStore } from "@/store/useGeoMapStore";
 
 let icrfListener = null; // 当前 ICRF postUpdate 监听函数
 
@@ -204,25 +205,26 @@ const icrfPostUpdateSatelliteThreat = (scene, time) => {
   if (scene.mode !== mars3d.Cesium.SceneMode.SCENE3D) return;
   const icrfToFixed = mars3d.Cesium.Transforms.computeIcrfToFixedMatrix(time);
   const fixedToIcrf = mars3d.Cesium.Transforms.computeFixedToIcrfMatrix(time);
+
   if (!mars3d.Cesium.defined(fixedToIcrf)) return;
   if (!mars3d.Cesium.defined(icrfToFixed)) return;
   const camera = scene.camera;
-  const satelliteGraphic = satelliteSceneLayer.getGraphicById("importSatellite");
+  const importGraphic = satelliteSceneLayer.getGraphicById("importSatellite");
   const threatGraphic = satelliteSceneLayer.getGraphicById("threatSatellite");
-  if (!satelliteGraphic || !threatGraphic) return;
 
-  const posA_fixed = satelliteGraphic.positionShow;
+  if (!importGraphic || !threatGraphic) return;
+  threatGraphic.model.show = false;
+  importGraphic.model.show = true;
+  const posA_fixed = importGraphic.positionShow;
   const posB_fixed = threatGraphic.positionShow;
-  if (!posA_fixed || !posB_fixed) return;
 
+  if (!posA_fixed || !posB_fixed) return;
   const posA_eci = mars3d.Cesium.Matrix3.multiplyByVector(fixedToIcrf, posA_fixed, new mars3d.Cesium.Cartesian3());
   const posB_eci = mars3d.Cesium.Matrix3.multiplyByVector(fixedToIcrf, posB_fixed, new mars3d.Cesium.Cartesian3());
 
-  // 4. 在 ECI 坐标系下计算 B 相对 A 的偏移向量 (从A指向B)
   const offsetEci = mars3d.Cesium.Cartesian3.subtract(posB_eci, posA_eci, new mars3d.Cesium.Cartesian3());
-  const offsetEciCloser = mars3d.Cesium.Cartesian3.multiplyByScalar(offsetEci, 0.8, new mars3d.Cesium.Cartesian3());
+  const offsetEciCloser = mars3d.Cesium.Cartesian3.multiplyByScalar(offsetEci, 0.1, new mars3d.Cesium.Cartesian3());
 
-  // 5. 构建以 A 卫星为中心、轴向平齐惯性系的 4x4 变换矩阵
   const transform = mars3d.Cesium.Matrix4.fromRotationTranslation(icrfToFixed, posA_fixed);
 
   camera.lookAtTransform(transform, offsetEciCloser);
@@ -241,7 +243,6 @@ export const lockCameraToInertial = (viewer) => {
 };
 
 // 南极侧视
-
 export const lockCameraToInertialSouthPoleSide = (viewer) => {
   if (!viewer) return;
   if (icrfListener) return;
@@ -249,6 +250,7 @@ export const lockCameraToInertialSouthPoleSide = (viewer) => {
   viewer.scene.postUpdate.addEventListener(icrfListener);
 };
 
+// 从星视角锁定
 export const lockCameraToInertialSatellite = (viewer) => {
   if (!viewer) return;
   if (icrfListener) return;
@@ -264,11 +266,7 @@ export const lockCameraToInertialSatelliteThreat = (viewer) => {
   viewer.scene.postUpdate.addEventListener(icrfListener);
 };
 
-/**
- * 解除 ECI 相机锁定（恢复 Fixed 系）
- * @param {object} viewer - mars3d 的 globalViewer
- * @returns {void}
- */
+// 解除 ECI 相机锁定（恢复 Fixed 系）
 export const unlockCameraFromInertial = (viewer) => {
   if (!viewer) return;
   if (icrfListener) {

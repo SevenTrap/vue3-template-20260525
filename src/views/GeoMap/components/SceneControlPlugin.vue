@@ -149,7 +149,6 @@
 </template>
 
 <script>
-import * as mars3d from "mars3d";
 import dayjs from "dayjs";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";

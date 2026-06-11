@@ -538,11 +538,13 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
     positions: new Cesium.CallbackProperty(() => {
       const threatPosition = threatGraphicLine.positionShow;
       const importPosition = importGraphicLine.positionShow;
-      return buildImageDirectionPositions(threatPosition, importPosition);
+
+      if (!threatPosition || !importPosition) return [];
+      return [threatPosition, importPosition];
     }, false),
     style: {
-      width: 6,
-      opacity: 1,
+      width: 1,
+      opacity: 0.5,
       arcType: Cesium.ArcType.NONE,
       material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(IMAGE_DIRECTION_COLOR)),
       label: {
