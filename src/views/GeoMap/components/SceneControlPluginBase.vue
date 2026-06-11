@@ -102,7 +102,7 @@ import {
   toggleSatellitePoint,
   rebuildSatelliteReferenceFrame,
 } from "../utils/mars3dSatelliteBase.js";
-import { lockCameraToInertial, unlockCameraFromInertial } from "../utils/mars3dOrbitDynamics.js";
+import { lockCameraToInertial, unlockCameraFromInertial } from "../utils/satelliteViewConfig.js";
 import { BASE_VIEW_PRESETS, GLOBAL_VIEW_ALT } from "../configs/index.js";
 
 const geoMapStore = useGeoMapStore();

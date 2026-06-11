@@ -1,6 +1,26 @@
 import * as mars3d from "mars3d";
 
 /**
+ * 将 Cesium JulianDate 转为毫秒时间戳
+ * @param {object} julianDate - Cesium.JulianDate
+ * @returns {number} 毫秒时间戳
+ */
+export const julianDateToTimeMs = (julianDate) => {
+  if (!julianDate) return 0;
+  return mars3d.Cesium.JulianDate.toDate(julianDate).getTime();
+};
+
+/**
+ * 将毫秒时间戳转为 Cesium JulianDate
+ * @param {number} timeMs - 毫秒时间戳
+ * @returns {object} Cesium.JulianDate
+ */
+export const timeMsToJulianDate = (timeMs) => {
+  if (!timeMs) return 0;
+  return mars3d.Cesium.JulianDate.fromDate(new Date(timeMs));
+};
+
+/**
  * 添加卫星
  * @param satelliteModel 卫星模型对象
  */
@@ -62,7 +82,6 @@ export function addSatellite(satelliteLayer, satelliteModel) {
     },
 
     path: {
-      // show: satelliteModel.options.orbitPath,
       show: false,
       color: "#00ff00",
       width: 1,

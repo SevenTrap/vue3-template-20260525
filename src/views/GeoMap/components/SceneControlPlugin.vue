@@ -71,10 +71,6 @@
             ></el-checkbox>
           </div>
 
-          <!-- <div class="button-group-item">
-            <el-checkbox size="small" :model-value="showChangePoints" @change="handleToggleSate('showChangePoints')" label="变轨点"></el-checkbox>
-          </div> -->
-
           <div class="button-group-item">
             <el-checkbox
               size="small"
@@ -181,13 +177,13 @@ import {
   toggleSatelliteImageDirection,
 } from "../utils/mars3dSatellite.js";
 import {
-  lockCameraToInertial,
   unlockCameraFromInertial,
+  lockCameraToInertial,
   lockCameraToInertialSouthPoleSide,
   lockCameraToInertialSatellite,
   lockCameraToInertialSatelliteThreat,
-} from "../utils/mars3dOrbitDynamics.js";
-import { toggleRelativeTrajectories, destroyRelativeTrajectoryLayer } from "../utils/mars3dRelativeTrajectory.js";
+} from "../utils/satelliteViewConfig.js";
+
 import { ECEF_PRESETS, ECI_PRESETS } from "../configs/index.js";
 import {
   setSouthPoleFrontECEF,
@@ -232,7 +228,7 @@ export default {
       "showSatellitePointScene",
       "showImportSatelliteOrbitScene",
       "showThreatSatelliteOrbitScene",
-      "showChangePoints",
+
       "showSatelliteNameScene",
       "showSatelliteModelScene",
       "showGeoCirclePositions",
@@ -250,9 +246,7 @@ export default {
       this.applyEcefView("default");
     }, 1000);
   },
-  beforeUnmount() {
-    destroyRelativeTrajectoryLayer(globalViewer);
-  },
+  beforeUnmount() {},
   watch: {
     showGeoCirclePositions(newVal) {
       if (newVal) {
@@ -295,10 +289,6 @@ export default {
       toggleSatelliteImageDirection(satelliteSceneLayer, newVal);
     },
 
-    // 显示变轨点
-    showChangePoints(newVal) {
-      toggleRelativeTrajectories(newVal);
-    },
     showSatelliteNameScene(newVal) {
       toggleSatelliteName(satelliteSceneLayer, newVal);
     },

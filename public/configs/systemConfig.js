@@ -1,5 +1,5 @@
 const SYSTEM_CONFIG = {
-  systemTitle: "项目模板",
+  systemTitle: "项目模版",
 
   menuListLeft: [
     // { path: "/layout/homePage", name: "HomePage", label: "首页" },

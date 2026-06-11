@@ -8,14 +8,14 @@ export const BASE_VIEW_PRESETS = [
 
 export const ECEF_PRESETS = [
   { id: "default", label: "默认视角" },
-  { id: "southPoleFront", label: "南极正视" },
+  { id: "southPoleFront", label: "南极俯视" },
   { id: "southPoleSide", label: "南极侧视" },
   { id: "starPole", label: "恒星视角" },
 ];
 
 export const ECI_PRESETS = [
   { id: "default", label: "默认视角" },
-  { id: "southPoleFront", label: "南极正视" },
+  { id: "southPoleFront", label: "南极俯视" },
   { id: "southPoleSide", label: "南极侧视" },
   { id: "importSatellite", label: "从星固定" },
   { id: "firstSatPole", label: "第一视角" },
@@ -44,8 +44,8 @@ export const SCENE_LISTS = [
     importName: "我方卫星", // 从动卫星名称
     besideTargetNames: [], // 旁观目标名称
 
-    startTime: "2026-02-06 12:00:00", // 开始时间
-    endTime: "2026-02-07 12:00:00", // 结束时间
+    startTime: "2026-02-04 12:00:00", // 开始时间
+    endTime: "2026-02-09 12:00:00", // 结束时间
     closeTime: "2026-02-07 10:23:34", // 接近时间
     timeStep: 1 * 60 * 1000, // 默认时间步长：1分钟
     timeFront: 3 * 24 * 60 * 60 * 1000, // 前轨时间：1天

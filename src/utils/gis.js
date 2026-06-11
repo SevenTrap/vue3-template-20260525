@@ -53,7 +53,7 @@ function calculateSurfaceDistance(lat1, lon1, lat2, lon2) {
 }
 
 // 导出函数
-module.exports = {
+export default {
   calculateDistance,
   calculateSurfaceDistance,
 };
