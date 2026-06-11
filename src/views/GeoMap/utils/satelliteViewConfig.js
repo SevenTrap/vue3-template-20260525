@@ -111,8 +111,6 @@ export function setSouthPoleSideECI(satelliteLayer, satelliteID) {
     pitch: 89,
     roll: 0,
   });
-
-  // globalViewer.trackedEntity = graphic.trackedEntity;
 }
 
 /**
@@ -141,7 +139,7 @@ const icrfPostUpdateSouthPoleSide = (scene, time) => {
   if (!mars3d.Cesium.defined(fixedToIcrf)) return;
   if (!mars3d.Cesium.defined(icrfToFixed)) return;
   const camera = scene.camera;
-  const satelliteGraphic = satelliteSceneLayer.getGraphicById("importSatellite");
+  const satelliteGraphic = satelliteSceneLayer.getGraphicById("importSatelliteECI");
 
   if (!satelliteGraphic) return;
 
@@ -186,7 +184,7 @@ const icrfPostUpdateSatellite = (scene, time) => {
   if (!mars3d.Cesium.defined(fixedToIcrf)) return;
   if (!mars3d.Cesium.defined(icrfToFixed)) return;
   const camera = scene.camera;
-  const satelliteGraphic = satelliteSceneLayer.getGraphicById("importSatellite");
+  const satelliteGraphic = satelliteSceneLayer.getGraphicById("importSatelliteECI");
   if (!satelliteGraphic) return;
 
   const posA_fixed = satelliteGraphic.positionShow;
@@ -209,8 +207,8 @@ const icrfPostUpdateSatelliteThreat = (scene, time) => {
   if (!mars3d.Cesium.defined(fixedToIcrf)) return;
   if (!mars3d.Cesium.defined(icrfToFixed)) return;
   const camera = scene.camera;
-  const importGraphic = satelliteSceneLayer.getGraphicById("importSatellite");
-  const threatGraphic = satelliteSceneLayer.getGraphicById("threatSatellite");
+  const importGraphic = satelliteSceneLayer.getGraphicById("importSatelliteECI");
+  const threatGraphic = satelliteSceneLayer.getGraphicById("threatSatelliteECI");
 
   if (!importGraphic || !threatGraphic) return;
   threatGraphic.model.show = false;

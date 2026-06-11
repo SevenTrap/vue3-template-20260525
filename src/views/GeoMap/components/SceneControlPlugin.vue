@@ -1,5 +1,5 @@
 <template>
-  <aircas-panel v-show="sceneControlPlugin" title="场景控制" width="320" height="500" bottom="100" right="20" @close="handlePanelClose">
+  <aircas-panel v-show="sceneControlPlugin" title="场景控制" width="320" height="550" bottom="100" right="20" @close="handlePanelClose">
     <div class="scene-control-panel">
       <div class="form-item">
         <div class="form-title">坐标系</div>
@@ -49,7 +49,7 @@
         </div>
       </div>
 
-      <div class="form-item">
+      <div class="form-item" style="border-bottom: none">
         <div class="form-title">图层控制</div>
 
         <div class="button-group">
@@ -58,7 +58,7 @@
               size="small"
               :model-value="showImportSatelliteOrbitScene"
               @change="handleToggleSate('showImportSatelliteOrbitScene')"
-              label="从星轨迹"
+              label="从星轨道"
             ></el-checkbox>
           </div>
 
@@ -67,6 +67,24 @@
               size="small"
               :model-value="showThreatSatelliteOrbitScene"
               @change="handleToggleSate('showThreatSatelliteOrbitScene')"
+              label="主星轨道"
+            ></el-checkbox>
+          </div>
+
+          <div class="button-group-item">
+            <el-checkbox
+              size="small"
+              :model-value="showImportSatelliteTrajectoryScene"
+              @change="handleToggleSate('showImportSatelliteTrajectoryScene')"
+              label="从星轨迹"
+            ></el-checkbox>
+          </div>
+
+          <div class="button-group-item">
+            <el-checkbox
+              size="small"
+              :model-value="showThreatSatelliteTrajectoryScene"
+              @change="handleToggleSate('showThreatSatelliteTrajectoryScene')"
               label="主星轨迹"
             ></el-checkbox>
           </div>
@@ -89,14 +107,14 @@
             ></el-checkbox>
           </div>
 
-          <div class="button-group-item">
+          <!-- <div class="button-group-item">
             <el-checkbox
               size="small"
               :model-value="showSatelliteModelScene"
               @change="handleToggleSate('showSatelliteModelScene')"
               label="显示卫星模型"
             ></el-checkbox>
-          </div>
+          </div> -->
 
           <div class="button-group-item">
             <el-checkbox
@@ -128,8 +146,8 @@
           <div class="button-group-item">
             <el-checkbox
               size="small"
-              :model-value="showSatelliteBodyCoordinateScene"
-              @change="handleToggleSate('showSatelliteBodyCoordinateScene')"
+              :model-value="showSatelliteBodyCoordinateAxisScene"
+              @change="handleToggleSate('showSatelliteBodyCoordinateAxisScene')"
               label="本体坐标系"
             ></el-checkbox>
           </div>
@@ -137,8 +155,8 @@
           <div class="button-group-item">
             <el-checkbox
               size="small"
-              :model-value="showSatelliteOrbitCoordinateScene"
-              @change="handleToggleSate('showSatelliteOrbitCoordinateScene')"
+              :model-value="showSatelliteOrbitCoordinateAxisScene"
+              @change="handleToggleSate('showSatelliteOrbitCoordinateAxisScene')"
               label="轨道坐标系"
             ></el-checkbox>
           </div>
@@ -168,12 +186,14 @@ import {
   toggleSatelliteName,
   toggleSatelliteModel,
   toggleSatellitePoint,
-  addSatelliteScene,
-  addSatelliteSceneByTle,
+  addSatelliteOrbitECEFScene,
+  addSatelliteOrbitECIScene,
   toggleSatelliteSensor,
-  toggleSatelliteBodyCoordinate,
+  toggleSatelliteCoordinateAxis,
   toggleSatelliteLightDirection,
   toggleSatelliteImageDirection,
+  toggleImportSatelliteTrajectory,
+  toggleThreatSatelliteTrajectory,
 } from "../utils/mars3dSatellite.js";
 import {
   unlockCameraFromInertial,
@@ -227,23 +247,24 @@ export default {
       "showSatellitePointScene",
       "showImportSatelliteOrbitScene",
       "showThreatSatelliteOrbitScene",
-
+      "showImportSatelliteTrajectoryScene",
+      "showThreatSatelliteTrajectoryScene",
       "showSatelliteNameScene",
       "showSatelliteModelScene",
       "showGeoCirclePositions",
       "showGeoCircleLabel",
       "showPatrolArea",
       "showSatelliteSensorScene",
-      "showSatelliteBodyCoordinateScene",
+      "showSatelliteBodyCoordinateAxisScene",
       "showSatelliteLightDirectionScene",
       "showSatelliteImageDirectionScene",
-      "showSatelliteOrbitCoordinateScene",
+      "showSatelliteOrbitCoordinateAxisScene",
     ]),
   },
   mounted() {
     setTimeout(() => {
       this.applyEcefView("default");
-    }, 1000);
+    }, 100);
   },
   beforeUnmount() {},
   watch: {
@@ -268,16 +289,26 @@ export default {
         removePatrolArea(globalViewer);
       }
     },
+    // 显示卫星点位
     showSatellitePointScene(newVal) {
       toggleSatellitePoint(satelliteSceneLayer, newVal);
     },
+    // 显示从星轨道
     showImportSatelliteOrbitScene(newVal) {
       toggleImportSatelliteOrbit(satelliteSceneLayer, newVal);
     },
+    // 显示主星轨道
     showThreatSatelliteOrbitScene(newVal) {
       toggleThreatSatelliteOrbit(satelliteSceneLayer, newVal);
     },
-
+    // 显示从星轨迹
+    showImportSatelliteTrajectoryScene(newVal) {
+      toggleImportSatelliteTrajectory(satelliteSceneLayer, newVal);
+    },
+    // 显示主星轨迹
+    showThreatSatelliteTrajectoryScene(newVal) {
+      toggleThreatSatelliteTrajectory(satelliteSceneLayer, newVal);
+    },
     // 显示光照方向
     showSatelliteLightDirectionScene(newVal) {
       toggleSatelliteLightDirection(satelliteSceneLayer, newVal);
@@ -288,29 +319,55 @@ export default {
       toggleSatelliteImageDirection(satelliteSceneLayer, newVal);
     },
 
+    // 显示卫星名称
     showSatelliteNameScene(newVal) {
       toggleSatelliteName(satelliteSceneLayer, newVal);
     },
+
+    // 显示卫星模型
     showSatelliteModelScene(newVal) {
       toggleSatelliteModel(satelliteSceneLayer, newVal);
     },
+
+    // 显示可视锥角
     showSatelliteSensorScene(newVal) {
       toggleSatelliteSensor(satelliteSceneLayer, newVal);
     },
-    showSatelliteBodyCoordinateScene(newVal) {
-      toggleSatelliteBodyCoordinate(satelliteSceneLayer, newVal);
+
+    // 显示卫星本体坐标轴
+    showSatelliteBodyCoordinateAxisScene(newVal) {
+      toggleSatelliteCoordinateAxis(satelliteSceneLayer, newVal);
+
+      if (newVal) geoMapStore.SET_STATE_DATA({ key: "showSatelliteModelScene", value: true });
+    },
+
+    // 显示卫星轨道坐标轴
+    showSatelliteOrbitCoordinateAxisScene(newVal) {
+      toggleSatelliteCoordinateAxis(satelliteSceneLayer, newVal);
+      if (newVal) geoMapStore.SET_STATE_DATA({ key: "showSatelliteModelScene", value: false });
     },
   },
   methods: {
     handleCoordinateChange(value) {
       geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
+
       unlockCameraFromInertial(globalViewer);
+
       if (value === "ECI") {
-        // lockCameraToInertial(globalViewer);
-        addSatelliteSceneByTle(satelliteSceneLayer, this.currentSceneConfig);
+        addSatelliteOrbitECIScene(satelliteSceneLayer, this.currentSceneConfig);
+
+        toggleSatelliteModel(satelliteSceneLayer, false);
+
+        geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteOrbitScene", value: true });
+        geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteOrbitScene", value: true });
+        geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteTrajectoryScene", value: false });
+        geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteTrajectoryScene", value: false });
       } else {
-        // unlockCameraFromInertial(globalViewer);
-        addSatelliteScene(satelliteSceneLayer, this.satRelativeData);
+        addSatelliteOrbitECEFScene(satelliteSceneLayer, this.satRelativeData);
+        geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteOrbitScene", value: false });
+        geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteOrbitScene", value: false });
+        geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteTrajectoryScene", value: true });
+        geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteTrajectoryScene", value: true });
       }
       this.handleApplyView("default");
 
@@ -340,7 +397,7 @@ export default {
 
       switch (presetId) {
         case "default":
-          setDefaultPoleECEF(satelliteSceneLayer, "importSatellite");
+          setDefaultPoleECEF(satelliteSceneLayer, "importSatelliteECEF");
           break;
 
         // 南极正视
@@ -350,12 +407,12 @@ export default {
 
         // 南极侧视
         case "southPoleSide":
-          setSouthPoleSideECEF(satelliteSceneLayer, "importSatellite");
+          setSouthPoleSideECEF(satelliteSceneLayer, "importSatelliteECEF");
           break;
 
         // 恒星视角
         case "starPole":
-          setStarPoleECEF(satelliteSceneLayer, "importSatellite");
+          setStarPoleECEF(satelliteSceneLayer, "importSatelliteECEF");
           break;
 
         default:
@@ -375,7 +432,7 @@ export default {
       switch (presetId) {
         case "default":
           lockCameraToInertial(globalViewer);
-          setDefaultPoleECI(satelliteSceneLayer, "importSatellite");
+          setDefaultPoleECI(satelliteSceneLayer, "importSatelliteECI");
           break;
 
         case "southPoleFront":

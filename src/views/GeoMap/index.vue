@@ -44,7 +44,14 @@ import SceneControlPluginBase from "./components/SceneControlPluginBase.vue";
 import HistoryCasePlugin from "./components/HistoryCasePlugin.vue";
 
 import { initMars3dLayers, satelliteSceneLayer } from "./utils/initMars3dLayers.js";
-import { addSatelliteScene } from "./utils/mars3dSatellite.js";
+import {
+  addSatelliteOrbitECEFScene,
+  toggleImportSatelliteTrajectory,
+  toggleThreatSatelliteTrajectory,
+  toggleSatelliteImageDirection,
+  toggleSatelliteLightDirection,
+  toggleSatelliteModel,
+} from "./utils/mars3dSatellite.js";
 import { computeSatRelativeData } from "./utils/satelliteLngHeight";
 import { julianDateToTimeMs } from "./utils/mars3dRelativeTrajectory";
 import { SCENE_LISTS } from "./configs/index";
@@ -126,8 +133,18 @@ export default {
       geoMapStore.SET_STATE_DATA({ key: "satRelativeData", value: result });
     },
 
+    // 初始化卫星抵近场景
     initSatelliteScene() {
-      addSatelliteScene(satelliteSceneLayer, this.satRelativeData);
+      addSatelliteOrbitECEFScene(satelliteSceneLayer, this.satRelativeData);
+      // addSatelliteOrbitECIScene(satelliteSceneLayer, this.currentScene);
+      toggleSatelliteImageDirection(satelliteSceneLayer, false);
+      toggleSatelliteLightDirection(satelliteSceneLayer, true);
+      // toggleImportSatelliteOrbit(satelliteSceneLayer, false);
+      // toggleThreatSatelliteOrbit(satelliteSceneLayer, false);
+      toggleImportSatelliteTrajectory(satelliteSceneLayer, true);
+      toggleThreatSatelliteTrajectory(satelliteSceneLayer, true);
+
+      toggleSatelliteModel(satelliteSceneLayer, false);
     },
 
     updateSceneTime() {
