@@ -33,8 +33,8 @@ export default {
     ...mapState(useGeoMapStore, ["geoSatRelativeEchartsPlugin", "satRelativeData", "currentSceneConfig", "currentSceneTimeMs"]),
 
     pluginTitle() {
-      if (!this.satRelativeData.threatName || !this.satRelativeData.importName) return "GEO相对距离与光照角";
-      return `${this.satRelativeData.threatName} vs ${this.satRelativeData.importName} - 相对距离与光照角`;
+      if (!this.satRelativeData.threatSatelliteName || !this.satRelativeData.importSatelliteName) return "GEO相对距离与光照角";
+      return `${this.satRelativeData.threatSatelliteName} vs ${this.satRelativeData.importSatelliteName} - 相对距离与光照角`;
     },
   },
   watch: {
@@ -283,8 +283,8 @@ export default {
       const fmt = (value, unit) => (Number.isFinite(value) ? `${value.toFixed(2)}${unit}` : "--");
       return [
         `时间：${metric.time}`,
-        `主动卫星：${this.currentSceneConfig.threatName}`,
-        `从动卫星：${this.currentSceneConfig.importName}`,
+        `主动卫星：${this.currentSceneConfig.threatSatelliteName}`,
+        `从动卫星：${this.currentSceneConfig.importSatelliteName}`,
         `两星距离：${fmt(metric.distanceKm, " km")}`,
         `太阳光照角：${fmt(metric.sunAngleDeg, "°")}`,
         `阈值：距离 < ${this.distanceThreshold} km，光照角 < ${this.sunAngleThreshold}°`,

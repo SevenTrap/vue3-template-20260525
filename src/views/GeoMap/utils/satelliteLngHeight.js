@@ -51,7 +51,7 @@ const getTleEpochMs = (satrec) => {
  * @param {string} name - 卫星名称
  * @returns {Array<{sat: SatelliteClass, epochMs: number, date: string}>} 倒序排序后的卫星列表
  */
-const buildSortedSatellites = (tles, name) => {
+export const buildSortedSatellites = (tles, name) => {
   if (!Array.isArray(tles)) return [];
   return tles
     .filter((item) => item && item.tle1 && item.tle2)
@@ -71,7 +71,7 @@ const buildSortedSatellites = (tles, name) => {
  * @param {number} timeMs - 目标时刻毫秒时间戳
  * @returns {SatelliteClass|null} 选中的卫星模型
  */
-const pickSatByTime = (sortedSats, timeMs) => {
+export const pickSatByTime = (sortedSats, timeMs) => {
   if (!sortedSats || !sortedSats.length) return null;
   const found = sortedSats.find((item) => item.epochMs <= timeMs);
   return (found || sortedSats[sortedSats.length - 1]).sat;
@@ -316,8 +316,8 @@ export const computeLngHeightData = ({ threatTles, importTles, closeTime, timeFr
  * @param {string} params.startTime - 开始时间字符串
  * @param {string} params.endTime - 结束时间字符串
  * @param {number} params.timeStep - 时间步长（ms）
- * @param {string} [params.threatName="主动卫星"] - 主动卫星名称
- * @param {string} [params.importName="从动卫星"] - 从动卫星名称
+ * @param {string} [params.threatSatelliteName="主动卫星"] - 主动卫星名称
+ * @param {string} [params.importSatelliteName="从动卫星"] - 从动卫星名称
  * @returns {{startTime:number,endTime:number,threatTrack:Array,importTrack:Array,distances:Array,sunAngles:Array,metrics:Array}} 计算结果
  */
 export const computeSatRelativeData = ({
@@ -326,8 +326,8 @@ export const computeSatRelativeData = ({
   startTime,
   endTime,
   timeStep = 1 * 60 * 1000,
-  threatName = "主动卫星",
-  importName = "从动卫星",
+  threatSatelliteName = "主动卫星",
+  importSatelliteName = "从动卫星",
 }) => {
   const startTimeMs = dayjs(startTime).valueOf();
   const endTimeMs = dayjs(endTime).valueOf();
@@ -351,8 +351,8 @@ export const computeSatRelativeData = ({
     return { startTime: startTimeMs, endTime: endTimeMs, threatTrack, importTrack, distances, sunAngles, metrics };
   }
 
-  const threatSats = buildSortedSatellites(threatTles, threatName);
-  const importSats = buildSortedSatellites(importTles, importName);
+  const threatSats = buildSortedSatellites(threatTles, threatSatelliteName);
+  const importSats = buildSortedSatellites(importTles, importSatelliteName);
 
   if (!threatSats.length || !importSats.length) {
     return { startTime: startTimeMs, endTime: endTimeMs, threatTrack, importTrack, distances, sunAngles, metrics };
@@ -369,8 +369,8 @@ export const computeSatRelativeData = ({
     const importEci = importSat.getEciPosition(date);
     if (!isValidVec(threatEci) || !isValidVec(importEci)) continue;
 
-    const threatPoint = buildTrackPoint(threatSat, date, t, time, threatName);
-    const importPoint = buildTrackPoint(importSat, date, t, time, importName);
+    const threatPoint = buildTrackPoint(threatSat, date, t, time, threatSatelliteName);
+    const importPoint = buildTrackPoint(importSat, date, t, time, importSatelliteName);
     if (!threatPoint || !importPoint) continue;
 
     const { distanceKm, sunAngleDeg, sunEci } = computeRelativeMetric(threatEci, importEci, date);

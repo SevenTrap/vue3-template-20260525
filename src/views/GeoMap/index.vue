@@ -11,26 +11,27 @@
   <AircasGraphicLayersPlugin></AircasGraphicLayersPlugin>
 
   <!-- 卫星树插件 -->
-  <SatelliteTreePlugin></SatelliteTreePlugin>
+  <!-- <SatelliteTreePlugin></SatelliteTreePlugin> -->
 
   <!-- GEO卫星相对距离与光照角插件 -->
-  <GeoSatRelativeEchartsPlugin></GeoSatRelativeEchartsPlugin>
+  <!-- <GeoSatRelativeEchartsPlugin></GeoSatRelativeEchartsPlugin> -->
 
   <!-- 卫星经度与相对同步轨道高度插件 -->
-  <GeoLngHeightEchartsPlugin></GeoLngHeightEchartsPlugin>
+  <!-- <GeoLngHeightEchartsPlugin></GeoLngHeightEchartsPlugin> -->
 
   <!-- 场景控制插件 -->
-  <SceneControlPlugin></SceneControlPlugin>
-  <SceneControlPluginBase></SceneControlPluginBase>
+  <!-- <SceneControlPlugin></SceneControlPlugin> -->
+  <!-- <SceneControlPluginBase></SceneControlPluginBase> -->
   <!-- 历史案例插件 -->
-  <HistoryCasePlugin></HistoryCasePlugin>
+  <!-- <HistoryCasePlugin></HistoryCasePlugin> -->
 </template>
 
 <script>
 import * as mars3d from "mars3d";
+import dayjs from "dayjs";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
-import { initViewer, globalViewer } from "@/utils/initEarth";
+import { initViewer, globalViewer, setCesiumClockRange } from "@/utils/initEarth";
 import { addGeoCirclePositions, addGeoCircleLabel, addPatrolArea } from "@/utils/mars3d/mars3dGeoStyle.js";
 
 import MenuBarPlugin from "./components/MenuBarPlugin.vue";
@@ -43,9 +44,11 @@ import SceneControlPlugin from "./components/SceneControlPlugin.vue";
 import SceneControlPluginBase from "./components/SceneControlPluginBase.vue";
 import HistoryCasePlugin from "./components/HistoryCasePlugin.vue";
 
+import { calculateSatellitePosition } from "./utils/satelliteCalculate.js";
 import { initMars3dLayers, satelliteSceneLayer } from "./utils/initMars3dLayers.js";
 import {
-  addSatelliteOrbitECEFScene,
+  addSatelliteOrbitSceneECEF,
+  addSatelliteOrbitSceneECI,
   toggleImportSatelliteTrajectory,
   toggleThreatSatelliteTrajectory,
   toggleSatelliteImageDirection,
@@ -76,13 +79,13 @@ export default {
     return {
       timer: null,
       sceneId: "1",
-      currentScene: {},
     };
   },
 
   async mounted() {
-    this.currentScene = SCENE_LISTS.find((scene) => scene.sceneID === this.sceneId);
-    geoMapStore.SET_STATE_DATA({ key: "currentSceneConfig", value: this.currentScene });
+    const currentScene = SCENE_LISTS.find((scene) => scene.sceneID === this.sceneId);
+    geoMapStore.SET_STATE_DATA({ key: "currentSceneConfig", value: currentScene });
+
     let earthContainer = this.$refs.geoEarthContainer;
     initViewer(earthContainer, MAP_CONFIG_Satellite);
 
@@ -91,60 +94,62 @@ export default {
       addGeoCirclePositions(globalViewer);
       addPatrolArea(globalViewer);
       initMars3dLayers();
-      this.initScene();
-      this.initSatelliteScene();
+
+      this.initSceneClockRange();
+      this.initSatelliteTracks();
     });
 
     this.timer = setInterval(() => {
       this.updateSceneTime();
-    }, 1000);
+    }, 100);
   },
 
   computed: {
-    ...mapState(useGeoMapStore, [
-      "sceneID",
-      "threatTargetID",
-      "importTargetID",
-      "threatTargetName",
-      "importTargetName",
-      "threatTles",
-      "importTles",
-      "startTime",
-      "endTime",
-      "timeStep",
-      "satRelativeData",
-    ]),
+    ...mapState(useGeoMapStore, ["sceneID", "currentSceneConfig", "satRelativeData", "clockStartTime", "clockEndTime"]),
   },
 
   methods: {
-    initScene() {
-      if (!this.currentScene?.sceneID || this.currentScene.sceneID !== this.sceneId) return;
+    // 初始化场景时钟范围
+    initSceneClockRange() {
+      if (!this.sceneId) return;
 
-      const result = computeSatRelativeData(this.currentScene);
+      const { closeTime, timeFront, timeBack } = this.currentSceneConfig;
+      const clockStartTime = dayjs(closeTime).subtract(timeFront, "ms").valueOf();
+      const clockEndTime = dayjs(closeTime).add(timeBack, "ms").valueOf();
+      geoMapStore.SET_STATE_DATA({ key: "clockStartTime", value: clockStartTime });
+      geoMapStore.SET_STATE_DATA({ key: "clockEndTime", value: clockEndTime });
 
-      console.log("result", result);
-
-      globalViewer.clock.stopTime = mars3d.Cesium.JulianDate.fromDate(new Date(this.currentScene.endTime));
-      globalViewer.clock.startTime = mars3d.Cesium.JulianDate.fromDate(new Date(this.currentScene.startTime));
-      globalViewer.clock.currentTime = mars3d.Cesium.JulianDate.fromDate(new Date(this.currentScene.startTime));
-      globalViewer.clock.clockRange = mars3d.Cesium.ClockRange.LOOP_STOP;
-      globalViewer.clock.shouldAnimate = true;
-      globalViewer.control.timeline.zoomTo(this.currentScene.startTime, this.currentScene.endTime);
-      geoMapStore.SET_STATE_DATA({ key: "satRelativeData", value: result });
+      setCesiumClockRange(globalViewer, clockStartTime, clockEndTime);
     },
 
-    // 初始化卫星抵近场景
-    initSatelliteScene() {
-      addSatelliteOrbitECEFScene(satelliteSceneLayer, this.satRelativeData);
-      // addSatelliteOrbitECIScene(satelliteSceneLayer, this.currentScene);
-      toggleSatelliteImageDirection(satelliteSceneLayer, false);
-      toggleSatelliteLightDirection(satelliteSceneLayer, true);
-      // toggleImportSatelliteOrbit(satelliteSceneLayer, false);
-      // toggleThreatSatelliteOrbit(satelliteSceneLayer, false);
-      toggleImportSatelliteTrajectory(satelliteSceneLayer, true);
-      toggleThreatSatelliteTrajectory(satelliteSceneLayer, true);
+    // 初始化卫星轨迹
+    initSatelliteTracks() {
+      const { startTime, endTime, timeStep, satelliteNoradIDs, satelliteTles } = this.currentSceneConfig;
 
-      toggleSatelliteModel(satelliteSceneLayer, false);
+      const satelliteTracks = new Map();
+
+      for (let i = 0; i < satelliteNoradIDs.length; i++) {
+        const satelliteTrack = calculateSatellitePosition(satelliteNoradIDs[i], satelliteTles[i], startTime, endTime, timeStep);
+        satelliteTracks.set(satelliteNoradIDs[i], satelliteTrack);
+      }
+
+      addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks, this.clockStartTime, this.clockEndTime);
+
+      addSatelliteOrbitSceneECI(satelliteSceneLayer, satelliteTracks, this.clockStartTime, this.clockEndTime);
+
+      geoMapStore.SET_STATE_DATA({ key: "satelliteTracks", value: satelliteTracks });
+
+      // const calculateStartTime = calculateSatellitePosition();
+      // addSatelliteOrbitSceneECEF(satelliteSceneLayer, this.satRelativeData);
+      // // addSatelliteOrbitSceneECI(satelliteSceneLayer, this.currentScene);
+      // toggleSatelliteImageDirection(satelliteSceneLayer, false);
+      // toggleSatelliteLightDirection(satelliteSceneLayer, true);
+      // // toggleImportSatelliteOrbit(satelliteSceneLayer, false);
+      // // toggleThreatSatelliteOrbit(satelliteSceneLayer, false);
+      // toggleImportSatelliteTrajectory(satelliteSceneLayer, true);
+      // toggleThreatSatelliteTrajectory(satelliteSceneLayer, true);
+
+      // toggleSatelliteModel(satelliteSceneLayer, false);
     },
 
     updateSceneTime() {

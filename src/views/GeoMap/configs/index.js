@@ -33,69 +33,56 @@ export const ECI_PRESETS = [
 export const DEFAULT_NORAD_USA = ["41745", "41744"]; // USA271, USA270
 export const DEFAULT_NORAD_CHINA = ["62485"]; // shijian-25
 
+/**
+ * @description 场景列表
+ * @param {string} sceneID - 场景ID
+ * @param {string} startTime - 开始时间
+ * @param {string} endTime - 结束时间
+ * @param {string} closeTime - 接近时间
+ * @param {string} timeFront - 前轨时间，注意closeTime - timeFront 不能小于 startTime
+ * @param {string} timeBack - 后轨时间，注意closeTime + timeBack 不能大于 endTime
+ * @param {string} timeStep - 时间步长，注意timeStep 不能大于 timeFront 和 timeBack
+ * @param {string} threatSatelliteNoradID - 主动卫星ID
+ * @param {string} importSatelliteNoradID - 从动卫星ID
+ * @param {string} threatSatelliteName - 主动卫星名称
+ * @param {string} importSatelliteName - 从动卫星名称
+ * @param {string[]} satelliteNoradIDs - 场景中涉及的卫星ID
+ * @param {string[][]} satelliteTles - 场景中涉及的卫星TLE
+ * @param {string} satelliteTles[0][0].date - 卫星TLE日期
+ * @param {string} satelliteTles[0][0].tle1 - 卫星TLE第一行
+ * @param {string} satelliteTles[0][0].tle2 - 卫星TLE第二行
+ * */
 export const SCENE_LISTS = [
   {
     sceneID: "1", // 场景ID
-    threatTargetID: "41745", // 主动卫星ID
-    importTargetID: "62485", // 从动卫星ID
-    besideTargetIDs: [], // 旁观目标ID
-
-    threatName: "敌方卫星", // 主动卫星名称
-    importName: "我方卫星", // 从动卫星名称
-    besideTargetNames: [], // 旁观目标名称
-
     startTime: "2026-02-04 12:00:00", // 开始时间
     endTime: "2026-02-09 12:00:00", // 结束时间
     closeTime: "2026-02-07 10:23:34", // 接近时间
+    timeFront: 1 * 24 * 60 * 60 * 1000, // 前轨时间：1天
+    timeBack: 1 * 24 * 60 * 60 * 1000, // 后轨时间：1天
     timeStep: 1 * 60 * 1000, // 默认时间步长：1分钟
-    timeFront: 3 * 24 * 60 * 60 * 1000, // 前轨时间：1天
-    timeBack: 3 * 24 * 60 * 60 * 1000, // 后轨时间：1天
-    distanceThreshold: 100, // 距离阈值（km）
-    sunAngleThreshold: 90, // 光照角阈值（°）
-    besideTles: {}, // 旁观目标TLE { ID: [{ tle1: "", tle2: "" }] }
-    threatTles: [
-      {
-        date: "20260204",
-        tle1: "1 41745U 16052B   26033.67594623 -.00000323  00000+0  00000+0 0  9998",
-        tle2: "2 41745   3.8242  78.9996 0001019 330.8376 104.2921  1.00127864 26579",
-      },
-      {
-        date: "20260206",
-        tle1: "1 41745U 16052B   26036.44045084 -.00000324  00000+0  00000+0 0  9999",
-        tle2: "2 41745   3.8312  78.9622 0001079 329.7097  21.9661  1.00126717 26590",
-      },
-      {
-        date: "20260207",
-        tle1: "1 41745U 16052B   26036.44045084 -.00000324  00000+0  00000+0 0  9999",
-        tle2: "2 41745   3.8312  78.9622 0001079 329.7097  21.9661  1.00126717 26590",
-      },
-      {
-        date: "20260209",
-        tle1: "1 41745U 16052B   26039.57811139 -.00000324  00000+0  00000+0 0  9998",
-        tle2: "2 41745   3.8394  78.9201 0001147 329.0474  73.6737  1.00125343 26638",
-      },
-    ],
-    importTles: [
-      {
-        date: "20260204",
-        tle1: "1 62485U 25002A   26034.80283026 -.00000358  00000+0  00000+0 0  9993",
-        tle2: "2 62485   4.7976  61.9375 0046612 167.1807 321.1272  1.00264786  4028",
-      },
-      {
-        date: "20260206",
-        tle1: "1 62485U 25002A   26036.74607634 -.00000353  00000+0  00000+0 0  9998",
-        tle2: "2 62485   4.8021  61.9290 0046379 167.1567 302.5938  1.00263457  4047",
-      },
-      {
-        date: "20260207",
-        tle1: "1 62485U 25002A   26037.76404020 -.00000348  00000+0  00000+0 0  9999",
-        tle2: "2 62485   4.8043  61.9244 0047042 166.3696 310.8584  1.00283003  4051",
-      },
-      {
-        date: "20260208",
-        tle1: "1 62485U 25002A   26038.79769294 -.00000346  00000+0  00000+0 0  9998",
-        tle2: "2 62485   4.8066  61.9183 0046962 166.3455 324.0627  1.00282454  4066",
-      },
+
+    threatSatelliteNoradID: "25019", // 主动卫星NORAD ID
+    importSatelliteNoradID: "23712", // 从动卫星NORAD ID
+    threatSatelliteName: "敌方卫星", // 主动卫星名称
+    importSatelliteName: "我方卫星", // 从动卫星名称
+
+    satelliteNoradIDs: ["25019", "23712"], // 场景中涉及的卫星NORAD ID
+    satelliteTles: [
+      [
+        {
+          timeMs: 1770220800000, // 历元时刻（毫秒时间戳）
+          tle1: "1 25019U 97065A   25232.48588396 -.00000079  00000+0  00000+0 0  9994",
+          tle2: "2 25019  12.4237  23.9041 0001572 227.5553 140.3495  1.00270082 29941",
+        },
+      ],
+      [
+        {
+          timeMs: 1770220800000, // 历元时刻（毫秒时间戳）
+          tle1: "1 23712U 95060A   25232.47008286 -.00000035  00000+0  00000+0 0  9991",
+          tle2: "2 23712  13.9620   5.9468 0001587 156.4235 215.9484  1.00275100 29872",
+        },
+      ],
     ],
   },
 ];

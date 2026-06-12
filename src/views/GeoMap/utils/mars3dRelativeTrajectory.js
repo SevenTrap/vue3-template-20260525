@@ -19,24 +19,21 @@ const isValidVec = (vec) => !!vec && [vec.x, vec.y, vec.z].every((v) => Number.i
  * @param {{x:number,y:number,z:number}} posKm - km 单位位置
  * @returns {object} Cesium.Cartesian3
  */
-const ecefKmToCartesian3 = (posKm) =>
-  new mars3d.Cesium.Cartesian3(posKm.x * KM_TO_M, posKm.y * KM_TO_M, posKm.z * KM_TO_M);
+const ecefKmToCartesian3 = (posKm) => new mars3d.Cesium.Cartesian3(posKm.x * KM_TO_M, posKm.y * KM_TO_M, posKm.z * KM_TO_M);
 
 /**
  * 将 km 单位 ECI 坐标转为 Cesium.Cartesian3（米）
  * @param {{x:number,y:number,z:number}} posKm - km 单位位置
  * @returns {object} Cesium.Cartesian3
  */
-const eciKmToCartesian3 = (posKm) =>
-  new mars3d.Cesium.Cartesian3(posKm.x * KM_TO_M, posKm.y * KM_TO_M, posKm.z * KM_TO_M);
+const eciKmToCartesian3 = (posKm) => new mars3d.Cesium.Cartesian3(posKm.x * KM_TO_M, posKm.y * KM_TO_M, posKm.z * KM_TO_M);
 
 /**
  * 将坐标系字符串转为 Cesium 参考系
  * @param {"ECEF"|"ECI"|string} frame - 坐标系
  * @returns {object} Cesium.ReferenceFrame
  */
-const toReferenceFrame = (frame) =>
-  frame === "ECI" ? mars3d.Cesium.ReferenceFrame.INERTIAL : mars3d.Cesium.ReferenceFrame.FIXED;
+const toReferenceFrame = (frame) => (frame === "ECI" ? mars3d.Cesium.ReferenceFrame.INERTIAL : mars3d.Cesium.ReferenceFrame.FIXED);
 
 /**
  * 拼接轨迹 graphic 前缀 id
@@ -131,16 +128,12 @@ const segmentToPositions = (segment, frame, julianTime) => {
   if (!segment.length) return [];
 
   if (frame === "ECEF") {
-    return segment
-      .filter((p) => isValidVec(p.ecefKm))
-      .map((p) => ecefKmToCartesian3(p.ecefKm));
+    return segment.filter((p) => isValidVec(p.ecefKm)).map((p) => ecefKmToCartesian3(p.ecefKm));
   }
 
   const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(julianTime);
   if (!icrfToFixed) {
-    return segment
-      .filter((p) => isValidVec(p.eciKm))
-      .map((p) => eciKmToCartesian3(p.eciKm));
+    return segment.filter((p) => isValidVec(p.eciKm)).map((p) => eciKmToCartesian3(p.eciKm));
   }
 
   return segment
@@ -322,8 +315,8 @@ export const setSceneClockRange = (viewer, startTimeMs, endTimeMs) => {
  * @param {"ECEF"|"ECI"} [options.frame="ECEF"] - 坐标系
  * @param {string|number} [options.threatNoradID] - 威胁目标 NORAD ID
  * @param {string|number} [options.importNoradID] - 被威胁目标 NORAD ID
- * @param {string} [options.threatName] - 威胁目标名称
- * @param {string} [options.importName] - 被威胁目标名称
+ * @param {string} [options.threatSatelliteName] - 威胁目标名称
+ * @param {string} [options.importSatelliteName] - 被威胁目标名称
  * @returns {void}
  */
 export const renderRelativeTrajectories = (viewer, data, options = {}) => {
@@ -333,19 +326,14 @@ export const renderRelativeTrajectories = (viewer, data, options = {}) => {
   if (!layer) return;
 
   const frame = options.frame || "ECEF";
-  const {
-    threatNoradID = "threat",
-    importNoradID = "import",
-    threatName = "威胁目标",
-    importName = "被威胁目标",
-  } = options;
+  const { threatNoradID = "threat", importNoradID = "import", threatSatelliteName = "威胁目标", importSatelliteName = "被威胁目标" } = options;
 
   layer.clear();
 
   if (Array.isArray(data.threatTrack) && data.threatTrack.length) {
     addSatelliteTrajectory(data.threatTrack, {
       noradID: threatNoradID,
-      name: threatName,
+      name: threatSatelliteName,
       color: THREAT_COLOR,
       frame,
     });
@@ -354,7 +342,7 @@ export const renderRelativeTrajectories = (viewer, data, options = {}) => {
   if (Array.isArray(data.importTrack) && data.importTrack.length) {
     addSatelliteTrajectory(data.importTrack, {
       noradID: importNoradID,
-      name: importName,
+      name: importSatelliteName,
       color: IMPORT_COLOR,
       frame,
     });

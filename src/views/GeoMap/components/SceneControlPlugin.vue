@@ -33,18 +33,13 @@
 
         <div class="button-group">
           <div class="button-group-item">
-            <el-checkbox
-              size="small"
-              :model-value="showGeoCirclePositions"
-              @change="handleToggleSate('showGeoCirclePositions')"
-              label="显示同步轨道"
-            ></el-checkbox>
+            <el-checkbox size="small" :model-value="showGeoCirclePositions" @change="handleToggleSate('showGeoCirclePositions')" label="同步轨道"></el-checkbox>
           </div>
           <div class="button-group-item">
-            <el-checkbox size="small" :model-value="showGeoCircleLabel" @change="handleToggleSate('showGeoCircleLabel')" label="显示经度标签"></el-checkbox>
+            <el-checkbox size="small" :model-value="showGeoCircleLabel" @change="handleToggleSate('showGeoCircleLabel')" label="经度标签"></el-checkbox>
           </div>
           <div class="button-group-item">
-            <el-checkbox size="small" :model-value="showPatrolArea" @change="handleToggleSate('showPatrolArea')" label="显示巡视区域"></el-checkbox>
+            <el-checkbox size="small" :model-value="showPatrolArea" @change="handleToggleSate('showPatrolArea')" label="巡视区域"></el-checkbox>
           </div>
         </div>
       </div>
@@ -94,17 +89,12 @@
               size="small"
               :model-value="showSatellitePointScene"
               @change="handleToggleSate('showSatellitePointScene')"
-              label="显示卫星点位"
+              label="卫星点位"
             ></el-checkbox>
           </div>
 
           <div class="button-group-item">
-            <el-checkbox
-              size="small"
-              :model-value="showSatelliteNameScene"
-              @change="handleToggleSate('showSatelliteNameScene')"
-              label="显示卫星名称"
-            ></el-checkbox>
+            <el-checkbox size="small" :model-value="showSatelliteNameScene" @change="handleToggleSate('showSatelliteNameScene')" label="卫星名称"></el-checkbox>
           </div>
 
           <!-- <div class="button-group-item">
@@ -186,8 +176,8 @@ import {
   toggleSatelliteName,
   toggleSatelliteModel,
   toggleSatellitePoint,
-  addSatelliteOrbitECEFScene,
-  addSatelliteOrbitECIScene,
+  addSatelliteOrbitSceneECEF,
+  addSatelliteOrbitSceneECI,
   toggleSatelliteSensor,
   toggleSatelliteCoordinateAxis,
   toggleSatelliteOrbitCoordinateAxis,
@@ -241,8 +231,8 @@ export default {
       "currentSceneConfig",
       "coordinate",
       "satRelativeData",
-      "threatTargetID",
-      "importTargetID",
+      "threatSatelliteNoradID",
+      "importSatelliteNoradID",
       "threatTargetName",
       "importTargetName",
       "showSatellitePointScene",
@@ -338,14 +328,11 @@ export default {
     // 显示卫星本体坐标轴
     showSatelliteBodyCoordinateAxisScene(newVal) {
       toggleSatelliteCoordinateAxis(satelliteSceneLayer, newVal);
-
-      // if (newVal) geoMapStore.SET_STATE_DATA({ key: "showSatelliteModelScene", value: true });
     },
 
     // 显示卫星轨道坐标轴
     showSatelliteOrbitCoordinateAxisScene(newVal) {
       toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, newVal);
-      // if (newVal) geoMapStore.SET_STATE_DATA({ key: "showSatelliteModelScene", value: false });
     },
   },
   methods: {
@@ -355,7 +342,7 @@ export default {
       unlockCameraFromInertial(globalViewer);
 
       if (value === "ECI") {
-        addSatelliteOrbitECIScene(satelliteSceneLayer, this.currentSceneConfig);
+        addSatelliteOrbitSceneECI(satelliteSceneLayer, this.currentSceneConfig);
 
         toggleSatelliteModel(satelliteSceneLayer, false);
 
@@ -364,7 +351,7 @@ export default {
         geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteTrajectoryScene", value: false });
         geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteTrajectoryScene", value: false });
       } else {
-        addSatelliteOrbitECEFScene(satelliteSceneLayer, this.satRelativeData);
+        addSatelliteOrbitSceneECEF(satelliteSceneLayer, this.satRelativeData);
         geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteOrbitScene", value: false });
         geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteOrbitScene", value: false });
         geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteTrajectoryScene", value: true });
@@ -379,6 +366,8 @@ export default {
       if (this.showSatelliteImageDirectionScene) {
         toggleSatelliteImageDirection(satelliteSceneLayer, true);
       }
+      toggleSatelliteCoordinateAxis(satelliteSceneLayer, this.showSatelliteBodyCoordinateAxisScene);
+      toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, this.showSatelliteOrbitCoordinateAxisScene);
     },
 
     handleApplyView(presetId) {
@@ -494,7 +483,7 @@ export default {
       margin-bottom: 8px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px 20px;
 
       .form-content-label {
         font-size: 12px;
@@ -520,7 +509,7 @@ export default {
     gap: 5px 20px;
 
     .button-group-item {
-      width: calc(50% - 10px);
+      width: calc(30% - 10px);
       display: flex;
       justify-content: flex-start;
       align-items: center;

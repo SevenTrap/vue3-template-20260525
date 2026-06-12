@@ -33,4 +33,25 @@ function skyShow() {
   });
 }
 
+/**
+ * @description 设置 Cesium 时钟范围
+ * @param {mars3d.Map} viewer - 地球图层实例
+ * @param {number} startTimeMs - 开始时间（毫秒时间戳）
+ * @param {number} endTimeMs - 结束时间（毫秒时间戳）
+ * @returns {void}
+ * */
+export function setCesiumClockRange(viewer, startTimeMs, endTimeMs) {
+  if (!viewer || !Number.isFinite(startTimeMs) || !Number.isFinite(endTimeMs)) return;
+
+  viewer.clock.stopTime = mars3d.Cesium.JulianDate.fromDate(new Date(endTimeMs));
+  viewer.clock.startTime = mars3d.Cesium.JulianDate.fromDate(new Date(startTimeMs));
+  viewer.clock.currentTime = mars3d.Cesium.JulianDate.fromDate(new Date(startTimeMs));
+  viewer.clock.clockRange = mars3d.Cesium.ClockRange.LOOP_STOP;
+  viewer.clock.shouldAnimate = true;
+
+  if (viewer.timeline) {
+    viewer.timeline.zoomTo(startTimeMs, endTimeMs);
+  }
+}
+
 export { globalViewer };

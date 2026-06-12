@@ -42,8 +42,8 @@ export default {
     ...mapState(useGeoMapStore, ["geoLngHeightEchartsPlugin", "satRelativeData", "currentSceneTimeMs", "currentSceneConfig"]),
 
     pluginTitle() {
-      if (!this.currentSceneConfig.threatName || !this.currentSceneConfig.importName) return "经高图";
-      return `${this.currentSceneConfig.threatName} vs ${this.currentSceneConfig.importName} - 经高图 `;
+      if (!this.currentSceneConfig.threatSatelliteName || !this.currentSceneConfig.importSatelliteName) return "经高图";
+      return `${this.currentSceneConfig.threatSatelliteName} vs ${this.currentSceneConfig.importSatelliteName} - 经高图 `;
     },
   },
   watch: {
@@ -168,7 +168,7 @@ export default {
 
       const option = {
         legend: {
-          data: [`威胁目标 ${this.currentSceneConfig.threatName}`, `被威胁目标 ${this.currentSceneConfig.importName}`],
+          data: [`威胁目标 ${this.currentSceneConfig.threatSatelliteName}`, `被威胁目标 ${this.currentSceneConfig.importSatelliteName}`],
           top: 8,
           itemStyle: {
             color: "#ffffff",
@@ -192,7 +192,7 @@ export default {
             restore: {},
             saveAsImage: {
               type: "png",
-              name: `经高图_${this.currentSceneConfig.threatTargetID || "threat"}_${this.currentSceneConfig.importTargetID || "import"}`,
+              name: `经高图_${this.currentSceneConfig.threatSatelliteNoradID || "threat"}_${this.currentSceneConfig.importSatelliteNoradID || "import"}`,
             },
           },
         },
@@ -297,7 +297,7 @@ export default {
         },
         series: [
           {
-            name: `威胁目标 ${this.currentSceneConfig.threatName}`,
+            name: `威胁目标 ${this.currentSceneConfig.threatSatelliteName}`,
             type: "line",
             showSymbol: false,
             smooth: true,
@@ -307,7 +307,7 @@ export default {
             zlevel: 1,
           },
           {
-            name: `被威胁目标 ${this.currentSceneConfig.importName}`,
+            name: `被威胁目标 ${this.currentSceneConfig.importSatelliteName}`,
             type: "line",
             showSymbol: false,
             smooth: true,
@@ -362,8 +362,8 @@ export default {
 
       return [
         `时间：${threat.time}`,
-        `威胁目标 ${this.currentSceneConfig.threatTargetID}：经度 ${fmt(threat.lon, "°")}，相对高度 ${fmt(threat.heightDiff, " km")}`,
-        `被威胁目标 ${this.currentSceneConfig.importTargetID}：经度 ${fmt(importSat.lon, "°")}，相对高度 ${fmt(importSat.heightDiff, " km")}`,
+        `威胁目标 ${this.currentSceneConfig.threatSatelliteNoradID}：经度 ${fmt(threat.lon, "°")}，相对高度 ${fmt(threat.heightDiff, " km")}`,
+        `被威胁目标 ${this.currentSceneConfig.importSatelliteNoradID}：经度 ${fmt(importSat.lon, "°")}，相对高度 ${fmt(importSat.heightDiff, " km")}`,
         `两星距离：${fmt(distance, " km")}`,
         `光照角：${fmt(sunAngle, "°")}`,
       ].join("<br/>");
