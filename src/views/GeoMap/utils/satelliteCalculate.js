@@ -1,4 +1,3 @@
-import * as satellite from "satellite.js";
 import dayjs from "dayjs";
 import SatelliteClass from "@/models/SatelliteClass";
 
@@ -29,11 +28,12 @@ export function calculateSatellitePosition(noradID, tles, startTime, endTime, ti
     satelliteClasses.set(epochTimeMs, satelliteClass);
   }
 
-  satelliteEpochs.sort((a, b) => a - b);
+  satelliteEpochs.sort((a, b) => b - a);
 
   for (let t = startTimeMs; t <= endTimeMs; t += timeStep) {
     const currentEpoch = pickSatByTime(satelliteEpochs, t);
     const satelliteClass = satelliteClasses.get(currentEpoch);
+
     if (!satelliteClass) continue;
     const state = satelliteClass.getState(new Date(t));
     if (state) satelliteTracks.push(state);

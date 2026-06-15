@@ -102,6 +102,10 @@ export default {
     this.timer = setInterval(() => {
       this.updateSceneTime();
     }, 100);
+
+    // globalViewer.clock.on(mars3d.EventType.change, (event) => {
+    //   console.log("时钟变化", event);
+    // });
   },
 
   computed: {
@@ -135,7 +139,7 @@ export default {
 
       addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks, this.clockStartTime, this.clockEndTime);
 
-      addSatelliteOrbitSceneECI(satelliteSceneLayer, satelliteTracks, this.clockStartTime, this.clockEndTime);
+      // addSatelliteOrbitSceneECI(satelliteSceneLayer, satelliteTracks, this.clockStartTime, this.clockEndTime);
 
       geoMapStore.SET_STATE_DATA({ key: "satelliteTracks", value: satelliteTracks });
 

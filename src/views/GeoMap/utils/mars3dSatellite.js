@@ -330,6 +330,14 @@ export function chunkSatelliteTrackByTimeECEF(satelliteTrackAll, clockStartTime,
   return positionsECEF;
 }
 
+/**
+ * 添加卫星轨迹线场景（ECEF 坐标系）
+ * @param {object} satelliteSceneLayer - 卫星场景图层
+ * @param {Map} satelliteTracks - 卫星轨迹
+ * @param {number} clockStartTime - 场景时钟开始时间
+ * @param {number} clockEndTime - 场景时钟结束时间
+ * @returns {void}
+ */
 export function addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks, clockStartTime, clockEndTime) {
   if (!satelliteSceneLayer || !satelliteTracks || !clockStartTime || !clockEndTime) return;
 
@@ -337,7 +345,22 @@ export function addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks,
     if (satelliteSceneLayer.getGraphicById(`${key}ECEF`)) continue;
     const positionsECEF = chunkSatelliteTrackByTimeECEF(value, clockStartTime, clockEndTime);
 
-    const satelliteGraphic = new mars3d.graphic.Satellite({
+    const satellitePathGraphic = new mars3d.graphic.PolylinePrimitive({
+      id: `${key}ECEF-path`,
+      name: `${key}ECEF-path`,
+      positions: positionsECEF,
+      style: {
+        width: 1,
+        opacity: 0.5,
+        materialType: mars3d.MaterialType.PolylineDash,
+        materialOptions: {
+          color: "#0000ff",
+          dashLength: 8.0,
+        },
+      },
+    });
+
+    const satelliteGraphic = new mars3d.graphic.ModelEntity({
       id: `${key}ECEF`,
       name: `${key}ECEF`,
       position: {
@@ -352,122 +375,148 @@ export function addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks,
         interpolationDegree: 3,
       },
       referenceFrame: mars3d.Cesium.ReferenceFrame.FIXED,
-      model: {
-        show: true,
+      style: {
         url: "/assets/gltf/weixin.gltf",
-        scale: 10,
+        scale: 1,
+        opacity: 1,
         minimumPixelSize: 90,
         mergeOrientation: false,
         heading: 0,
         pitch: 0,
         roll: 0,
+        label: {
+          text: `${key}ECEF`,
+          font_size: 16,
+          font_family: "楷体",
+          color: "#ffffff",
+          opacity: 1,
+        },
       },
       path: {
-        show: true,
-        width: 1,
-        color: mars3d.Cesium.Color.BLUE,
+        width: 1.5,
+        color: "#0000ff",
+        leadTime: 0,
+        trailTime: 1 * 24 * 60 * 60, // 暂定1天，后面可以改为一个轨道周期
         opacity: 1,
       },
       point: {
-        show: true,
-        color: mars3d.Cesium.Color.BLUE,
+        color: mars3d.Cesium.Color.RED,
         pixelSize: 10,
-        debugAxis: true,
-        debugAxisLength: 1000000,
-      },
-      label: {
-        show: true,
-        text: `${key}ECEF`,
-        font_size: 16,
-        font_family: "楷体",
-        color: "#ffffff",
-        opacity: 1,
       },
     });
 
+    satelliteSceneLayer.addGraphic(satellitePathGraphic);
     satelliteSceneLayer.addGraphic(satelliteGraphic);
+
     satelliteGraphic._isSate = true;
+    satellitePathGraphic._isSatePath = true;
   }
 }
 
+/**
+ * 将卫星轨道转换为 ECI 坐标系（ECI 坐标系下的卫星轨迹）
+ * @param {Array} satelliteTrackAll - 卫星轨迹
+ * @param {number} clockStartTime - 场景时钟开始时间
+ * @param {number} clockEndTime - 场景时钟结束时间
+ * @returns {object} ECI 坐标系下的卫星轨迹
+ */
 export function chunkSatelliteTrackByTimeECI(satelliteTrackAll, clockStartTime, clockEndTime) {
   if (!satelliteTrackAll || !clockStartTime || !clockEndTime) return;
 
-  const positionsECI = [];
+  const positionProperty = new mars3d.Cesium.SampledPositionProperty(mars3d.Cesium.ReferenceFrame.INERTIAL);
+  positionProperty.forwardExtrapolationType = mars3d.Cesium.ExtrapolationType.HOLD;
+  positionProperty.backwardExtrapolationType = mars3d.Cesium.ExtrapolationType.HOLD;
+
   for (let i = 0; i < satelliteTrackAll.length; i++) {
     const item = satelliteTrackAll[i];
-    console.log("item", item);
     if (item.timeMs < clockStartTime) continue;
     if (item.timeMs > clockEndTime) break;
 
-    const positionECI = {
-      time: item.time,
-      x: item.posEci.x * 1000,
-      y: item.posEci.y * 1000,
-      z: item.posEci.z * 1000,
-    };
-    positionsECI.push(positionECI);
+    const positionECI = new mars3d.Cesium.Cartesian3(item.posEci.x * 1000, item.posEci.y * 1000, item.posEci.z * 1000);
+    const julianDate = mars3d.Cesium.JulianDate.fromDate(new Date(item.timeMs));
+    positionProperty.addSample(julianDate, positionECI);
   }
-  return positionsECI;
+
+  positionProperty.setInterpolationOptions({
+    interpolationDegree: 3,
+    interpolationAlgorithm: mars3d.Cesium.LagrangePolynomialApproximation,
+  });
+  return positionProperty;
 }
 
+/**
+ * 添加卫星轨道线场景（ECI 坐标系）
+ * @param {object} satelliteSceneLayer - 卫星场景图层
+ * @param {Map} satelliteTracks - 卫星轨迹
+ * @param {number} clockStartTime - 场景时钟开始时间
+ * @param {number} clockEndTime - 场景时钟结束时间
+ * @returns {void}
+ */
 export function addSatelliteOrbitSceneECI(satelliteSceneLayer, satelliteTracks, clockStartTime, clockEndTime) {
   if (!satelliteSceneLayer || !satelliteTracks || !clockStartTime || !clockEndTime) return;
 
   for (const [key, value] of satelliteTracks) {
     if (satelliteSceneLayer.getGraphicById(`${key}ECI`)) continue;
-    const positionsECI = chunkSatelliteTrackByTimeECI(value, clockStartTime, clockEndTime);
+    const positionProperty = chunkSatelliteTrackByTimeECI(value, clockStartTime, clockEndTime);
 
-    const satelliteGraphic = new mars3d.graphic.Satellite({
+    const satellitePathGraphic = new mars3d.graphic.ModelEntity({
+      id: `${key}ECI-path`,
+      name: `${key}ECI-path`,
+      position: positionProperty,
+      referenceFrame: mars3d.Cesium.ReferenceFrame.INERTIAL,
+      path: {
+        width: 1,
+        color: "#0000ff",
+        isAll: true,
+        opacity: 0.5,
+        materialType: mars3d.MaterialType.PolylineDash,
+        materialOptions: {
+          color: "#0000ff",
+          dashLength: 8.0,
+        },
+      },
+    });
+
+    const satelliteGraphic = new mars3d.graphic.ModelEntity({
       id: `${key}ECI`,
       name: `${key}ECI`,
-      position: {
-        type: "time",
-        timeField: "time",
-        list: positionsECI,
-        forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
-        backwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
-        referenceFrame: mars3d.Cesium.ReferenceFrame.INERTIAL,
-        interpolation: true,
-        interpolationAlgorithm: mars3d.Cesium.LagrangePolynomialApproximation,
-        interpolationDegree: 3,
-      },
+      position: positionProperty,
       referenceFrame: mars3d.Cesium.ReferenceFrame.INERTIAL,
-      model: {
-        show: true,
+      style: {
         url: "/assets/gltf/weixin.gltf",
-        scale: 10,
+        scale: 1,
+        opacity: 1,
         minimumPixelSize: 90,
         mergeOrientation: false,
         heading: 0,
         pitch: 0,
         roll: 0,
+        label: {
+          text: `${key}ECI`,
+          font_size: 16,
+          font_family: "楷体",
+          color: "#ffffff",
+          opacity: 1,
+        },
       },
       path: {
-        show: true,
-        width: 1,
-        color: mars3d.Cesium.Color.BLUE,
+        width: 1.5,
+        color: "#0000ff",
+        leadTime: 10 * 24 * 60 * 60,
+        trailTime: 10 * 24 * 60 * 60, // 暂定10天，后面可以改为一个轨道周期
         opacity: 1,
       },
       point: {
-        show: true,
-        color: mars3d.Cesium.Color.BLUE,
+        color: "#ff0000",
         pixelSize: 10,
-        debugAxis: true,
-        debugAxisLength: 1000000,
-      },
-      label: {
-        show: true,
-        text: `${key}ECI`,
-        font_size: 16,
-        font_family: "楷体",
-        color: "#ffffff",
-        opacity: 1,
       },
     });
 
+    satelliteSceneLayer.addGraphic(satellitePathGraphic);
     satelliteSceneLayer.addGraphic(satelliteGraphic);
+
     satelliteGraphic._isSate = true;
+    satellitePathGraphic._isSatePath = true;
   }
 }
 
