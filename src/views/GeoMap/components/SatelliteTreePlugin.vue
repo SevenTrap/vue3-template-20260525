@@ -32,7 +32,7 @@ import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { globalViewer } from "@/utils/initEarth.js";
 
-import { addSatellite } from "../utils/mars3dSatellite.js";
+import { addSatellite } from "../utils/mars3dSatelliteBase.js";
 import { initSatellitesTree } from "../utils/initSatellitesTree.js";
 import { satelliteLayer } from "../utils/initMars3dLayers.js";
 

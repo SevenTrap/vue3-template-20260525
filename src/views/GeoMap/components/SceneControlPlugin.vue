@@ -162,15 +162,9 @@ import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { globalViewer } from "@/utils/initEarth";
 import { satelliteSceneLayer } from "../utils/initMars3dLayers.js";
+
 import {
-  addGeoCirclePositions,
-  removeGeoCirclePositions,
-  addGeoCircleLabel,
-  removeGeoCircleLabel,
-  addPatrolArea,
-  removePatrolArea,
-} from "@/utils/mars3d/mars3dGeoStyle.js";
-import {
+  removeSatelliteSceneLayer,
   toggleImportSatelliteOrbit,
   toggleThreatSatelliteOrbit,
   toggleSatelliteName,
@@ -228,7 +222,11 @@ export default {
   computed: {
     ...mapState(useGeoMapStore, [
       "sceneControlPlugin",
+      "clockStartTime",
+      "clockEndTime",
+      "satelliteTracks",
       "currentSceneConfig",
+
       "coordinate",
       "satRelativeData",
       "threatSatelliteNoradID",
@@ -253,33 +251,12 @@ export default {
     ]),
   },
   mounted() {
-    setTimeout(() => {
-      this.applyEcefView("default");
-    }, 100);
+    // setTimeout(() => {
+    //   this.applyEcefView("default");
+    // }, 100);
   },
   beforeUnmount() {},
   watch: {
-    showGeoCirclePositions(newVal) {
-      if (newVal) {
-        addGeoCirclePositions(globalViewer);
-      } else {
-        removeGeoCirclePositions(globalViewer);
-      }
-    },
-    showGeoCircleLabel(newVal) {
-      if (newVal) {
-        addGeoCircleLabel(globalViewer);
-      } else {
-        removeGeoCircleLabel(globalViewer);
-      }
-    },
-    showPatrolArea(newVal) {
-      if (newVal) {
-        addPatrolArea(globalViewer);
-      } else {
-        removePatrolArea(globalViewer);
-      }
-    },
     // 显示卫星点位
     showSatellitePointScene(newVal) {
       toggleSatellitePoint(satelliteSceneLayer, newVal);
@@ -340,54 +317,56 @@ export default {
       geoMapStore.SET_STATE_DATA({ key: "coordinate", value: value });
 
       unlockCameraFromInertial(globalViewer);
+      removeSatelliteSceneLayer(satelliteSceneLayer);
 
       if (value === "ECI") {
-        addSatelliteOrbitSceneECI(satelliteSceneLayer, this.currentSceneConfig);
+        addSatelliteOrbitSceneECI(satelliteSceneLayer, this.satelliteTracks, this.clockStartTime, this.clockEndTime);
 
-        toggleSatelliteModel(satelliteSceneLayer, false);
+        // toggleSatelliteModel(satelliteSceneLayer, false);
 
-        geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteOrbitScene", value: true });
-        geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteOrbitScene", value: true });
-        geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteTrajectoryScene", value: false });
-        geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteTrajectoryScene", value: false });
+        // geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteOrbitScene", value: true });
+        // geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteOrbitScene", value: true });
+        // geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteTrajectoryScene", value: false });
+        // geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteTrajectoryScene", value: false });
       } else {
-        addSatelliteOrbitSceneECEF(satelliteSceneLayer, this.satRelativeData);
-        geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteOrbitScene", value: false });
-        geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteOrbitScene", value: false });
-        geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteTrajectoryScene", value: true });
-        geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteTrajectoryScene", value: true });
+        addSatelliteOrbitSceneECEF(satelliteSceneLayer, this.satelliteTracks, this.clockStartTime, this.clockEndTime);
+        // geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteOrbitScene", value: false });
+        // geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteOrbitScene", value: false });
+        // geoMapStore.SET_STATE_DATA({ key: "showImportSatelliteTrajectoryScene", value: true });
+        // geoMapStore.SET_STATE_DATA({ key: "showThreatSatelliteTrajectoryScene", value: true });
       }
       this.handleApplyView("default");
 
-      // 重置图层控制显示状态
-      if (this.showSatelliteLightDirectionScene) {
-        toggleSatelliteLightDirection(satelliteSceneLayer, true);
-      }
-      if (this.showSatelliteImageDirectionScene) {
-        toggleSatelliteImageDirection(satelliteSceneLayer, true);
-      }
-      toggleSatelliteCoordinateAxis(satelliteSceneLayer, this.showSatelliteBodyCoordinateAxisScene);
-      toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, this.showSatelliteOrbitCoordinateAxisScene);
+      // // 重置图层控制显示状态
+      // if (this.showSatelliteLightDirectionScene) {
+      //   toggleSatelliteLightDirection(satelliteSceneLayer, true);
+      // }
+      // if (this.showSatelliteImageDirectionScene) {
+      //   toggleSatelliteImageDirection(satelliteSceneLayer, true);
+      // }
+      // toggleSatelliteCoordinateAxis(satelliteSceneLayer, this.showSatelliteBodyCoordinateAxisScene);
+      // toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, this.showSatelliteOrbitCoordinateAxisScene);
     },
 
     handleApplyView(presetId) {
       this.viewMode = presetId;
+      const { importSatelliteNoradID, threatSatelliteNoradID } = this.currentSceneConfig;
 
       if (this.coordinate === "ECI") {
-        this.applyEciView(presetId); // 应用 ECI 视角
+        this.applyEciView(presetId, importSatelliteNoradID, threatSatelliteNoradID); // 应用 ECI 视角
       } else {
-        this.applyEcefView(presetId); // 应用 ECEF 视角
+        this.applyEcefView(presetId, importSatelliteNoradID); // 应用 ECEF 视角
       }
     },
 
     // 应用 ECEF 视角预设
-    applyEcefView(presetId) {
+    applyEcefView(presetId, importSatelliteNoradID) {
       globalViewer.trackedEntity = null;
       globalViewer.clock.shouldAnimate = false;
 
       switch (presetId) {
         case "default":
-          setDefaultPoleECEF(satelliteSceneLayer, "importSatelliteECEF");
+          setDefaultPoleECEF(satelliteSceneLayer, importSatelliteNoradID);
           break;
 
         // 南极正视
@@ -397,12 +376,12 @@ export default {
 
         // 南极侧视
         case "southPoleSide":
-          setSouthPoleSideECEF(satelliteSceneLayer, "importSatelliteECEF");
+          setSouthPoleSideECEF(satelliteSceneLayer, importSatelliteNoradID);
           break;
 
         // 恒星视角
         case "starPole":
-          setStarPoleECEF(satelliteSceneLayer, "importSatelliteECEF");
+          setStarPoleECEF(satelliteSceneLayer, importSatelliteNoradID);
           break;
 
         default:

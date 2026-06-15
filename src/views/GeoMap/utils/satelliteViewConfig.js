@@ -6,13 +6,14 @@ import { useGeoMapStore } from "@/store/useGeoMapStore";
 let icrfListener = null; // 当前 ICRF postUpdate 监听函数
 
 // 设置 ECEF 默认视角
-export function setDefaultPoleECEF(satelliteLayer, satelliteID) {
-  if (!satelliteLayer) return;
+export function setDefaultPoleECEF(satelliteLayer, noradID) {
+  if (!satelliteLayer || !noradID) return;
 
-  const graphic = satelliteLayer.getGraphicById(satelliteID);
+  const graphic = satelliteLayer.getGraphicById(`${noradID}ECEF`);
   if (!graphic) return;
 
   globalViewer.flyToGraphic(graphic, {
+    scale: 10,
     duration: 1.5,
     heading: 0,
     pitch: -89,
@@ -20,7 +21,7 @@ export function setDefaultPoleECEF(satelliteLayer, satelliteID) {
   });
 }
 
-// 设置 ECEF 南极正视
+// 设置 ECEF 南极俯视
 export function setSouthPoleFrontECEF(satelliteLayer) {
   if (!satelliteLayer) return;
 
@@ -36,30 +37,33 @@ export function setSouthPoleFrontECEF(satelliteLayer) {
 }
 
 // 设置 ECEF 南极侧视
-export function setSouthPoleSideECEF(satelliteLayer, satelliteID) {
-  if (!satelliteLayer || !satelliteID) return;
+export function setSouthPoleSideECEF(satelliteLayer, noradID) {
+  if (!satelliteLayer || !noradID) return;
 
-  const graphic = satelliteLayer.getGraphicById(satelliteID);
+  const graphic = satelliteLayer.getGraphicById(`${noradID}ECEF`);
   if (!graphic) return;
 
-  graphic.flyToPoint({
-    scale: 0.8,
+  globalViewer.flyToGraphic(graphic, {
+    scale: 10,
+    duration: 1.5,
     heading: 180,
     pitch: 89,
     roll: 0,
   });
 
-  globalViewer.trackedEntity = graphic;
+  console.log(graphic);
+
+  globalViewer.trackedEntity = graphic.entity;
 }
 
 // 设置 ECEF 恒星视角
-export function setStarPoleECEF(satelliteLayer, satelliteID) {
-  if (!satelliteLayer || !satelliteID) return;
+export function setStarPoleECEF(satelliteLayer, noradID) {
+  if (!satelliteLayer || !noradID) return;
 
-  const graphic = satelliteLayer.getGraphicById(satelliteID);
+  const graphic = satelliteLayer.getGraphicById(`${noradID}ECEF`);
   if (!graphic) return;
 
-  graphic.flyToPoint({
+  globalViewer.flyToGraphic(graphic, {
     scale: 1,
     heading: 0,
     pitch: -90,
@@ -113,6 +117,16 @@ export function setSouthPoleSideECI(satelliteLayer, satelliteID) {
   });
 }
 
+// 解除 ECI 相机锁定（恢复 Fixed 系）
+export const unlockCameraFromInertial = (viewer) => {
+  if (!viewer) return;
+  if (icrfListener) {
+    viewer.scene.postUpdate.removeEventListener(icrfListener);
+    icrfListener = null;
+  }
+  viewer.scene.camera.lookAtTransform(mars3d.Cesium.Matrix4.IDENTITY);
+};
+
 /**
  * ICRF 相机锁定：每帧把相机变换到惯性系，使地球自转、轨道静止
  * @param {object} scene - Cesium Scene
@@ -128,6 +142,18 @@ const icrfPostUpdate = (scene, time) => {
   const offset = mars3d.Cesium.Cartesian3.clone(camera.position);
   const transform = mars3d.Cesium.Matrix4.fromRotationTranslation(icrfToFixed);
   camera.lookAtTransform(transform, offset);
+};
+
+/**
+ * 启用 ECI 相机锁定（地球自转、轨道静止）
+ * @param {object} viewer - mars3d 的 globalViewer
+ * @returns {void}
+ */
+export const lockCameraToInertial = (viewer) => {
+  if (!viewer) return;
+  if (icrfListener) return;
+  icrfListener = icrfPostUpdate;
+  viewer.scene.postUpdate.addEventListener(icrfListener);
 };
 
 // 南极侧视
@@ -175,6 +201,14 @@ const icrfPostUpdateSouthPoleSide = (scene, time) => {
   mars3d.Cesium.Cartesian3.normalize(camera.up, camera.up);
 };
 
+// 南极侧视
+export const lockCameraToInertialSouthPoleSide = (viewer) => {
+  if (!viewer) return;
+  if (icrfListener) return;
+  icrfListener = icrfPostUpdateSouthPoleSide;
+  viewer.scene.postUpdate.addEventListener(icrfListener);
+};
+
 // 从星视角
 const icrfPostUpdateSatellite = (scene, time) => {
   if (!scene || !time) return;
@@ -195,6 +229,14 @@ const icrfPostUpdateSatellite = (scene, time) => {
 
   const transform = mars3d.Cesium.Matrix4.fromRotationTranslation(icrfToFixed, posA_fixed);
   camera.lookAtTransform(transform, offsetEci);
+};
+
+// 从星视角锁定
+export const lockCameraToInertialSatellite = (viewer) => {
+  if (!viewer) return;
+  if (icrfListener) return;
+  icrfListener = icrfPostUpdateSatellite;
+  viewer.scene.postUpdate.addEventListener(icrfListener);
 };
 
 // 第一视角
@@ -228,48 +270,10 @@ const icrfPostUpdateSatelliteThreat = (scene, time) => {
   camera.lookAtTransform(transform, offsetEciCloser);
 };
 
-/**
- * 启用 ECI 相机锁定（地球自转、轨道静止）
- * @param {object} viewer - mars3d 的 globalViewer
- * @returns {void}
- */
-export const lockCameraToInertial = (viewer) => {
-  if (!viewer) return;
-  if (icrfListener) return;
-  icrfListener = icrfPostUpdate;
-  viewer.scene.postUpdate.addEventListener(icrfListener);
-};
-
-// 南极侧视
-export const lockCameraToInertialSouthPoleSide = (viewer) => {
-  if (!viewer) return;
-  if (icrfListener) return;
-  icrfListener = icrfPostUpdateSouthPoleSide;
-  viewer.scene.postUpdate.addEventListener(icrfListener);
-};
-
-// 从星视角锁定
-export const lockCameraToInertialSatellite = (viewer) => {
-  if (!viewer) return;
-  if (icrfListener) return;
-  icrfListener = icrfPostUpdateSatellite;
-  viewer.scene.postUpdate.addEventListener(icrfListener);
-};
-
 // 第一视角锁定
 export const lockCameraToInertialSatelliteThreat = (viewer) => {
   if (!viewer) return;
   if (icrfListener) return;
   icrfListener = icrfPostUpdateSatelliteThreat;
   viewer.scene.postUpdate.addEventListener(icrfListener);
-};
-
-// 解除 ECI 相机锁定（恢复 Fixed 系）
-export const unlockCameraFromInertial = (viewer) => {
-  if (!viewer) return;
-  if (icrfListener) {
-    viewer.scene.postUpdate.removeEventListener(icrfListener);
-    icrfListener = null;
-  }
-  viewer.scene.camera.lookAtTransform(mars3d.Cesium.Matrix4.IDENTITY);
 };

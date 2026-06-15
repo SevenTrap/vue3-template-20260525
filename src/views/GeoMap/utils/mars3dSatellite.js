@@ -396,7 +396,7 @@ export function addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks,
         width: 1.5,
         color: "#0000ff",
         leadTime: 0,
-        trailTime: 1 * 24 * 60 * 60, // 暂定1天，后面可以改为一个轨道周期
+        trailTime: 10 * 24 * 60 * 60, // 暂定10天，后面可以改为一个轨道周期
         opacity: 1,
       },
       point: {
@@ -518,6 +518,12 @@ export function addSatelliteOrbitSceneECI(satelliteSceneLayer, satelliteTracks, 
     satelliteGraphic._isSate = true;
     satellitePathGraphic._isSatePath = true;
   }
+}
+
+// 清除图层
+export function removeSatelliteSceneLayer(satelliteSceneLayer) {
+  if (!satelliteSceneLayer) return;
+  satelliteSceneLayer.clear();
 }
 
 // 切换卫星传感器显示状态

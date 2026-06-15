@@ -29,7 +29,7 @@ const createSatelliteGraphic = (satelliteModel) => {
       minimumPixelSize: 90,
       silhouette: false,
       mergeOrientation: false,
-      heading: 90,
+      heading: 0,
       pitch: 0,
       roll: 0,
     },
@@ -78,7 +78,6 @@ const createSatelliteGraphic = (satelliteModel) => {
   });
 
   satelliteGraphic._isSate = true;
-  satelliteGraphic._satelliteModel = satelliteModel;
 
   return satelliteGraphic;
 };
@@ -105,11 +104,11 @@ export function addSatellite(satelliteLayer, satelliteModel) {
 export const rebuildSatelliteReferenceFrame = (satelliteLayer) => {
   if (!satelliteLayer) return;
 
-  geoMapStore.checkedNorads.forEach((norad) => {
-    const satelliteModel = geoMapStore.satelliteModels.get(norad);
+  geoMapStore.checkedNorads.forEach((noradID) => {
+    const satelliteModel = geoMapStore.satelliteModels.get(noradID);
     if (!satelliteModel) return;
 
-    const graphic = satelliteLayer.getGraphicById(norad);
+    const graphic = satelliteLayer.getGraphicById(noradID);
     if (graphic) satelliteLayer.removeGraphic(graphic);
 
     const nextGraphic = createSatelliteGraphic(satelliteModel);

@@ -40,7 +40,7 @@ export async function initSatellitesTree() {
       const tle1 = lines[i + 1].trim();
       const tle2 = lines[i + 2].trim();
 
-      const satelliteModel = new SatelliteClass(name, tle1, tle2);
+      const satelliteModel = new SatelliteClass(tle1, tle2, name);
       satelliteModels.set(satelliteModel.noradID, satelliteModel);
 
       if (satelliteModel.eccentricity > 0.05) {

@@ -87,14 +87,7 @@ import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { globalViewer } from "@/utils/initEarth";
 import { satelliteLayer } from "../utils/initMars3dLayers.js";
-import {
-  addGeoCirclePositions,
-  removeGeoCirclePositions,
-  addGeoCircleLabel,
-  removeGeoCircleLabel,
-  addPatrolArea,
-  removePatrolArea,
-} from "@/utils/mars3d/mars3dGeoStyle.js";
+
 import {
   toggleSatelliteOrbit,
   toggleSatelliteName,
@@ -133,27 +126,6 @@ export default {
     ]),
   },
   watch: {
-    showGeoCirclePositions(newVal) {
-      if (newVal) {
-        addGeoCirclePositions(globalViewer);
-      } else {
-        removeGeoCirclePositions(globalViewer);
-      }
-    },
-    showGeoCircleLabel(newVal) {
-      if (newVal) {
-        addGeoCircleLabel(globalViewer);
-      } else {
-        removeGeoCircleLabel(globalViewer);
-      }
-    },
-    showPatrolArea(newVal) {
-      if (newVal) {
-        addPatrolArea(globalViewer);
-      } else {
-        removePatrolArea(globalViewer);
-      }
-    },
     showSatelliteOrbitBase(newVal) {
       toggleSatelliteOrbit(satelliteLayer, newVal);
     },

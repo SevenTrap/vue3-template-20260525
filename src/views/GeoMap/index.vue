@@ -11,7 +11,7 @@
   <AircasGraphicLayersPlugin></AircasGraphicLayersPlugin>
 
   <!-- 卫星树插件 -->
-  <!-- <SatelliteTreePlugin></SatelliteTreePlugin> -->
+  <SatelliteTreePlugin></SatelliteTreePlugin>
 
   <!-- GEO卫星相对距离与光照角插件 -->
   <!-- <GeoSatRelativeEchartsPlugin></GeoSatRelativeEchartsPlugin> -->
@@ -20,19 +20,25 @@
   <!-- <GeoLngHeightEchartsPlugin></GeoLngHeightEchartsPlugin> -->
 
   <!-- 场景控制插件 -->
-  <!-- <SceneControlPlugin></SceneControlPlugin> -->
-  <!-- <SceneControlPluginBase></SceneControlPluginBase> -->
+  <SceneControlPlugin></SceneControlPlugin>
+  <SceneControlPluginBase></SceneControlPluginBase>
   <!-- 历史案例插件 -->
   <!-- <HistoryCasePlugin></HistoryCasePlugin> -->
 </template>
 
 <script>
-import * as mars3d from "mars3d";
 import dayjs from "dayjs";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { initViewer, globalViewer, setCesiumClockRange } from "@/utils/initEarth";
-import { addGeoCirclePositions, addGeoCircleLabel, addPatrolArea } from "@/utils/mars3d/mars3dGeoStyle.js";
+import {
+  addGeoCirclePositions,
+  removeGeoCirclePositions,
+  addGeoCircleLabel,
+  removeGeoCircleLabel,
+  addPatrolArea,
+  removePatrolArea,
+} from "@/utils/mars3d/mars3dGeoStyle.js";
 
 import MenuBarPlugin from "./components/MenuBarPlugin.vue";
 import MenuTools from "./components/MenuTools.vue";
@@ -46,17 +52,8 @@ import HistoryCasePlugin from "./components/HistoryCasePlugin.vue";
 
 import { calculateSatellitePosition } from "./utils/satelliteCalculate.js";
 import { initMars3dLayers, satelliteSceneLayer } from "./utils/initMars3dLayers.js";
-import {
-  addSatelliteOrbitSceneECEF,
-  addSatelliteOrbitSceneECI,
-  toggleImportSatelliteTrajectory,
-  toggleThreatSatelliteTrajectory,
-  toggleSatelliteImageDirection,
-  toggleSatelliteLightDirection,
-  toggleSatelliteModel,
-} from "./utils/mars3dSatellite.js";
-import { computeSatRelativeData } from "./utils/satelliteLngHeight";
-import { julianDateToTimeMs } from "./utils/mars3dRelativeTrajectory";
+import { addSatelliteOrbitSceneECEF } from "./utils/mars3dSatellite.js";
+import { julianDateToTimeMs } from "@/utils/formatDatetime";
 import { SCENE_LISTS } from "./configs/index";
 
 const geoMapStore = useGeoMapStore();
@@ -102,16 +99,33 @@ export default {
     this.timer = setInterval(() => {
       this.updateSceneTime();
     }, 100);
-
-    // globalViewer.clock.on(mars3d.EventType.change, (event) => {
-    //   console.log("时钟变化", event);
-    // });
   },
 
   computed: {
-    ...mapState(useGeoMapStore, ["sceneID", "currentSceneConfig", "satRelativeData", "clockStartTime", "clockEndTime"]),
+    ...mapState(useGeoMapStore, [
+      "coordinate",
+      "showGeoCirclePositions",
+      "showGeoCircleLabel",
+      "showPatrolArea",
+      "sceneID",
+      "currentSceneConfig",
+      "satRelativeData",
+      "clockStartTime",
+      "clockEndTime",
+    ]),
   },
 
+  watch: {
+    showGeoCirclePositions(newVal) {
+      newVal ? addGeoCirclePositions(globalViewer) : removeGeoCirclePositions(globalViewer);
+    },
+    showGeoCircleLabel(newVal) {
+      newVal ? addGeoCircleLabel(globalViewer) : removeGeoCircleLabel(globalViewer);
+    },
+    showPatrolArea(newVal) {
+      newVal ? addPatrolArea(globalViewer) : removePatrolArea(globalViewer);
+    },
+  },
   methods: {
     // 初始化场景时钟范围
     initSceneClockRange() {
