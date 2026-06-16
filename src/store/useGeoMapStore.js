@@ -46,17 +46,17 @@ export const useGeoMapStore = defineStore("geoMap", {
     showSatelliteModelBase: true, // 显示卫星模型
 
     // 场景案例的特殊配置
-    showImportSatelliteOrbitScene: false, // 显示从星轨道线
-    showThreatSatelliteOrbitScene: false, // 显示主星轨道线
+    showImportSatelliteOrbitScene: true, // 显示从星轨道线
+    showThreatSatelliteOrbitScene: true, // 显示主星轨道线
     showImportSatelliteTrajectoryScene: true, // 显示从星轨迹线
     showThreatSatelliteTrajectoryScene: true, // 显示主星轨迹线
     showSatelliteNameScene: true, // 显示卫星名称
     showSatellitePointScene: true, // 显示卫星当前实时点位
-    showSatelliteModelScene: false, // 显示卫星模型
+    showSatelliteModelScene: true, // 显示卫星模型
     showSatelliteSensorScene: false, // 显示卫星传感器
     showSatelliteBodyCoordinateAxisScene: false, // 显示卫星本体坐标系
     showSatelliteOrbitCoordinateAxisScene: false, // 显示卫星轨道坐标系
-    showSatelliteLightDirectionScene: true, // 显示卫星光照方向
+    showSatelliteLightDirectionScene: false, // 显示卫星光照方向
     showSatelliteImageDirectionScene: false, // 显示卫星成像方向
   }),
   getters: {

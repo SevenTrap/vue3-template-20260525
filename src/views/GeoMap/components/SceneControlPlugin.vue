@@ -48,7 +48,7 @@
         <div class="form-title">图层控制</div>
 
         <div class="button-group">
-          <div class="button-group-item">
+          <div class="button-group-item" v-if="coordinate === 'ECI'">
             <el-checkbox
               size="small"
               :model-value="showImportSatelliteOrbitScene"
@@ -57,7 +57,7 @@
             ></el-checkbox>
           </div>
 
-          <div class="button-group-item">
+          <div class="button-group-item" v-if="coordinate === 'ECI'">
             <el-checkbox
               size="small"
               :model-value="showThreatSatelliteOrbitScene"
@@ -66,7 +66,7 @@
             ></el-checkbox>
           </div>
 
-          <div class="button-group-item">
+          <div class="button-group-item" v-if="coordinate === 'ECEF'">
             <el-checkbox
               size="small"
               :model-value="showImportSatelliteTrajectoryScene"
@@ -75,7 +75,7 @@
             ></el-checkbox>
           </div>
 
-          <div class="button-group-item">
+          <div class="button-group-item" v-if="coordinate === 'ECEF'">
             <el-checkbox
               size="small"
               :model-value="showThreatSatelliteTrajectoryScene"
@@ -97,14 +97,14 @@
             <el-checkbox size="small" :model-value="showSatelliteNameScene" @change="handleToggleSate('showSatelliteNameScene')" label="卫星名称"></el-checkbox>
           </div>
 
-          <!-- <div class="button-group-item">
+          <div class="button-group-item">
             <el-checkbox
               size="small"
               :model-value="showSatelliteModelScene"
               @change="handleToggleSate('showSatelliteModelScene')"
-              label="显示卫星模型"
+              label="卫星模型"
             ></el-checkbox>
-          </div> -->
+          </div>
 
           <div class="button-group-item">
             <el-checkbox
@@ -196,7 +196,6 @@ import {
   setDefaultPoleECEF,
   setDefaultPoleECI,
   setSouthPoleFrontECI,
-  setSouthPoleSideECI,
 } from "../utils/satelliteViewConfig.js";
 
 const geoMapStore = useGeoMapStore();
@@ -251,9 +250,9 @@ export default {
     ]),
   },
   mounted() {
-    // setTimeout(() => {
-    //   this.applyEcefView("default");
-    // }, 100);
+    setTimeout(() => {
+      this.applyEcefView("default");
+    }, 100);
   },
   beforeUnmount() {},
   watch: {
@@ -350,10 +349,10 @@ export default {
 
     handleApplyView(presetId) {
       this.viewMode = presetId;
-      const { importSatelliteNoradID, threatSatelliteNoradID } = this.currentSceneConfig;
+      const { importSatelliteNoradID } = this.currentSceneConfig;
 
       if (this.coordinate === "ECI") {
-        this.applyEciView(presetId, importSatelliteNoradID, threatSatelliteNoradID); // 应用 ECI 视角
+        this.applyEciView(presetId, importSatelliteNoradID); // 应用 ECI 视角
       } else {
         this.applyEcefView(presetId, importSatelliteNoradID); // 应用 ECEF 视角
       }
@@ -393,7 +392,7 @@ export default {
     },
 
     // 应用 ECI 视角预设
-    applyEciView(presetId) {
+    applyEciView(presetId, importSatelliteNoradID) {
       globalViewer.trackedEntity = null;
       globalViewer.clock.shouldAnimate = false;
       unlockCameraFromInertial(globalViewer);
@@ -401,7 +400,7 @@ export default {
       switch (presetId) {
         case "default":
           lockCameraToInertial(globalViewer);
-          setDefaultPoleECI(satelliteSceneLayer, "importSatelliteECI");
+          setDefaultPoleECI(satelliteSceneLayer, importSatelliteNoradID);
           break;
 
         case "southPoleFront":

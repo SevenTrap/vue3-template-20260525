@@ -42,120 +42,6 @@ let importAxisEciSat = null;
 let importAxisEciTleKey = null;
 
 /**
- * 创建卫星 graphic
- * @param {object} satelliteModel - 卫星模型对象
- * @param {number} referenceFrame - Cesium 参考系
- * @param {object} displayState - 显示状态
- * @returns {object|null} Mars3D 卫星 graphic
- */
-const createSatelliteGraphic = (satelliteModel) => {
-  const coordinate = geoMapStore.coordinate;
-
-  const referenceFrame = coordinate === "ECI" ? mars3d.Cesium.ReferenceFrame.INERTIAL : mars3d.Cesium.ReferenceFrame.FIXED;
-
-  const satelliteGraphic = new mars3d.graphic.Satellite({
-    id: satelliteModel.noradID,
-    name: satelliteModel.name,
-    tle1: satelliteModel.tle1,
-    tle2: satelliteModel.tle2,
-    referenceFrame, // INERTIAL：惯性坐标系  FIXED：地球坐标系
-
-    model: {
-      show: true,
-      url: "/assets/gltf/weixin.gltf",
-      scale: 1,
-      minimumPixelSize: 90,
-      silhouette: false,
-      mergeOrientation: true,
-      heading: 0,
-      pitch: 0,
-      roll: 0,
-    },
-    point: {
-      show: true,
-      color: "#ff0000",
-      pixelSize: 10,
-      debugAxis: true,
-      debugAxisLength: 1000000,
-    },
-
-    label: {
-      show: true,
-      text: satelliteModel.name,
-      font_size: 20,
-      font_family: "楷体",
-      color: "#ffffff",
-      opacity: 1,
-      outline: true,
-      outlineColor: "#000000",
-      outlineWidth: 2,
-      background: true,
-      backgroundColor: "#000000",
-      backgroundOpacity: 0.5,
-      backgroundPadding: new mars3d.Cesium.Cartesian2(2, 5),
-      pixelOffsetX: 0,
-      pixelOffsetY: -20,
-      pixelOffsetScaleByDistance: true,
-      pixelOffsetScaleByDistance_far: 1000000,
-      pixelOffsetScaleByDistance_farValue: 0.5,
-      pixelOffsetScaleByDistance_near: 1000,
-      pixelOffsetScaleByDistance_nearValue: 1.0,
-      scaleByDistance: true,
-      scaleByDistance_far: 1000000,
-      scaleByDistance_farValue: 0.5,
-      scaleByDistance_near: 1000,
-      scaleByDistance_nearValue: 1.0,
-    },
-
-    path: {
-      show: true,
-      color: "#00ff00",
-      width: 1,
-      opacity: 0.5,
-    },
-  });
-
-  satelliteGraphic._isSate = true;
-  satelliteGraphic._satelliteModel = satelliteModel;
-
-  return satelliteGraphic;
-};
-
-// 添加卫星上球展示
-export function addSatellite(satelliteLayer, satelliteModel) {
-  if (!satelliteLayer || !satelliteModel) return;
-
-  const graphicSatellite = satelliteLayer.getGraphicById(satelliteModel.noradID);
-  if (graphicSatellite) return;
-
-  const satelliteGraphic = createSatelliteGraphic(satelliteModel);
-  if (!satelliteGraphic) return;
-
-  satelliteLayer.addGraphic(satelliteGraphic);
-}
-
-/**
- * 重建卫星 graphic 以更新参考坐标系
- * @param {object} satelliteLayer - 卫星图层
- * @param {number} referenceFrame - Cesium 参考系
- * @returns {void}
- */
-export const rebuildSatelliteReferenceFrame = (satelliteLayer) => {
-  if (!satelliteLayer) return;
-
-  geoMapStore.checkedNorads.forEach((norad) => {
-    const satelliteModel = geoMapStore.satelliteModels.get(norad);
-    if (!satelliteModel) return;
-
-    const graphic = satelliteLayer.getGraphicById(norad);
-    if (graphic) satelliteLayer.removeGraphic(graphic);
-
-    const nextGraphic = createSatelliteGraphic(satelliteModel);
-    if (nextGraphic) satelliteLayer.addGraphic(nextGraphic);
-  });
-};
-
-/**
  * 切换卫星轨道线显示状态
  * @param {object} satelliteLayer - 卫星图层
  * @param {boolean} showSatelliteOrbit - 是否显示轨道线
@@ -176,38 +62,56 @@ export function toggleSatelliteOrbit(satelliteLayer, showSatelliteOrbit) {
 export function toggleImportSatelliteOrbit(satelliteLayer, showImportSatelliteOrbit) {
   if (!satelliteLayer) return;
 
-  const graphic = satelliteLayer.getGraphicById("importSatelliteECI");
-  if (!graphic) return;
+  const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+  const graphic = satelliteLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+  const graphicPath = satelliteLayer.getGraphicById(`${importSatelliteNoradID}ECI-path`);
+
+  if (!graphic || !graphicPath) return;
   graphic.path.show = showImportSatelliteOrbit;
+  graphicPath.path.show = showImportSatelliteOrbit;
   graphic.path.opacity = showImportSatelliteOrbit ? 0.5 : 0;
+  graphicPath.path.opacity = showImportSatelliteOrbit ? 0.5 : 0;
 }
 
 // 切换主星轨道线显示状态
 export function toggleThreatSatelliteOrbit(satelliteLayer, showThreatSatelliteOrbit) {
   if (!satelliteLayer) return;
 
-  const graphic = satelliteLayer.getGraphicById("threatSatelliteECI");
-  if (!graphic) return;
+  const threatSatelliteNoradID = geoMapStore.currentSceneConfig.threatSatelliteNoradID;
+  const graphic = satelliteLayer.getGraphicById(`${threatSatelliteNoradID}ECI`);
+  const graphicPath = satelliteLayer.getGraphicById(`${threatSatelliteNoradID}ECI-path`);
+
+  if (!graphic || !graphicPath) return;
   graphic.path.show = showThreatSatelliteOrbit;
+  graphicPath.path.show = showThreatSatelliteOrbit;
   graphic.path.opacity = showThreatSatelliteOrbit ? 0.5 : 0;
+  graphicPath.path.opacity = showThreatSatelliteOrbit ? 0.5 : 0;
 }
 
 // 切换从星轨迹线显示状态
 export function toggleImportSatelliteTrajectory(satelliteLayer, showImportSatelliteTrajectory) {
   if (!satelliteLayer) return;
-  const graphic = satelliteLayer.getGraphicById("importSatelliteECEF");
-  if (!graphic) return;
+  const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+  const graphic = satelliteLayer.getGraphicById(`${importSatelliteNoradID}ECEF`);
+  const graphicPath = satelliteLayer.getGraphicById(`${importSatelliteNoradID}ECEF-path`);
+  if (!graphic || !graphicPath) return;
   graphic.path.show = showImportSatelliteTrajectory;
+  graphicPath.path.show = showImportSatelliteTrajectory;
   graphic.path.opacity = showImportSatelliteTrajectory ? 0.5 : 0;
+  graphicPath.path.opacity = showImportSatelliteTrajectory ? 0.5 : 0;
 }
 
 // 切换主星轨迹线显示状态
 export function toggleThreatSatelliteTrajectory(satelliteLayer, showThreatSatelliteTrajectory) {
   if (!satelliteLayer) return;
-  const graphic = satelliteLayer.getGraphicById("threatSatelliteECEF");
-  if (!graphic) return;
+  const threatSatelliteNoradID = geoMapStore.currentSceneConfig.threatSatelliteNoradID;
+  const graphic = satelliteLayer.getGraphicById(`${threatSatelliteNoradID}ECEF`);
+  const graphicPath = satelliteLayer.getGraphicById(`${threatSatelliteNoradID}ECEF-path`);
+  if (!graphic || !graphicPath) return;
   graphic.path.show = showThreatSatelliteTrajectory;
+  graphicPath.path.show = showThreatSatelliteTrajectory;
   graphic.path.opacity = showThreatSatelliteTrajectory ? 0.5 : 0;
+  graphicPath.path.opacity = showThreatSatelliteTrajectory ? 0.5 : 0;
 }
 
 /**
@@ -234,17 +138,10 @@ export function toggleSatelliteName(satelliteLayer, showSatelliteName) {
 export function toggleSatelliteModel(satelliteLayer, showSatelliteModel) {
   if (!satelliteLayer) return;
 
-  const importGraphicECEF = satelliteLayer.getGraphicById("importSatelliteECEF");
-
-  if (showSatelliteModel) {
-    if (!importGraphicECEF) return;
-    importGraphicECEF.model.show = true;
-  } else {
-    satelliteLayer.eachGraphic((graphic) => {
-      if (!graphic._isSate) return;
-      graphic.model.show = false;
-    });
-  }
+  satelliteLayer.eachGraphic((graphic) => {
+    if (!graphic._isSate) return;
+    graphic.model.show = showSatelliteModel;
+  });
 }
 
 export function toggleSatellitePoint(satelliteLayer, showSatellitePoint) {
@@ -256,35 +153,6 @@ export function toggleSatellitePoint(satelliteLayer, showSatellitePoint) {
     graphic.point.show = showSatellitePoint;
   });
 }
-
-/**
- * 切换卫星模型朝向：启用时模型始终指向地心（nadir），禁用时还原沿速度方向
- * @param {object} satelliteLayer - 卫星图层
- * @param {string|number} noradID - 卫星 NORAD ID
- * @param {boolean} enable - true：朝向地球；false：还原速度朝向
- * @returns {void}
- */
-export const setSatelliteFaceEarth = (satelliteLayer, noradID, enable) => {
-  if (!satelliteLayer || !noradID) return;
-
-  const graphic = satelliteLayer.getGraphicById(noradID);
-  const entity = graphic?.entity;
-  if (!entity || !entity.position) return;
-
-  const Cesium = mars3d.Cesium;
-  const positionProperty = entity.position;
-
-  if (enable) {
-    entity.orientation = new Cesium.CallbackProperty((time, result) => {
-      const position = positionProperty.getValue(time);
-      if (!position) return undefined;
-      const hpr = new Cesium.HeadingPitchRoll(0, Cesium.Math.toRadians(-90), 0);
-      return Cesium.Transforms.headingPitchRollQuaternion(position, hpr, Cesium.Ellipsoid.WGS84, undefined, result);
-    }, false);
-  } else {
-    entity.orientation = new Cesium.VelocityOrientationProperty(positionProperty);
-  }
-};
 
 /**
  * 切换卫星轨迹线显示状态
@@ -338,34 +206,52 @@ export function chunkSatelliteTrackByTimeECEF(satelliteTrackAll, clockStartTime,
  * @param {number} clockEndTime - 场景时钟结束时间
  * @returns {void}
  */
-export function addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks, clockStartTime, clockEndTime) {
+export function addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks, clockStartTime, clockEndTime, rebuild = false) {
   if (!satelliteSceneLayer || !satelliteTracks || !clockStartTime || !clockEndTime) return;
 
   for (const [key, value] of satelliteTracks) {
-    if (satelliteSceneLayer.getGraphicById(`${key}ECEF`)) continue;
+    if (rebuild) {
+      const satellitePathGraphic = satelliteSceneLayer.getGraphicById(`${key}ECEF-path`);
+      const satelliteGraphic = satelliteSceneLayer.getGraphicById(`${key}ECEF`);
+      if (satellitePathGraphic) satelliteSceneLayer.removeGraphic(satellitePathGraphic);
+      if (satelliteGraphic) satelliteSceneLayer.removeGraphic(satelliteGraphic);
+    } else {
+      if (satelliteSceneLayer.getGraphicById(`${key}ECEF`)) continue;
+    }
+
     const positionsECEF = chunkSatelliteTrackByTimeECEF(value, clockStartTime, clockEndTime);
 
-    const satellitePathGraphic = new mars3d.graphic.PolylinePrimitive({
+    // 卫星的轨迹线
+    const satellitePathGraphic = new mars3d.graphic.Satellite({
       id: `${key}ECEF-path`,
       name: `${key}ECEF-path`,
-      positions: positionsECEF,
-      style: {
+      position: {
+        type: "time",
+        list: positionsECEF,
+        forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
+        backwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
+        referenceFrame: mars3d.Cesium.ReferenceFrame.FIXED,
+        interpolation: true,
+        interpolationAlgorithm: mars3d.Cesium.LagrangePolynomialApproximation,
+        interpolationDegree: 3,
+      },
+      path: {
         width: 1,
+        color: "#0000ff",
         opacity: 0.5,
         materialType: mars3d.MaterialType.PolylineDash,
         materialOptions: {
           color: "#0000ff",
-          dashLength: 8.0,
+          dashLength: 6,
         },
       },
     });
 
-    const satelliteGraphic = new mars3d.graphic.ModelEntity({
+    const satelliteGraphic = new mars3d.graphic.Satellite({
       id: `${key}ECEF`,
       name: `${key}ECEF`,
       position: {
         type: "time",
-        timeField: "time",
         list: positionsECEF,
         forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
         backwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
@@ -375,7 +261,7 @@ export function addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks,
         interpolationDegree: 3,
       },
       referenceFrame: mars3d.Cesium.ReferenceFrame.FIXED,
-      style: {
+      model: {
         url: "/assets/gltf/weixin.gltf",
         scale: 1,
         opacity: 1,
@@ -384,13 +270,15 @@ export function addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks,
         heading: 0,
         pitch: 0,
         roll: 0,
-        label: {
-          text: `${key}ECEF`,
-          font_size: 16,
-          font_family: "楷体",
-          color: "#ffffff",
-          opacity: 1,
-        },
+      },
+      label: {
+        text: `${key}ECEF`,
+        font_size: 16,
+        font_family: "楷体",
+        color: "#ffffff",
+        opacity: 1,
+        pixelOffsetX: 0,
+        pixelOffsetY: -15,
       },
       path: {
         width: 1.5,
@@ -401,7 +289,10 @@ export function addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks,
       },
       point: {
         color: mars3d.Cesium.Color.RED,
-        pixelSize: 10,
+        pixelSize: 6,
+        outline: true,
+        outlineColor: "#feec41",
+        outlineWidth: 2,
       },
     });
 
@@ -423,25 +314,22 @@ export function addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks,
 export function chunkSatelliteTrackByTimeECI(satelliteTrackAll, clockStartTime, clockEndTime) {
   if (!satelliteTrackAll || !clockStartTime || !clockEndTime) return;
 
-  const positionProperty = new mars3d.Cesium.SampledPositionProperty(mars3d.Cesium.ReferenceFrame.INERTIAL);
-  positionProperty.forwardExtrapolationType = mars3d.Cesium.ExtrapolationType.HOLD;
-  positionProperty.backwardExtrapolationType = mars3d.Cesium.ExtrapolationType.HOLD;
-
+  const positionsECI = [];
   for (let i = 0; i < satelliteTrackAll.length; i++) {
     const item = satelliteTrackAll[i];
     if (item.timeMs < clockStartTime) continue;
     if (item.timeMs > clockEndTime) break;
 
-    const positionECI = new mars3d.Cesium.Cartesian3(item.posEci.x * 1000, item.posEci.y * 1000, item.posEci.z * 1000);
-    const julianDate = mars3d.Cesium.JulianDate.fromDate(new Date(item.timeMs));
-    positionProperty.addSample(julianDate, positionECI);
+    const positionECI = {
+      time: item.time,
+      lng: 0,
+      lat: 0,
+      alt: 0,
+      _position: new mars3d.Cesium.Cartesian3(item.posEci.x * 1000, item.posEci.y * 1000, item.posEci.z * 1000),
+    };
+    positionsECI.push(positionECI);
   }
-
-  positionProperty.setInterpolationOptions({
-    interpolationDegree: 3,
-    interpolationAlgorithm: mars3d.Cesium.LagrangePolynomialApproximation,
-  });
-  return positionProperty;
+  return positionsECI;
 }
 
 /**
@@ -457,32 +345,49 @@ export function addSatelliteOrbitSceneECI(satelliteSceneLayer, satelliteTracks, 
 
   for (const [key, value] of satelliteTracks) {
     if (satelliteSceneLayer.getGraphicById(`${key}ECI`)) continue;
-    const positionProperty = chunkSatelliteTrackByTimeECI(value, clockStartTime, clockEndTime);
+    const positionsECI = chunkSatelliteTrackByTimeECI(value, clockStartTime, clockEndTime);
 
-    const satellitePathGraphic = new mars3d.graphic.ModelEntity({
+    const satellitePathGraphic = new mars3d.graphic.Satellite({
       id: `${key}ECI-path`,
       name: `${key}ECI-path`,
-      position: positionProperty,
+      position: {
+        type: "time",
+        list: positionsECI,
+        forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
+        backwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
+        referenceFrame: mars3d.Cesium.ReferenceFrame.INERTIAL,
+        interpolation: true,
+        interpolationAlgorithm: mars3d.Cesium.LagrangePolynomialApproximation,
+        interpolationDegree: 3,
+      },
       referenceFrame: mars3d.Cesium.ReferenceFrame.INERTIAL,
       path: {
         width: 1,
         color: "#0000ff",
-        isAll: true,
         opacity: 0.5,
         materialType: mars3d.MaterialType.PolylineDash,
         materialOptions: {
           color: "#0000ff",
-          dashLength: 8.0,
+          dashLength: 6.0,
         },
       },
     });
 
-    const satelliteGraphic = new mars3d.graphic.ModelEntity({
+    const satelliteGraphic = new mars3d.graphic.Satellite({
       id: `${key}ECI`,
       name: `${key}ECI`,
-      position: positionProperty,
+      position: {
+        type: "time",
+        list: positionsECI,
+        forwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
+        backwardExtrapolationType: mars3d.Cesium.ExtrapolationType.HOLD,
+        referenceFrame: mars3d.Cesium.ReferenceFrame.INERTIAL,
+        interpolation: true,
+        interpolationAlgorithm: mars3d.Cesium.LagrangePolynomialApproximation,
+        interpolationDegree: 3,
+      },
       referenceFrame: mars3d.Cesium.ReferenceFrame.INERTIAL,
-      style: {
+      model: {
         url: "/assets/gltf/weixin.gltf",
         scale: 1,
         opacity: 1,
@@ -491,24 +396,28 @@ export function addSatelliteOrbitSceneECI(satelliteSceneLayer, satelliteTracks, 
         heading: 0,
         pitch: 0,
         roll: 0,
-        label: {
-          text: `${key}ECI`,
-          font_size: 16,
-          font_family: "楷体",
-          color: "#ffffff",
-          opacity: 1,
-        },
+      },
+      label: {
+        text: `${key}ECI`,
+        font_size: 16,
+        font_family: "楷体",
+        color: "#ffffff",
+        opacity: 1,
       },
       path: {
         width: 1.5,
         color: "#0000ff",
-        leadTime: 10 * 24 * 60 * 60,
+        leadTime: 0,
         trailTime: 10 * 24 * 60 * 60, // 暂定10天，后面可以改为一个轨道周期
         opacity: 1,
       },
       point: {
+        show: true,
         color: "#ff0000",
-        pixelSize: 10,
+        pixelSize: 6,
+        outline: true,
+        outlineColor: "#feec41",
+        outlineWidth: 2,
       },
     });
 
@@ -533,23 +442,29 @@ export function toggleSatelliteSensor(satelliteSceneLayer, showSatelliteSensor) 
   if (showSatelliteSensor) {
     if (satelliteSceneLayer.getGraphicById("satelliteSensor")) return;
 
-    const threatGraphicLine = satelliteSceneLayer.getGraphicById("threatSatelliteECEF") || satelliteSceneLayer.getGraphicById("threatSatelliteECI");
-    const importGraphicLine = satelliteSceneLayer.getGraphicById("importSatelliteECEF") || satelliteSceneLayer.getGraphicById("importSatelliteECI");
-    if (!threatGraphicLine || !importGraphicLine) return;
+    const threatSatelliteNoradID = geoMapStore.currentSceneConfig.threatSatelliteNoradID;
+    const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+    const threatGraphicLineECEF = satelliteSceneLayer.getGraphicById(`${threatSatelliteNoradID}ECEF`);
+    const importGraphicLineECEF = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`);
+    const threatGraphicLineECI = satelliteSceneLayer.getGraphicById(`${threatSatelliteNoradID}ECI`);
+    const importGraphicLineECI = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+    const threatGraphic = threatGraphicLineECEF || threatGraphicLineECI;
+    const importGraphic = importGraphicLineECEF || importGraphicLineECI;
+
+    if (!threatGraphic || !importGraphic) return;
 
     const satelliteSensor = new mars3d.graphic.ConicSensor({
       id: "satelliteSensor",
       name: "satelliteSensor",
-      position: threatGraphicLine.property,
-      lookAt: importGraphicLine.property,
+      position: threatGraphic.property,
+      lookAt: importGraphic.property,
       style: {
         angle: 10,
         opacity: 0.3,
         color: "#7ef500",
+        outline: true,
         outlineColor: "#e1e1e1",
         topOutlineShow: true,
-        slices: 1,
-        slicesR: 1,
       },
     });
     satelliteSceneLayer.addGraphic(satelliteSensor);
@@ -572,14 +487,15 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
   if (showSatelliteImageDirection) {
     if (satelliteSceneLayer.getGraphicById("satelliteImageDirection")) return;
 
-    const threatGraphicECEF = satelliteSceneLayer.getGraphicById("threatSatelliteECEF");
-    const importGraphicECEF = satelliteSceneLayer.getGraphicById("importSatelliteECEF");
-    const threatGraphicECI = satelliteSceneLayer.getGraphicById("threatSatelliteECI");
-    const importGraphicECI = satelliteSceneLayer.getGraphicById("importSatelliteECI");
+    const threatSatelliteNoradID = geoMapStore.currentSceneConfig.threatSatelliteNoradID;
+    const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+    const threatGraphicECEF = satelliteSceneLayer.getGraphicById(`${threatSatelliteNoradID}ECEF`);
+    const importGraphicECEF = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`);
+    const threatGraphicECI = satelliteSceneLayer.getGraphicById(`${threatSatelliteNoradID}ECI`);
+    const importGraphicECI = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
 
     const threatGraphic = threatGraphicECEF || threatGraphicECI;
     const importGraphic = importGraphicECEF || importGraphicECI;
-
     if (!threatGraphic || !importGraphic) return;
 
     const Cesium = mars3d.Cesium;
@@ -624,21 +540,21 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
  * @param {{x:number,y:number,z:number}} vec - ECI 矢量
  * @returns {object} Cesium Cartesian3
  */
-const eciKmToCartesian3 = (vec) => {
-  const Cesium = mars3d.Cesium;
-  return new Cesium.Cartesian3(vec.x * KM_TO_M, vec.y * KM_TO_M, vec.z * KM_TO_M);
-};
+// const eciKmToCartesian3 = (vec) => {
+//   const Cesium = mars3d.Cesium;
+//   return new Cesium.Cartesian3(vec.x * KM_TO_M, vec.y * KM_TO_M, vec.z * KM_TO_M);
+// };
 
 /**
  * 重置从动卫星坐标轴 TLE 推演缓存
  * @returns {void}
  */
-const resetImportAxisEciCache = () => {
-  importAxisEcefSortedSats = null;
-  importAxisEcefTlesRef = null;
-  importAxisEciSat = null;
-  importAxisEciTleKey = null;
-};
+// const resetImportAxisEciCache = () => {
+//   importAxisEcefSortedSats = null;
+//   importAxisEcefTlesRef = null;
+//   importAxisEciSat = null;
+//   importAxisEciTleKey = null;
+// };
 
 /**
  * 获取从动卫星在指定时刻的 ECI 位置与速度
@@ -646,32 +562,32 @@ const resetImportAxisEciCache = () => {
  * @param {object} importGraphic - 从动卫星 graphic
  * @returns {{ posEci: object, velEci: object }|null} ECI 状态（km / km/s）
  */
-const getImportSatelliteEciState = (time, importGraphic) => {
-  if (!time || !importGraphic) return null;
+// const getImportSatelliteEciState = (time, importGraphic) => {
+//   if (!time || !importGraphic) return null;
 
-  const date = mars3d.Cesium.JulianDate.toDate(time);
-  const isEciGraphic = importGraphic.id === "importSatelliteECI";
+//   const date = mars3d.Cesium.JulianDate.toDate(time);
+//   const isEciGraphic = importGraphic.id === "importSatelliteECI";
 
-  if (isEciGraphic && importGraphic.tle1 && importGraphic.tle2) {
-    const tleKey = `${importGraphic.tle1}|${importGraphic.tle2}`;
-    if (importAxisEciTleKey !== tleKey) {
-      importAxisEciSat = new SatelliteClass("import", importGraphic.tle1, importGraphic.tle2);
-      importAxisEciTleKey = tleKey;
-    }
-    return importAxisEciSat.getEciState(date);
-  }
+//   if (isEciGraphic && importGraphic.tle1 && importGraphic.tle2) {
+//     const tleKey = `${importGraphic.tle1}|${importGraphic.tle2}`;
+//     if (importAxisEciTleKey !== tleKey) {
+//       importAxisEciSat = new SatelliteClass(importGraphic.tle1, importGraphic.tle2, "");
+//       importAxisEciTleKey = tleKey;
+//     }
+//     return importAxisEciSat.getEciState(date);
+//   }
 
-  const importTles = geoMapStore.currentSceneConfig?.importTles;
-  if (!importTles?.length) return null;
+//   const importTles = geoMapStore.currentSceneConfig?.importTles;
+//   if (!importTles?.length) return null;
 
-  if (importAxisEcefTlesRef !== importTles) {
-    importAxisEcefSortedSats = buildSortedSatellites(importTles, "import");
-    importAxisEcefTlesRef = importTles;
-  }
+//   if (importAxisEcefTlesRef !== importTles) {
+//     importAxisEcefSortedSats = buildSortedSatellites(importTles, "import");
+//     importAxisEcefTlesRef = importTles;
+//   }
 
-  const sat = pickSatByTime(importAxisEcefSortedSats, date.getTime());
-  return sat ? sat.getEciState(date) : null;
-};
+//   const sat = pickSatByTime(importAxisEcefSortedSats, date.getTime());
+//   return sat ? sat.getEciState(date) : null;
+// };
 
 /**
  * 在 ECI 中计算 LVLH 类正交基并变换到地固系
@@ -683,35 +599,35 @@ const getImportSatelliteEciState = (time, importGraphic) => {
  * @param {{x:number,y:number,z:number}} velEciKm - ECI 速度（km/s）
  * @returns {{ origin: object, xAxis: object, yAxis: object, zAxis: object }|null} 地固系单位向量
  */
-const computeLvvhFrameAxesFixed = (time, origin, posEciKm, velEciKm) => {
-  const Cesium = mars3d.Cesium;
-  if (!origin || !posEciKm || !velEciKm) return null;
+// const computeLvvhFrameAxesFixed = (time, origin, posEciKm, velEciKm) => {
+//   const Cesium = mars3d.Cesium;
+//   if (!origin || !posEciKm || !velEciKm) return null;
 
-  const r = eciKmToCartesian3(posEciKm);
-  const v = eciKmToCartesian3(velEciKm);
-  const rMag = Cesium.Cartesian3.magnitude(r);
-  if (rMag < 1) return null;
+//   const r = eciKmToCartesian3(posEciKm);
+//   const v = eciKmToCartesian3(velEciKm);
+//   const rMag = Cesium.Cartesian3.magnitude(r);
+//   if (rMag < 1) return null;
 
-  const zAxis = Cesium.Cartesian3.negate(Cesium.Cartesian3.divideByScalar(r, rMag, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+//   const zAxis = Cesium.Cartesian3.negate(Cesium.Cartesian3.divideByScalar(r, rMag, new Cesium.Cartesian3()), new Cesium.Cartesian3());
 
-  const vDotZ = Cesium.Cartesian3.dot(v, zAxis);
-  const vProj = Cesium.Cartesian3.subtract(v, Cesium.Cartesian3.multiplyByScalar(zAxis, vDotZ, new Cesium.Cartesian3()), new Cesium.Cartesian3());
-  const vProjMag = Cesium.Cartesian3.magnitude(vProj);
-  if (vProjMag < 1e-6) return null;
+//   const vDotZ = Cesium.Cartesian3.dot(v, zAxis);
+//   const vProj = Cesium.Cartesian3.subtract(v, Cesium.Cartesian3.multiplyByScalar(zAxis, vDotZ, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+//   const vProjMag = Cesium.Cartesian3.magnitude(vProj);
+//   if (vProjMag < 1e-6) return null;
 
-  const xAxis = Cesium.Cartesian3.divideByScalar(vProj, vProjMag, new Cesium.Cartesian3());
-  const yAxis = Cesium.Cartesian3.normalize(Cesium.Cartesian3.cross(zAxis, xAxis, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+//   const xAxis = Cesium.Cartesian3.divideByScalar(vProj, vProjMag, new Cesium.Cartesian3());
+//   const yAxis = Cesium.Cartesian3.normalize(Cesium.Cartesian3.cross(zAxis, xAxis, new Cesium.Cartesian3()), new Cesium.Cartesian3());
 
-  const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
-  if (!icrfToFixed) return null;
+//   const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
+//   if (!icrfToFixed) return null;
 
-  return {
-    origin,
-    xAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, xAxis, new Cesium.Cartesian3()),
-    yAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, yAxis, new Cesium.Cartesian3()),
-    zAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, zAxis, new Cesium.Cartesian3()),
-  };
-};
+//   return {
+//     origin,
+//     xAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, xAxis, new Cesium.Cartesian3()),
+//     yAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, yAxis, new Cesium.Cartesian3()),
+//     zAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, zAxis, new Cesium.Cartesian3()),
+//   };
+// };
 
 /**
  * 构造单根坐标轴线段端点
@@ -720,13 +636,13 @@ const computeLvvhFrameAxesFixed = (time, origin, posEciKm, velEciKm) => {
  * @param {number} length - 轴长度（m）
  * @returns {Array} 线段端点 [origin, end]
  */
-const buildAxisLinePositions = (origin, axisUnit, length) => {
-  const Cesium = mars3d.Cesium;
-  if (!origin || !axisUnit) return [];
+// const buildAxisLinePositions = (origin, axisUnit, length) => {
+//   const Cesium = mars3d.Cesium;
+//   if (!origin || !axisUnit) return [];
 
-  const end = Cesium.Cartesian3.add(origin, Cesium.Cartesian3.multiplyByScalar(axisUnit, length, new Cesium.Cartesian3()), new Cesium.Cartesian3());
-  return [origin, end];
-};
+//   const end = Cesium.Cartesian3.add(origin, Cesium.Cartesian3.multiplyByScalar(axisUnit, length, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+//   return [origin, end];
+// };
 
 /**
  * 移除指定 ID 的坐标轴 graphic
@@ -734,14 +650,14 @@ const buildAxisLinePositions = (origin, axisUnit, length) => {
  * @param {string[]} graphicIds - graphic ID 列表
  * @returns {void}
  */
-const removeAxisGraphicsByIds = (satelliteSceneLayer, graphicIds) => {
-  if (!satelliteSceneLayer) return;
+// const removeAxisGraphicsByIds = (satelliteSceneLayer, graphicIds) => {
+//   if (!satelliteSceneLayer) return;
 
-  graphicIds.forEach((id) => {
-    const graphic = satelliteSceneLayer.getGraphicById(id);
-    if (graphic) satelliteSceneLayer.removeGraphic(graphic);
-  });
-};
+//   graphicIds.forEach((id) => {
+//     const graphic = satelliteSceneLayer.getGraphicById(id);
+//     if (graphic) satelliteSceneLayer.removeGraphic(graphic);
+//   });
+// };
 
 /**
  * 创建单根从动卫星坐标轴折线
@@ -750,45 +666,41 @@ const removeAxisGraphicsByIds = (satelliteSceneLayer, graphicIds) => {
  * @param {number} axisLength - 轴长度（m）
  * @returns {object} Mars3D PolylineEntity
  */
-const createImportSatelliteAxisLineGraphic = (satelliteSceneLayer, config, axisLength) => {
-  const Cesium = mars3d.Cesium;
-  const { id, label, color, axisKey } = config;
+// const createImportSatelliteAxisLineGraphic = (satelliteSceneLayer, config, axisLength, importGraphic) => {
+//   const Cesium = mars3d.Cesium;
+//   const { id, label, color, axisKey } = config;
 
-  return new mars3d.graphic.PolylineEntity({
-    id,
-    name: id,
-    positions: new Cesium.CallbackProperty((time) => {
-      const satGraphic = satelliteSceneLayer.getGraphicById("importSatelliteECEF") || satelliteSceneLayer.getGraphicById("importSatelliteECI");
-      if (!satGraphic) return [];
+//   return new mars3d.graphic.PolylineEntity({
+//     id,
+//     name: id,
+//     positions: new Cesium.CallbackProperty((time) => {
+//       const origin = importGraphic.positionShow;
 
-      const origin = satGraphic.positionShow;
-      if (!origin) return [];
+//       const eciState = getImportSatelliteEciState(time, importGraphic);
+//       if (!eciState) return [];
 
-      const eciState = getImportSatelliteEciState(time, satGraphic);
-      if (!eciState) return [];
+//       const axes = computeLvvhFrameAxesFixed(time, origin, eciState.posEci, eciState.velEci);
+//       if (!axes) return [];
 
-      const axes = computeLvvhFrameAxesFixed(time, origin, eciState.posEci, eciState.velEci);
-      if (!axes) return [];
-
-      return buildAxisLinePositions(origin, axes[axisKey], axisLength);
-    }, false),
-    style: {
-      width: 2,
-      opacity: 1,
-      arcType: Cesium.ArcType.NONE,
-      material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(color)),
-      label: {
-        text: label,
-        font_size: 16,
-        font_family: "楷体",
-        color,
-        outline: true,
-        outlineColor: "#000000",
-        outlineWidth: 2,
-      },
-    },
-  });
-};
+//       return buildAxisLinePositions(origin, axes[axisKey], axisLength);
+//     }, false),
+//     style: {
+//       width: 2,
+//       opacity: 1,
+//       arcType: Cesium.ArcType.NONE,
+//       material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(color)),
+//       label: {
+//         text: label,
+//         font_size: 16,
+//         font_family: "楷体",
+//         color,
+//         outline: true,
+//         outlineColor: "#000000",
+//         outlineWidth: 2,
+//       },
+//     },
+//   });
+// };
 
 /**
  * 切换从动卫星本体坐标轴显示状态
@@ -799,17 +711,19 @@ const createImportSatelliteAxisLineGraphic = (satelliteSceneLayer, config, axisL
 export function toggleSatelliteCoordinateAxis(satelliteSceneLayer, showSatelliteCoordinateAxis) {
   if (!satelliteSceneLayer) return;
 
-  removeAxisGraphicsByIds(satelliteSceneLayer, BODY_AXIS_GRAPHIC_IDS);
-  resetImportAxisEciCache();
+  // removeAxisGraphicsByIds(satelliteSceneLayer, BODY_AXIS_GRAPHIC_IDS);
+  // resetImportAxisEciCache();
 
-  if (!showSatelliteCoordinateAxis) return;
+  // if (!showSatelliteCoordinateAxis) return;
 
-  const importGraphic = satelliteSceneLayer.getGraphicById("importSatelliteECEF") || satelliteSceneLayer.getGraphicById("importSatelliteECI");
-  if (!importGraphic) return;
+  // const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+  // const importGraphic =
+  //   satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`) || satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+  // if (!importGraphic) return;
 
-  BODY_AXIS_CONFIG.forEach((config) => {
-    satelliteSceneLayer.addGraphic(createImportSatelliteAxisLineGraphic(satelliteSceneLayer, config, SATELLITE_AXIS_LENGTH));
-  });
+  // BODY_AXIS_CONFIG.forEach((config) => {
+  //   satelliteSceneLayer.addGraphic(createImportSatelliteAxisLineGraphic(satelliteSceneLayer, config, SATELLITE_AXIS_LENGTH, importGraphic));
+  // });
 }
 
 /**
@@ -821,17 +735,19 @@ export function toggleSatelliteCoordinateAxis(satelliteSceneLayer, showSatellite
 export function toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, showSatelliteOrbitCoordinateAxis) {
   if (!satelliteSceneLayer) return;
 
-  removeAxisGraphicsByIds(satelliteSceneLayer, ORBIT_AXIS_GRAPHIC_IDS);
-  resetImportAxisEciCache();
+  // removeAxisGraphicsByIds(satelliteSceneLayer, ORBIT_AXIS_GRAPHIC_IDS);
+  // resetImportAxisEciCache();
 
-  if (!showSatelliteOrbitCoordinateAxis) return;
+  // if (!showSatelliteOrbitCoordinateAxis) return;
 
-  const importGraphic = satelliteSceneLayer.getGraphicById("importSatelliteECEF") || satelliteSceneLayer.getGraphicById("importSatelliteECI");
-  if (!importGraphic) return;
+  // const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+  // const importGraphic =
+  //   satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`) || satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+  // if (!importGraphic) return;
 
-  ORBIT_AXIS_CONFIG.forEach((config) => {
-    satelliteSceneLayer.addGraphic(createImportSatelliteAxisLineGraphic(satelliteSceneLayer, config, SATELLITE_AXIS_LENGTH));
-  });
+  // ORBIT_AXIS_CONFIG.forEach((config) => {
+  //   satelliteSceneLayer.addGraphic(createImportSatelliteAxisLineGraphic(satelliteSceneLayer, config, SATELLITE_AXIS_LENGTH, importGraphic));
+  // });
 }
 
 /**
@@ -911,8 +827,12 @@ export function toggleSatelliteLightDirection(satelliteSceneLayer, showSatellite
 
   if (!showSatelliteLightDirection) return;
 
-  const importGraphicLine = satelliteSceneLayer.getGraphicById("importSatelliteECEF");
-  if (!importGraphicLine) return;
+  const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+  const importGraphicLine = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`);
+  const importGraphicLineECI = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+  const importGraphic = importGraphicLine || importGraphicLineECI;
+
+  if (!importGraphic) return;
 
   const Cesium = mars3d.Cesium;
 
@@ -920,7 +840,7 @@ export function toggleSatelliteLightDirection(satelliteSceneLayer, showSatellite
     id: "satelliteLightDirection",
     name: "satelliteLightDirection",
     positions: new Cesium.CallbackProperty((time) => {
-      const satPosition = importGraphicLine.positionShow;
+      const satPosition = importGraphic.positionShow;
       return buildLightDirectionPositions(time, satPosition);
     }, false),
     style: {

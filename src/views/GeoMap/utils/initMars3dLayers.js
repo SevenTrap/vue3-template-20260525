@@ -22,18 +22,18 @@ export function initMars3dLayers() {
   //   console.log("点击了卫星", event);
   // });
 
-  satelliteLayer.on(mars3d.EventType.change, (event) => {
-    requestAnimationFrame(() => {
-      console.log("卫星状态变化", event);
-    });
-  });
+  // satelliteLayer.on(mars3d.EventType.change, (event) => {
+  //   requestAnimationFrame(() => {
+  //     console.log("卫星状态变化", event);
+  //   });
+  // });
 
-  satelliteSceneLayer.on(mars3d.EventType.change, (event) => {
-    console.log("卫星场景状态变化", event);
-    requestAnimationFrame(() => {
-      console.log("卫星状态变化", event);
-    });
-  });
+  // satelliteSceneLayer.on(mars3d.EventType.change, (event) => {
+  //   console.log("卫星场景状态变化", event);
+  //   requestAnimationFrame(() => {
+  //     console.log("卫星状态变化", event);
+  //   });
+  // });
 }
 
 export { satelliteLayer, satelliteSceneLayer, satellitePathLayer, satelliteLinkLayer };

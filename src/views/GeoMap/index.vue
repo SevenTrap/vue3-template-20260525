@@ -52,7 +52,7 @@ import HistoryCasePlugin from "./components/HistoryCasePlugin.vue";
 
 import { calculateSatellitePosition } from "./utils/satelliteCalculate.js";
 import { initMars3dLayers, satelliteSceneLayer } from "./utils/initMars3dLayers.js";
-import { addSatelliteOrbitSceneECEF } from "./utils/mars3dSatellite.js";
+import { addSatelliteOrbitSceneECEF, addSatelliteOrbitSceneECI } from "./utils/mars3dSatellite.js";
 import { julianDateToTimeMs } from "@/utils/formatDatetime";
 import { SCENE_LISTS } from "./configs/index";
 
@@ -143,7 +143,6 @@ export default {
     // 初始化卫星轨迹
     initSatelliteTracks() {
       const { startTime, endTime, timeStep, satelliteNoradIDs, satelliteTles } = this.currentSceneConfig;
-
       const satelliteTracks = new Map();
 
       for (let i = 0; i < satelliteNoradIDs.length; i++) {
@@ -152,22 +151,9 @@ export default {
       }
 
       addSatelliteOrbitSceneECEF(satelliteSceneLayer, satelliteTracks, this.clockStartTime, this.clockEndTime);
-
-      // addSatelliteOrbitSceneECI(satelliteSceneLayer, satelliteTracks, this.clockStartTime, this.clockEndTime);
-
       geoMapStore.SET_STATE_DATA({ key: "satelliteTracks", value: satelliteTracks });
 
-      // const calculateStartTime = calculateSatellitePosition();
-      // addSatelliteOrbitSceneECEF(satelliteSceneLayer, this.satRelativeData);
-      // // addSatelliteOrbitSceneECI(satelliteSceneLayer, this.currentScene);
-      // toggleSatelliteImageDirection(satelliteSceneLayer, false);
-      // toggleSatelliteLightDirection(satelliteSceneLayer, true);
-      // // toggleImportSatelliteOrbit(satelliteSceneLayer, false);
-      // // toggleThreatSatelliteOrbit(satelliteSceneLayer, false);
-      // toggleImportSatelliteTrajectory(satelliteSceneLayer, true);
-      // toggleThreatSatelliteTrajectory(satelliteSceneLayer, true);
-
-      // toggleSatelliteModel(satelliteSceneLayer, false);
+      // addSatelliteOrbitSceneECI(satelliteSceneLayer, satelliteTracks, this.clockStartTime, this.clockEndTime);
     },
 
     updateSceneTime() {
