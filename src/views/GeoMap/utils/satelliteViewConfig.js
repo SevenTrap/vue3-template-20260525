@@ -91,12 +91,7 @@ export function setSouthPoleFrontECI(satelliteLayer) {
   if (!satelliteLayer) return;
 
   globalViewer.camera.flyTo({
-    destination: mars3d.Cesium.Cartesian3.fromDegrees(0, -90, 160_000_000),
-    orientation: {
-      heading: mars3d.Cesium.Math.toRadians(107.5),
-      pitch: mars3d.Cesium.Math.toRadians(-90),
-      roll: 0,
-    },
+    destination: mars3d.Cesium.Cartesian3.fromDegrees(107.5, -90, 160_000_000),
   });
 }
 
@@ -122,7 +117,7 @@ const computeSouthPoleSideOffset = (fixedToIcrf, posA_fixed) => {
   const posA_eci = mars3d.Cesium.Matrix3.multiplyByVector(fixedToIcrf, posA_fixed, new mars3d.Cesium.Cartesian3());
   const posB_eci = mars3d.Cesium.Matrix3.multiplyByVector(fixedToIcrf, posB_fixed, new mars3d.Cesium.Cartesian3());
   const offsetEci = mars3d.Cesium.Cartesian3.subtract(posB_eci, posA_eci, new mars3d.Cesium.Cartesian3());
-  return mars3d.Cesium.Cartesian3.multiplyByScalar(offsetEci, 0.1, new mars3d.Cesium.Cartesian3());
+  return mars3d.Cesium.Cartesian3.multiplyByScalar(offsetEci, 0.3, new mars3d.Cesium.Cartesian3());
 };
 
 /**
@@ -335,12 +330,7 @@ export const lockCameraToInertialSatelliteThreat = (viewer) => {
   const threatGraphic = satelliteSceneLayer.getGraphicById(`${threatSatelliteNoradID}ECI`);
   if (!importGraphic?.positionShow || !threatGraphic?.positionShow) return;
 
-  const initialOffset = computeThreatViewOffset(
-    fixedToIcrf,
-    importGraphic.positionShow,
-    threatGraphic.positionShow,
-    0.1
-  );
+  const initialOffset = computeThreatViewOffset(fixedToIcrf, importGraphic.positionShow, threatGraphic.positionShow, 0.3);
   if (!initialOffset) return;
 
   initInertialViewAtSatellite(viewer, icrfToFixed, importGraphic.positionShow, initialOffset);
