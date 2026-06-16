@@ -13,13 +13,15 @@ export const pickSatByTime = (satelliteEpochs, currentTimeMs) => {
   return currentEpoch || satelliteEpochs[satelliteEpochs.length - 1];
 };
 
-export function calculateSatellitePosition(noradID, tles, startTime, endTime, timeStep) {
-  const satelliteTracks = [];
+/**
+ * 按 TLE 列表构建历元倒序的 SatelliteClass 映射
+ * @param {string} noradID - 卫星 NORAD ID
+ * @param {Array<{tle1:string,tle2:string}>} tles - 两行根数列表
+ * @returns {{ satelliteEpochs: number[], satelliteClasses: Map<number, SatelliteClass> }} 历元映射
+ */
+export const buildSatelliteClassEpochMap = (noradID, tles) => {
   const satelliteEpochs = [];
   const satelliteClasses = new Map();
-
-  const startTimeMs = dayjs(startTime).valueOf();
-  const endTimeMs = dayjs(endTime).valueOf();
 
   for (let i = 0; i < tles.length; i++) {
     const satelliteClass = new SatelliteClass(tles[i].tle1, tles[i].tle2, noradID);
@@ -29,6 +31,32 @@ export function calculateSatellitePosition(noradID, tles, startTime, endTime, ti
   }
 
   satelliteEpochs.sort((a, b) => b - a);
+  return { satelliteEpochs, satelliteClasses };
+};
+
+/**
+ * 按指定时刻选取适用 TLE 并计算 ECI 位置与速度
+ * @param {string} noradID - 卫星 NORAD ID
+ * @param {Array<{tle1:string,tle2:string}>} tles - 两行根数列表
+ * @param {number} timeMs - 目标时刻毫秒时间戳
+ * @returns {{ posEci: object, velEci: object }|null} ECI 状态（km / km/s）
+ */
+export const getSatelliteEciStateAtTime = (noradID, tles, timeMs) => {
+  if (!tles?.length) return null;
+
+  const { satelliteEpochs, satelliteClasses } = buildSatelliteClassEpochMap(noradID, tles);
+  const currentEpoch = pickSatByTime(satelliteEpochs, timeMs);
+  const satelliteClass = satelliteClasses.get(currentEpoch);
+  if (!satelliteClass) return null;
+
+  return satelliteClass.getEciState(new Date(timeMs));
+};
+
+export function calculateSatellitePosition(noradID, tles, startTime, endTime, timeStep) {
+  const satelliteTracks = [];
+  const startTimeMs = dayjs(startTime).valueOf();
+  const endTimeMs = dayjs(endTime).valueOf();
+  const { satelliteEpochs, satelliteClasses } = buildSatelliteClassEpochMap(noradID, tles);
 
   for (let t = startTimeMs; t <= endTimeMs; t += timeStep) {
     const currentEpoch = pickSatByTime(satelliteEpochs, t);

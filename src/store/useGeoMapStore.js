@@ -50,6 +50,7 @@ export const useGeoMapStore = defineStore("geoMap", {
     showThreatSatelliteOrbitScene: true, // 显示主星轨道线
     showImportSatelliteTrajectoryScene: true, // 显示从星轨迹线
     showThreatSatelliteTrajectoryScene: true, // 显示主星轨迹线
+    showRelativeTrajectoryScene: false, // 显示相对轨迹线
     showSatelliteNameScene: true, // 显示卫星名称
     showSatellitePointScene: true, // 显示卫星当前实时点位
     showSatelliteModelScene: true, // 显示卫星模型

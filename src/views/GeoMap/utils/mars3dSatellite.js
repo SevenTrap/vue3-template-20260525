@@ -1,8 +1,7 @@
 import * as mars3d from "mars3d";
 import * as satellite from "satellite.js";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
-import SatelliteClass from "@/models/SatelliteClass";
-import { buildSortedSatellites, pickSatByTime } from "./satelliteLngHeight";
+import { buildSatelliteClassEpochMap, pickSatByTime } from "./satelliteCalculate";
 
 /** 天文单位（km），用于将 sunPos 的 rsun(AU) 换算为 km */
 const AU_KM = 149597870.7;
@@ -26,7 +25,7 @@ const BODY_AXIS_CONFIG = [
 ];
 /** 轨道坐标轴 graphic ID */
 const ORBIT_AXIS_GRAPHIC_IDS = ["importSatelliteOrbitAxisX", "importSatelliteOrbitAxisY", "importSatelliteOrbitAxisZ"];
-/** 轨道坐标轴配置：X 飞行方向、Y 轨道法线、Z 天底 */
+/** 轨道坐标轴配置：X 轨道切线(飞行方向)、Y 轨道法线(Z×X)、Z 指向地心(天底) */
 const ORBIT_AXIS_CONFIG = [
   { id: "importSatelliteOrbitAxisX", label: "X", color: "#ff4444", axisKey: "xAxis" },
   { id: "importSatelliteOrbitAxisY", label: "Y", color: "#44ff44", axisKey: "yAxis" },
@@ -35,11 +34,10 @@ const ORBIT_AXIS_CONFIG = [
 
 const geoMapStore = useGeoMapStore();
 
-/** 从动卫星坐标轴 TLE 推演缓存，避免每帧重建 SatelliteClass 列表 */
-let importAxisEcefSortedSats = null;
-let importAxisEcefTlesRef = null;
-let importAxisEciSat = null;
-let importAxisEciTleKey = null;
+/** 从动卫星轨道轴 TLE 历元缓存，避免每帧重建 SatelliteClass 列表 */
+let importMotionTlesRef = null;
+let importMotionEpochs = null;
+let importMotionClasses = null;
 
 /**
  * 切换卫星轨道线显示状态
@@ -112,6 +110,12 @@ export function toggleThreatSatelliteTrajectory(satelliteLayer, showThreatSatell
   graphicPath.path.show = showThreatSatelliteTrajectory;
   graphic.path.opacity = showThreatSatelliteTrajectory ? 0.5 : 0;
   graphicPath.path.opacity = showThreatSatelliteTrajectory ? 0.5 : 0;
+}
+
+export function toggleRelativeTrajectories(satelliteLayer, showRelativeTrajectories) {
+  if (!satelliteLayer) return;
+  const graphic = satelliteLayer.getGraphicById(`relativeTrajectories`);
+  if (!graphic) return;
 }
 
 /**
@@ -540,109 +544,246 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
  * @param {{x:number,y:number,z:number}} vec - ECI 矢量
  * @returns {object} Cesium Cartesian3
  */
-// const eciKmToCartesian3 = (vec) => {
-//   const Cesium = mars3d.Cesium;
-//   return new Cesium.Cartesian3(vec.x * KM_TO_M, vec.y * KM_TO_M, vec.z * KM_TO_M);
-// };
+const eciKmToCartesian3 = (vec) => {
+  const Cesium = mars3d.Cesium;
+  return new Cesium.Cartesian3(vec.x * KM_TO_M, vec.y * KM_TO_M, vec.z * KM_TO_M);
+};
 
 /**
- * 重置从动卫星坐标轴 TLE 推演缓存
+ * 判断锚点卫星 graphic 是否处于惯性系渲染
+ * @param {object} importGraphic - 从动卫星 graphic
+ * @returns {boolean} 是否为惯性系
+ */
+const isInertialGraphic = (importGraphic) => {
+  if (!importGraphic) return false;
+  if (String(importGraphic.id).endsWith("ECI")) return true;
+  return importGraphic.referenceFrame === mars3d.Cesium.ReferenceFrame.INERTIAL;
+};
+
+/**
+ * 按当前场景坐标系获取从动卫星 graphic
+ * @param {object} satelliteSceneLayer - 卫星场景图层
+ * @returns {object|null} 从动卫星 graphic
+ */
+const getImportSatelliteGraphic = (satelliteSceneLayer) => {
+  if (!satelliteSceneLayer) return null;
+
+  const importSatelliteNoradID = geoMapStore.currentSceneConfig?.importSatelliteNoradID;
+  if (!importSatelliteNoradID) return null;
+
+  const suffix = geoMapStore.coordinate === "ECI" ? "ECI" : "ECEF";
+  return (
+    satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}${suffix}`) ||
+    satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`) ||
+    satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`)
+  );
+};
+
+/**
+ * 从 currentSceneConfig 获取从动卫星的两行根数列表
+ * @returns {{ noradID: string, tles: Array }|null} NORAD ID 与 TLE 列表
+ */
+const getImportSatelliteTlesFromConfig = () => {
+  const config = geoMapStore.currentSceneConfig;
+  if (!config?.satelliteNoradIDs?.length || !config?.satelliteTles?.length) return null;
+
+  const { importSatelliteNoradID, satelliteNoradIDs, satelliteTles } = config;
+  const index = satelliteNoradIDs.indexOf(importSatelliteNoradID);
+  if (index < 0) return null;
+
+  const tles = satelliteTles[index];
+  if (!tles?.length) return null;
+
+  return { noradID: importSatelliteNoradID, tles };
+};
+
+/**
+ * 确保从动卫星 TLE 历元缓存与场景配置一致
+ * @param {string} noradID - 卫星 NORAD ID
+ * @param {Array} tles - 两行根数列表
  * @returns {void}
  */
-// const resetImportAxisEciCache = () => {
-//   importAxisEcefSortedSats = null;
-//   importAxisEcefTlesRef = null;
-//   importAxisEciSat = null;
-//   importAxisEciTleKey = null;
-// };
+const ensureImportMotionEpochCache = (noradID, tles) => {
+  if (importMotionTlesRef === tles) return;
+
+  const { satelliteEpochs, satelliteClasses } = buildSatelliteClassEpochMap(noradID, tles);
+  importMotionTlesRef = tles;
+  importMotionEpochs = satelliteEpochs;
+  importMotionClasses = satelliteClasses;
+};
 
 /**
- * 获取从动卫星在指定时刻的 ECI 位置与速度
+ * 按当前时刻选取适用 TLE，实时计算从动卫星 ECI 位置与速度
  * @param {object} time - Cesium JulianDate
- * @param {object} importGraphic - 从动卫星 graphic
  * @returns {{ posEci: object, velEci: object }|null} ECI 状态（km / km/s）
  */
-// const getImportSatelliteEciState = (time, importGraphic) => {
-//   if (!time || !importGraphic) return null;
+const getImportSatelliteMotionState = (time) => {
+  if (!time) return null;
 
-//   const date = mars3d.Cesium.JulianDate.toDate(time);
-//   const isEciGraphic = importGraphic.id === "importSatelliteECI";
+  const tlesInfo = getImportSatelliteTlesFromConfig();
+  if (!tlesInfo) return null;
 
-//   if (isEciGraphic && importGraphic.tle1 && importGraphic.tle2) {
-//     const tleKey = `${importGraphic.tle1}|${importGraphic.tle2}`;
-//     if (importAxisEciTleKey !== tleKey) {
-//       importAxisEciSat = new SatelliteClass(importGraphic.tle1, importGraphic.tle2, "");
-//       importAxisEciTleKey = tleKey;
-//     }
-//     return importAxisEciSat.getEciState(date);
-//   }
+  const { noradID, tles } = tlesInfo;
+  ensureImportMotionEpochCache(noradID, tles);
 
-//   const importTles = geoMapStore.currentSceneConfig?.importTles;
-//   if (!importTles?.length) return null;
-
-//   if (importAxisEcefTlesRef !== importTles) {
-//     importAxisEcefSortedSats = buildSortedSatellites(importTles, "import");
-//     importAxisEcefTlesRef = importTles;
-//   }
-
-//   const sat = pickSatByTime(importAxisEcefSortedSats, date.getTime());
-//   return sat ? sat.getEciState(date) : null;
-// };
+  const Cesium = mars3d.Cesium;
+  const timeMs = Cesium.JulianDate.toDate(time).getTime();
+  const currentEpoch = pickSatByTime(importMotionEpochs, timeMs);
+  const satelliteClass = importMotionClasses.get(currentEpoch);
+  if (!satelliteClass) return null;
+  const state = satelliteClass.getEciState(new Date(timeMs));
+  return state;
+};
 
 /**
- * 在 ECI 中计算 LVLH 类正交基并变换到地固系
- * 本体系：X 沿速度（滚动）、Z 指向地心（偏航/对地）、Y = Z×X（俯仰/右侧）
- * 轨道系与本体系共用同一组基向量，仅语义标签不同
- * @param {object} time - Cesium JulianDate
- * @param {object} origin - 轴线原点（地固系 Cartesian3）
- * @param {{x:number,y:number,z:number}} posEciKm - ECI 位置（km）
- * @param {{x:number,y:number,z:number}} velEciKm - ECI 速度（km/s）
- * @returns {{ origin: object, xAxis: object, yAxis: object, zAxis: object }|null} 地固系单位向量
+ * 从 4×4 变换矩阵提取三轴单位向量
+ * @param {object} modelMatrix - Cesium Matrix4
+ * @returns {{ xAxis: object, yAxis: object, zAxis: object }} 三轴单位向量
  */
-// const computeLvvhFrameAxesFixed = (time, origin, posEciKm, velEciKm) => {
-//   const Cesium = mars3d.Cesium;
-//   if (!origin || !posEciKm || !velEciKm) return null;
+const extractAxesFromModelMatrix = (modelMatrix) => {
+  const Cesium = mars3d.Cesium;
+  const rotation = Cesium.Matrix4.getRotation(modelMatrix, new Cesium.Matrix3());
+  return {
+    xAxis: Cesium.Matrix3.getColumn(rotation, 0, new Cesium.Cartesian3()),
+    yAxis: Cesium.Matrix3.getColumn(rotation, 1, new Cesium.Cartesian3()),
+    zAxis: Cesium.Matrix3.getColumn(rotation, 2, new Cesium.Cartesian3()),
+  };
+};
 
-//   const r = eciKmToCartesian3(posEciKm);
-//   const v = eciKmToCartesian3(velEciKm);
-//   const rMag = Cesium.Cartesian3.magnitude(r);
-//   if (rMag < 1) return null;
+/**
+ * 将地固系轴向量变换到惯性系
+ * @param {object} time - Cesium JulianDate
+ * @param {object} axis - 地固系轴向量
+ * @returns {object|null} 惯性系轴向量
+ */
+const fixedAxisToInertial = (time, axis) => {
+  const Cesium = mars3d.Cesium;
+  const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
+  if (!icrfToFixed) return null;
+  const fixedToIcrf = Cesium.Matrix3.transpose(icrfToFixed, new Cesium.Matrix3());
+  return Cesium.Matrix3.multiplyByVector(fixedToIcrf, axis, new Cesium.Cartesian3());
+};
 
-//   const zAxis = Cesium.Cartesian3.negate(Cesium.Cartesian3.divideByScalar(r, rMag, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+/**
+ * 计算本体坐标轴（基于 model 姿态）
+ * @param {object} time - Cesium JulianDate
+ * @param {object} origin - 轴线原点
+ * @param {object} model - 卫星 model 配置
+ * @param {boolean} isInertial - 是否惯性系渲染
+ * @returns {{ origin: object, xAxis: object, yAxis: object, zAxis: object }|null} 三轴
+ */
+const computeBodyFrameAxes = (time, origin, model, isInertial) => {
+  const Cesium = mars3d.Cesium;
+  if (!origin || !model) return null;
 
-//   const vDotZ = Cesium.Cartesian3.dot(v, zAxis);
-//   const vProj = Cesium.Cartesian3.subtract(v, Cesium.Cartesian3.multiplyByScalar(zAxis, vDotZ, new Cesium.Cartesian3()), new Cesium.Cartesian3());
-//   const vProjMag = Cesium.Cartesian3.magnitude(vProj);
-//   if (vProjMag < 1e-6) return null;
+  const heading = Cesium.Math.toRadians(model.heading ?? 0);
+  const pitch = Cesium.Math.toRadians(model.pitch ?? 0);
+  const roll = Cesium.Math.toRadians(model.roll ?? 0);
+  const hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
 
-//   const xAxis = Cesium.Cartesian3.divideByScalar(vProj, vProjMag, new Cesium.Cartesian3());
-//   const yAxis = Cesium.Cartesian3.normalize(Cesium.Cartesian3.cross(zAxis, xAxis, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+  let fixedOrigin = origin;
+  if (isInertial) {
+    const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
+    if (!icrfToFixed) return null;
+    fixedOrigin = Cesium.Matrix3.multiplyByVector(icrfToFixed, origin, new Cesium.Cartesian3());
+  }
 
-//   const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
-//   if (!icrfToFixed) return null;
+  const modelMatrix = Cesium.Transforms.headingPitchRollToFixedFrame(fixedOrigin, hpr);
+  const { xAxis, yAxis, zAxis } = extractAxesFromModelMatrix(modelMatrix);
 
-//   return {
-//     origin,
-//     xAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, xAxis, new Cesium.Cartesian3()),
-//     yAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, yAxis, new Cesium.Cartesian3()),
-//     zAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, zAxis, new Cesium.Cartesian3()),
-//   };
-// };
+  if (!isInertial) {
+    return { origin, xAxis, yAxis, zAxis };
+  }
+
+  const xAxisInertial = fixedAxisToInertial(time, xAxis);
+  const yAxisInertial = fixedAxisToInertial(time, yAxis);
+  const zAxisInertial = fixedAxisToInertial(time, zAxis);
+  if (!xAxisInertial || !yAxisInertial || !zAxisInertial) return null;
+
+  return {
+    origin,
+    xAxis: xAxisInertial,
+    yAxis: yAxisInertial,
+    zAxis: zAxisInertial,
+  };
+};
+
+/**
+ * 在 ECI 中由位置/速度构造轨道运动坐标系
+ * @param {object} originEci - ECI 原点（m）
+ * @param {{x:number,y:number,z:number}} velEciKm - ECI 速度（km/s）
+ * @returns {{ xAxis: object, yAxis: object, zAxis: object }|null} ECI 三轴单位向量
+ */
+const computeOrbitFrameAxesEci = (originEci, velEciKm) => {
+  const Cesium = mars3d.Cesium;
+  if (!originEci || !velEciKm) return null;
+
+  const r = originEci;
+  const v = eciKmToCartesian3(velEciKm);
+  const rMag = Cesium.Cartesian3.magnitude(r);
+  if (rMag < 1) return null;
+
+  const zAxis = Cesium.Cartesian3.negate(Cesium.Cartesian3.divideByScalar(r, rMag, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+
+  const vDotZ = Cesium.Cartesian3.dot(v, zAxis);
+  const vProj = Cesium.Cartesian3.subtract(v, Cesium.Cartesian3.multiplyByScalar(zAxis, vDotZ, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+  const vProjMag = Cesium.Cartesian3.magnitude(vProj);
+  if (vProjMag < 1e-6) return null;
+
+  const xAxis = Cesium.Cartesian3.divideByScalar(vProj, vProjMag, new Cesium.Cartesian3());
+  const yAxis = Cesium.Cartesian3.normalize(Cesium.Cartesian3.cross(zAxis, xAxis, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+
+  return { xAxis, yAxis, zAxis };
+};
+
+/**
+ * 计算轨道坐标轴（基于实时运动方向）
+ * @param {object} time - Cesium JulianDate
+ * @param {object} origin - 轴线原点（地固系世界坐标，与 positionShow 一致）
+ * @param {{x:number,y:number,z:number}} velEciKm - ECI 速度（km/s）
+ * @param {boolean} isInertial - 是否惯性系渲染
+ * @returns {{ origin: object, xAxis: object, yAxis: object, zAxis: object }|null} 三轴
+ */
+const computeOrbitFrameAxes = (time, origin, velEciKm, isInertial) => {
+  const Cesium = mars3d.Cesium;
+  if (!time || !origin) return null;
+
+  const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
+  if (!icrfToFixed) return null;
+  const fixedToIcrf = Cesium.Matrix3.transpose(icrfToFixed, new Cesium.Matrix3());
+
+  // positionShow 与光照来向一致，均为地固系世界坐标
+  const originEci = Cesium.Matrix3.multiplyByVector(fixedToIcrf, origin, new Cesium.Cartesian3());
+
+  const eciAxes = computeOrbitFrameAxesEci(originEci, velEciKm);
+  if (!eciAxes) return null;
+
+  if (isInertial) {
+    return { origin: originEci, ...eciAxes };
+  }
+
+  return {
+    origin,
+    xAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, eciAxes.xAxis, new Cesium.Cartesian3()),
+    yAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, eciAxes.yAxis, new Cesium.Cartesian3()),
+    zAxis: Cesium.Matrix3.multiplyByVector(icrfToFixed, eciAxes.zAxis, new Cesium.Cartesian3()),
+  };
+};
 
 /**
  * 构造单根坐标轴线段端点
- * @param {object} origin - 起点（地固系）
- * @param {object} axisUnit - 轴单位向量（地固系）
+ * @param {object} origin - 起点
+ * @param {object} axisUnit - 轴单位向量
  * @param {number} length - 轴长度（m）
  * @returns {Array} 线段端点 [origin, end]
  */
-// const buildAxisLinePositions = (origin, axisUnit, length) => {
-//   const Cesium = mars3d.Cesium;
-//   if (!origin || !axisUnit) return [];
+const buildAxisLinePositions = (origin, axisUnit, length) => {
+  const Cesium = mars3d.Cesium;
+  if (!origin || !axisUnit) return [];
 
-//   const end = Cesium.Cartesian3.add(origin, Cesium.Cartesian3.multiplyByScalar(axisUnit, length, new Cesium.Cartesian3()), new Cesium.Cartesian3());
-//   return [origin, end];
-// };
+  const end = Cesium.Cartesian3.add(origin, Cesium.Cartesian3.multiplyByScalar(axisUnit, length, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+  return [origin, end];
+};
 
 /**
  * 移除指定 ID 的坐标轴 graphic
@@ -650,57 +791,85 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
  * @param {string[]} graphicIds - graphic ID 列表
  * @returns {void}
  */
-// const removeAxisGraphicsByIds = (satelliteSceneLayer, graphicIds) => {
-//   if (!satelliteSceneLayer) return;
+const removeAxisGraphicsByIds = (satelliteSceneLayer, graphicIds) => {
+  if (!satelliteSceneLayer) return;
 
-//   graphicIds.forEach((id) => {
-//     const graphic = satelliteSceneLayer.getGraphicById(id);
-//     if (graphic) satelliteSceneLayer.removeGraphic(graphic);
-//   });
-// };
+  graphicIds.forEach((id) => {
+    const graphic = satelliteSceneLayer.getGraphicById(id);
+    if (graphic) satelliteSceneLayer.removeGraphic(graphic);
+  });
+};
 
 /**
  * 创建单根从动卫星坐标轴折线
- * @param {object} satelliteSceneLayer - 卫星场景图层
  * @param {{ id: string, label: string, color: string, axisKey: string }} config - 轴配置
  * @param {number} axisLength - 轴长度（m）
+ * @param {object} importGraphic - 从动卫星 graphic
+ * @param {boolean} isInertial - 是否惯性系
+ * @param {Function} resolveAxesFn - 返回三轴的回调 (time) => axes|null
  * @returns {object} Mars3D PolylineEntity
  */
-// const createImportSatelliteAxisLineGraphic = (satelliteSceneLayer, config, axisLength, importGraphic) => {
-//   const Cesium = mars3d.Cesium;
-//   const { id, label, color, axisKey } = config;
+const createAxisLineGraphic = (config, axisLength, importGraphic, isInertial, resolveAxesFn) => {
+  const Cesium = mars3d.Cesium;
+  const { id, label, color, axisKey } = config;
 
-//   return new mars3d.graphic.PolylineEntity({
-//     id,
-//     name: id,
-//     positions: new Cesium.CallbackProperty((time) => {
-//       const origin = importGraphic.positionShow;
+  return new mars3d.graphic.PolylineEntity({
+    id,
+    name: id,
+    referenceFrame: isInertial ? Cesium.ReferenceFrame.INERTIAL : Cesium.ReferenceFrame.FIXED,
+    positions: new Cesium.CallbackProperty((time) => {
+      const axes = resolveAxesFn(time);
+      if (!axes) return [];
 
-//       const eciState = getImportSatelliteEciState(time, importGraphic);
-//       if (!eciState) return [];
+      const axisUnit = axes[axisKey];
+      if (!axisUnit) return [];
 
-//       const axes = computeLvvhFrameAxesFixed(time, origin, eciState.posEci, eciState.velEci);
-//       if (!axes) return [];
+      return buildAxisLinePositions(axes.origin, axisUnit, axisLength);
+    }, false),
+    style: {
+      width: 2,
+      opacity: 1,
+      arcType: Cesium.ArcType.NONE,
+      material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(color)),
+      label: {
+        text: label,
+        font_size: 16,
+        font_family: "楷体",
+        color,
+        outline: true,
+        outlineColor: "#000000",
+        outlineWidth: 2,
+      },
+    },
+  });
+};
 
-//       return buildAxisLinePositions(origin, axes[axisKey], axisLength);
-//     }, false),
-//     style: {
-//       width: 2,
-//       opacity: 1,
-//       arcType: Cesium.ArcType.NONE,
-//       material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(color)),
-//       label: {
-//         text: label,
-//         font_size: 16,
-//         font_family: "楷体",
-//         color,
-//         outline: true,
-//         outlineColor: "#000000",
-//         outlineWidth: 2,
-//       },
-//     },
-//   });
-// };
+/**
+ * 切换指定坐标轴集合的显示状态（内部复用）
+ * @param {object} satelliteSceneLayer - 卫星场景图层
+ * @param {boolean} show - 是否显示
+ * @param {string[]} graphicIds - graphic ID 列表
+ * @param {Array} axisConfig - 轴配置列表
+ * @param {Function} resolveAxesFn - (time, importGraphic, isInertial) => axes|null
+ * @returns {void}
+ */
+const toggleImportSatelliteAxisSet = (satelliteSceneLayer, show, graphicIds, axisConfig, resolveAxesFn) => {
+  removeAxisGraphicsByIds(satelliteSceneLayer, graphicIds);
+  if (!show) return;
+
+  const importGraphic = getImportSatelliteGraphic(satelliteSceneLayer);
+  if (!importGraphic) return;
+
+  const isInertial = isInertialGraphic(importGraphic);
+  axisConfig.forEach((config) => {
+    satelliteSceneLayer.addGraphic(
+      createAxisLineGraphic(config, SATELLITE_AXIS_LENGTH, importGraphic, isInertial, (time) => {
+        const axes = resolveAxesFn(time, importGraphic, isInertial);
+        return axes;
+      }),
+    );
+  });
+};
 
 /**
  * 切换从动卫星本体坐标轴显示状态
@@ -708,23 +877,15 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
  * @param {boolean} showSatelliteCoordinateAxis - 是否显示本体坐标轴
  * @returns {void}
  */
-export function toggleSatelliteCoordinateAxis(satelliteSceneLayer, showSatelliteCoordinateAxis) {
+export const toggleSatelliteCoordinateAxis = (satelliteSceneLayer, showSatelliteCoordinateAxis) => {
   if (!satelliteSceneLayer) return;
 
-  // removeAxisGraphicsByIds(satelliteSceneLayer, BODY_AXIS_GRAPHIC_IDS);
-  // resetImportAxisEciCache();
-
-  // if (!showSatelliteCoordinateAxis) return;
-
-  // const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
-  // const importGraphic =
-  //   satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`) || satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
-  // if (!importGraphic) return;
-
-  // BODY_AXIS_CONFIG.forEach((config) => {
-  //   satelliteSceneLayer.addGraphic(createImportSatelliteAxisLineGraphic(satelliteSceneLayer, config, SATELLITE_AXIS_LENGTH, importGraphic));
-  // });
-}
+  toggleImportSatelliteAxisSet(satelliteSceneLayer, showSatelliteCoordinateAxis, BODY_AXIS_GRAPHIC_IDS, BODY_AXIS_CONFIG, (time, importGraphic, isInertial) => {
+    const origin = importGraphic.positionShow;
+    if (!origin) return null;
+    return computeBodyFrameAxes(time, origin, importGraphic.model, isInertial);
+  });
+};
 
 /**
  * 切换从动卫星轨道坐标轴显示状态
@@ -732,23 +893,23 @@ export function toggleSatelliteCoordinateAxis(satelliteSceneLayer, showSatellite
  * @param {boolean} showSatelliteOrbitCoordinateAxis - 是否显示轨道坐标轴
  * @returns {void}
  */
-export function toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, showSatelliteOrbitCoordinateAxis) {
+export const toggleSatelliteOrbitCoordinateAxis = (satelliteSceneLayer, showSatelliteOrbitCoordinateAxis) => {
   if (!satelliteSceneLayer) return;
 
-  // removeAxisGraphicsByIds(satelliteSceneLayer, ORBIT_AXIS_GRAPHIC_IDS);
-  // resetImportAxisEciCache();
-
-  // if (!showSatelliteOrbitCoordinateAxis) return;
-
-  // const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
-  // const importGraphic =
-  //   satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`) || satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
-  // if (!importGraphic) return;
-
-  // ORBIT_AXIS_CONFIG.forEach((config) => {
-  //   satelliteSceneLayer.addGraphic(createImportSatelliteAxisLineGraphic(satelliteSceneLayer, config, SATELLITE_AXIS_LENGTH, importGraphic));
-  // });
-}
+  toggleImportSatelliteAxisSet(
+    satelliteSceneLayer,
+    showSatelliteOrbitCoordinateAxis,
+    ORBIT_AXIS_GRAPHIC_IDS,
+    ORBIT_AXIS_CONFIG,
+    (time, importGraphic, isInertial) => {
+      const motionState = getImportSatelliteMotionState(time);
+      if (!motionState) return null;
+      const origin = importGraphic.positionShow;
+      if (!origin) return null;
+      return computeOrbitFrameAxes(time, origin, motionState.velEci, isInertial);
+    },
+  );
+};
 
 /**
  * 获取太阳在 ECI 坐标系下的位置（km）

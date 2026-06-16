@@ -87,6 +87,15 @@
           <div class="button-group-item">
             <el-checkbox
               size="small"
+              :model-value="showRelativeTrajectoryScene"
+              @change="handleToggleSate('showRelativeTrajectoryScene')"
+              label="相对轨迹"
+            ></el-checkbox>
+          </div>
+
+          <div class="button-group-item">
+            <el-checkbox
+              size="small"
               :model-value="showSatellitePointScene"
               @change="handleToggleSate('showSatellitePointScene')"
               label="卫星点位"
@@ -167,6 +176,7 @@ import {
   removeSatelliteSceneLayer,
   toggleImportSatelliteOrbit,
   toggleThreatSatelliteOrbit,
+  toggleRelativeTrajectories,
   toggleSatelliteName,
   toggleSatelliteModel,
   toggleSatellitePoint,
@@ -237,6 +247,7 @@ export default {
       "showThreatSatelliteOrbitScene",
       "showImportSatelliteTrajectoryScene",
       "showThreatSatelliteTrajectoryScene",
+      "showRelativeTrajectoryScene",
       "showSatelliteNameScene",
       "showSatelliteModelScene",
       "showGeoCirclePositions",
@@ -276,6 +287,12 @@ export default {
     showThreatSatelliteTrajectoryScene(newVal) {
       toggleThreatSatelliteTrajectory(satelliteSceneLayer, newVal);
     },
+
+    // 显示相对轨迹
+    showRelativeTrajectoryScene(newVal) {
+      toggleRelativeTrajectories(satelliteSceneLayer, newVal);
+    },
+
     // 显示光照方向
     showSatelliteLightDirectionScene(newVal) {
       toggleSatelliteLightDirection(satelliteSceneLayer, newVal);
@@ -336,15 +353,8 @@ export default {
       }
       this.handleApplyView("default");
 
-      // // 重置图层控制显示状态
-      // if (this.showSatelliteLightDirectionScene) {
-      //   toggleSatelliteLightDirection(satelliteSceneLayer, true);
-      // }
-      // if (this.showSatelliteImageDirectionScene) {
-      //   toggleSatelliteImageDirection(satelliteSceneLayer, true);
-      // }
-      // toggleSatelliteCoordinateAxis(satelliteSceneLayer, this.showSatelliteBodyCoordinateAxisScene);
-      // toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, this.showSatelliteOrbitCoordinateAxisScene);
+      toggleSatelliteCoordinateAxis(satelliteSceneLayer, this.showSatelliteBodyCoordinateAxisScene);
+      toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, this.showSatelliteOrbitCoordinateAxisScene);
     },
 
     handleApplyView(presetId) {
