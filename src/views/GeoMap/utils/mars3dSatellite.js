@@ -539,7 +539,10 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
     const importGraphic = importGraphicECEF || importGraphicECI;
     if (!threatGraphic || !importGraphic) return;
 
-    const Cesium = mars3d.Cesium;
+    const shortLineLength = 1_000_000;
+    const scratchDirection = new Cesium.Cartesian3();
+    const scratchOffset = new Cesium.Cartesian3();
+    const scratchStartPos = new Cesium.Cartesian3();
 
     const imageDirectionLine = new mars3d.graphic.PolylineEntity({
       id: "satelliteImageDirection",
@@ -549,11 +552,19 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
         const importPosition = importGraphic.positionShow;
 
         if (!threatPosition || !importPosition) return [];
-        return [threatPosition, importPosition];
+        // 1. 计算两颗卫星的方向向量 (终点 - 起点)
+        const direction = Cesium.Cartesian3.subtract(importPosition, threatPosition, scratchDirection);
+        // 2. 归一化方向向量
+        Cesium.Cartesian3.normalize(direction, direction);
+        // 3. 计算偏离量：方向 * 长度
+        const offset = Cesium.Cartesian3.multiplyByScalar(direction, shortLineLength, scratchOffset);
+        // 4. 用终点减去偏移量，得到靠近终点的“新起点”
+        const newStartPosition = Cesium.Cartesian3.subtract(importPosition, offset, scratchStartPos);
+        return [Cesium.Cartesian3.clone(newStartPosition), Cesium.Cartesian3.clone(importPosition)];
       }, false),
       style: {
-        width: 1,
-        opacity: 0.5,
+        width: 8,
+        opacity: 1,
         arcType: Cesium.ArcType.NONE,
         material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString("#00ccff")),
         label: {
@@ -936,18 +947,6 @@ export const toggleSatelliteOrbitCoordinateAxis = (satelliteSceneLayer, showSate
       return computeOrbitFrameAxes(time, origin, motionState.velEci, isInertial);
     },
   );
-};
-
-/**
- * 将惯性系坐标转换到地固系（与 mars3d 卫星 positionShow 的渲染坐标系一致）
- * @param {object} position - 惯性系坐标（Cartesian3）
- * @param {object} time - Cesium JulianDate
- * @returns {object|null} 地固系坐标
- */
-const inertialToFixed = (position, time) => {
-  const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
-  if (!icrfToFixed) return null;
-  return Cesium.Matrix3.multiplyByVector(icrfToFixed, position, new Cesium.Cartesian3());
 };
 
 /**
