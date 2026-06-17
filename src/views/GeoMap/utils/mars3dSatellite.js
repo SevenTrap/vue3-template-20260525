@@ -113,12 +113,14 @@ export function toggleThreatSatelliteTrajectory(satelliteLayer, showThreatSatell
 }
 
 /**
- * 将 import 实时位置与相对偏移轨迹合成为 ECEF Cartesian3 数组
- * @param {object} importCartesian3 - importGraphic.positionShow
- * @param {Array<{lng:number,lat:number,alt:number}>} track - relativeTrack
+ * 将 import 实时位置与相对偏移轨迹合成为 Cartesian3 数组
+ * @param {object} importCartesian3 - importGraphic.positionShow（地固系）
+ * @param {Array} track - relativeTrack
+ * @param {"ECEF"|"ECI"} coordinate - 当前坐标系
+ * @param {object} time - Cesium JulianDate
  * @returns {Array} Cartesian3 数组
  */
-const buildRelativeTrajectoryPositions = (importCartesian3, track, coordinate) => {
+const buildRelativeTrajectoryPositions = (importCartesian3, track, coordinate, time) => {
   const Cesium = mars3d.Cesium;
 
   if (coordinate === "ECEF") {
@@ -128,9 +130,18 @@ const buildRelativeTrajectoryPositions = (importCartesian3, track, coordinate) =
     const baseAlt = cartographic.height;
 
     return track.map((item) => Cesium.Cartesian3.fromDegrees(baseLng + item.lng, baseLat + item.lat, baseAlt + item.alt));
-  } else {
-    return track.map((item) => Cesium.Cartesian3.fromDegrees(item.x + importCartesian3.x, item.y + importCartesian3.y, item.z + importCartesian3.z));
   }
+
+  const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
+  if (!Cesium.defined(icrfToFixed)) return [];
+
+  const fixedToIcrf = Cesium.Matrix3.transpose(icrfToFixed, new Cesium.Matrix3());
+  const eciPosition = Cesium.Matrix3.multiplyByVector(fixedToIcrf, importCartesian3, new Cesium.Cartesian3());
+
+  return track.map((item) => {
+    const eciPoint = new Cesium.Cartesian3(eciPosition.x + item.x, eciPosition.y + item.y, eciPosition.z + item.z);
+    return Cesium.Matrix3.multiplyByVector(icrfToFixed, eciPoint, new Cesium.Cartesian3());
+  });
 };
 
 /**
@@ -171,12 +182,12 @@ export function toggleRelativeTrajectories(satelliteLayer, showRelativeTrajector
   const relativePathGraphic = new mars3d.graphic.PolylineEntity({
     id: relativeTrajectoryId,
     name: relativeTrajectoryId,
-    positions: new Cesium.CallbackProperty(() => {
+    positions: new Cesium.CallbackProperty((time) => {
       const importPosition = importGraphic.positionShow;
       if (!importPosition) return [];
-      return buildRelativeTrajectoryPositions(importPosition, relativeTrack, coordinate);
+      return buildRelativeTrajectoryPositions(importPosition, relativeTrack, coordinate, time);
     }, false),
-    referenceFrame: coordinate === "ECEF" ? Cesium.ReferenceFrame.FIXED : Cesium.ReferenceFrame.INERTIAL,
+    referenceFrame: Cesium.ReferenceFrame.FIXED,
     style: {
       width: 2,
       color: "#ff6600",
