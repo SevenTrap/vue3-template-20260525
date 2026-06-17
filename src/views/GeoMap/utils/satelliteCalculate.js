@@ -40,7 +40,7 @@ export const buildSatelliteClassEpochMap = (noradID, tles) => {
  * @param {string} noradID - 卫星 NORAD ID
  * @param {Array<{tle1:string,tle2:string}>} tles - 两行根数列表
  * @param {number} timeMs - 目标时刻毫秒时间戳
- * @returns {{ posEci: object, velEci: object }|null} ECI 状态（km / km/s）
+ * @returns {{ time: string, timeMs: number, noradID: string, name: string, posEci: object, velEci: object, posEcf: object, velEcf: object, lon: number, lat: number, altm: number, altKm: number, headingDeg: number }|null} 状态
  */
 export const getSatelliteEciStateAtTime = (noradID, tles, timeMs) => {
   if (!tles?.length) return null;
@@ -50,7 +50,7 @@ export const getSatelliteEciStateAtTime = (noradID, tles, timeMs) => {
   const satelliteClass = satelliteClasses.get(currentEpoch);
   if (!satelliteClass) return null;
 
-  return satelliteClass.getEciState(new Date(timeMs));
+  return satelliteClass.getState(new Date(timeMs));
 };
 
 /**
