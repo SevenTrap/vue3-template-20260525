@@ -1,4 +1,8 @@
 import * as mars3d from "mars3d";
+import * as satellite from "satellite.js";
+
+/** 天文单位（km），用于将 sunPos 的 rsun(AU) 换算为 km */
+const AU_KM = 149597870.7;
 
 /**
  * 将 Cesium JulianDate 转为毫秒时间戳
@@ -18,6 +22,26 @@ export const julianDateToTimeMs = (julianDate) => {
 export const timeMsToJulianDate = (timeMs) => {
   if (!timeMs) return 0;
   return mars3d.Cesium.JulianDate.fromDate(new Date(timeMs));
+};
+
+/**
+ * 获取太阳在 ECI 坐标系下的位置（km）
+ * @param {Date} date - UTC 时间
+ * @returns {{x:number,y:number,z:number}|null} 太阳 ECI 位置
+ */
+export const getSunEciKm = (date) => {
+  const jd = satellite.jday(date);
+  const sunPos = satellite.sunPos(jd);
+  const rsun = sunPos && sunPos.rsun;
+  if (!rsun) return null;
+
+  const sunEci = {
+    x: (rsun.x ?? rsun[0]) * AU_KM,
+    y: (rsun.y ?? rsun[1]) * AU_KM,
+    z: (rsun.z ?? rsun[2]) * AU_KM,
+  };
+  const magnitude = Math.sqrt(sunEci.x * sunEci.x + sunEci.y * sunEci.y + sunEci.z * sunEci.z);
+  return magnitude ? sunEci : null;
 };
 
 /**

@@ -1,20 +1,12 @@
 import * as mars3d from "mars3d";
 import * as satellite from "satellite.js";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
-import { buildSatelliteClassEpochMap, pickSatByTime, calculateSatelliteRelativePosition } from "./satelliteCalculate";
+import { buildSatelliteClassEpochMap, pickSatByTime, calculateSatelliteRelativePosition, buildRelativeTrajectoryPositions } from "./satelliteCalculate";
+import { getSunEciKm } from "@/utils/mars3d/mars3dSatellite";
 
-/** 天文单位（km），用于将 sunPos 的 rsun(AU) 换算为 km */
-const AU_KM = 149597870.7;
-/** km 转 m */
-const KM_TO_M = 1000;
-/** 光照来向线段长度（m） */
-const LIGHT_DIRECTION_LINE_LENGTH = 10_000_000;
-/** 光照来向线段颜色 */
-const LIGHT_DIRECTION_COLOR = "#ffff00";
-/** 成像方向线段颜色 */
-const IMAGE_DIRECTION_COLOR = "#00ccff";
-/** 卫星坐标轴线段长度（m），默认 5000 km */
-const SATELLITE_AXIS_LENGTH = 5_000_000;
+const Cesium = mars3d.Cesium;
+const geoMapStore = useGeoMapStore();
+
 /** 本体坐标轴 graphic ID */
 const BODY_AXIS_GRAPHIC_IDS = ["importSatelliteBodyAxisX", "importSatelliteBodyAxisY", "importSatelliteBodyAxisZ"];
 /** 本体坐标轴：X 滚动（速度方向）、Y 俯仰（右侧）、Z 偏航（对地） */
@@ -23,6 +15,7 @@ const BODY_AXIS_CONFIG = [
   { id: "importSatelliteBodyAxisY", label: "Y", color: "#33ff33", axisKey: "yAxis" },
   { id: "importSatelliteBodyAxisZ", label: "Z", color: "#3333ff", axisKey: "zAxis" },
 ];
+
 /** 轨道坐标轴 graphic ID */
 const ORBIT_AXIS_GRAPHIC_IDS = ["importSatelliteOrbitAxisX", "importSatelliteOrbitAxisY", "importSatelliteOrbitAxisZ"];
 /** 轨道坐标轴配置：X 轨道切线(飞行方向)、Y 轨道法线(Z×X)、Z 指向地心(天底) */
@@ -31,8 +24,6 @@ const ORBIT_AXIS_CONFIG = [
   { id: "importSatelliteOrbitAxisY", label: "Y", color: "#44ff44", axisKey: "yAxis" },
   { id: "importSatelliteOrbitAxisZ", label: "Z", color: "#4488ff", axisKey: "zAxis" },
 ];
-
-const geoMapStore = useGeoMapStore();
 
 /** 从动卫星轨道轴 TLE 历元缓存，避免每帧重建 SatelliteClass 列表 */
 let importMotionTlesRef = null;
@@ -113,38 +104,6 @@ export function toggleThreatSatelliteTrajectory(satelliteLayer, showThreatSatell
 }
 
 /**
- * 将 import 实时位置与相对偏移轨迹合成为 Cartesian3 数组
- * @param {object} importCartesian3 - importGraphic.positionShow（地固系）
- * @param {Array} track - relativeTrack
- * @param {"ECEF"|"ECI"} coordinate - 当前坐标系
- * @param {object} time - Cesium JulianDate
- * @returns {Array} Cartesian3 数组
- */
-const buildRelativeTrajectoryPositions = (importCartesian3, track, coordinate, time) => {
-  const Cesium = mars3d.Cesium;
-
-  if (coordinate === "ECEF") {
-    const cartographic = Cesium.Cartographic.fromCartesian(importCartesian3, Cesium.Ellipsoid.WGS84, new Cesium.Cartographic());
-    const baseLng = Cesium.Math.toDegrees(cartographic.longitude);
-    const baseLat = Cesium.Math.toDegrees(cartographic.latitude);
-    const baseAlt = cartographic.height;
-
-    return track.map((item) => Cesium.Cartesian3.fromDegrees(baseLng + item.lng, baseLat + item.lat, baseAlt + item.alt));
-  }
-
-  const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
-  if (!Cesium.defined(icrfToFixed)) return [];
-
-  const fixedToIcrf = Cesium.Matrix3.transpose(icrfToFixed, new Cesium.Matrix3());
-  const eciPosition = Cesium.Matrix3.multiplyByVector(fixedToIcrf, importCartesian3, new Cesium.Cartesian3());
-
-  return track.map((item) => {
-    const eciPoint = new Cesium.Cartesian3(eciPosition.x + item.x, eciPosition.y + item.y, eciPosition.z + item.z);
-    return Cesium.Matrix3.multiplyByVector(icrfToFixed, eciPoint, new Cesium.Cartesian3());
-  });
-};
-
-/**
  * 切换相对运动轨迹显示状态
  * @param {object} satelliteLayer - 卫星图层
  * @param {boolean} showRelativeTrajectories - 是否显示相对轨迹
@@ -153,32 +112,26 @@ const buildRelativeTrajectoryPositions = (importCartesian3, track, coordinate, t
 export function toggleRelativeTrajectories(satelliteLayer, showRelativeTrajectories) {
   if (!satelliteLayer) return;
 
-  const { threatSatelliteNoradID, importSatelliteNoradID } = geoMapStore.currentSceneConfig;
   const coordinate = geoMapStore.coordinate;
+  const { clockStartTime, clockEndTime } = geoMapStore;
+  const { threatSatelliteNoradID, importSatelliteNoradID } = geoMapStore.currentSceneConfig;
   const relativeTrajectoryId = `${threatSatelliteNoradID}-relative-trajectory`;
   const existingGraphic = satelliteLayer.getGraphicById(relativeTrajectoryId);
+  if (existingGraphic) satelliteLayer.removeGraphic(existingGraphic);
 
-  if (!showRelativeTrajectories) {
-    if (existingGraphic) satelliteLayer.removeGraphic(existingGraphic);
-    return;
-  }
-
-  if (existingGraphic) return;
-
-  const { clockStartTime, clockEndTime } = geoMapStore;
+  if (!showRelativeTrajectories) return;
   if (!clockStartTime || !clockEndTime) return;
 
   const threatTrack = geoMapStore.satelliteTracks.get(threatSatelliteNoradID);
   const importTrack = geoMapStore.satelliteTracks.get(importSatelliteNoradID);
   const importGraphicECEF = satelliteLayer.getGraphicById(`${importSatelliteNoradID}ECEF`);
   const importGraphicECI = satelliteLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
-  const importGraphic = geoMapStore.coordinate === "ECEF" ? importGraphicECEF : importGraphicECI;
+  const importGraphic = coordinate === "ECEF" ? importGraphicECEF : importGraphicECI;
   if (!threatTrack || !importTrack || !importGraphic) return;
 
   const relativeTrack = calculateSatelliteRelativePosition(threatTrack, importTrack, clockStartTime, clockEndTime, coordinate);
   if (!relativeTrack.length) return;
 
-  const Cesium = mars3d.Cesium;
   const relativePathGraphic = new mars3d.graphic.PolylineEntity({
     id: relativeTrajectoryId,
     name: relativeTrajectoryId,
@@ -187,7 +140,6 @@ export function toggleRelativeTrajectories(satelliteLayer, showRelativeTrajector
       if (!importPosition) return [];
       return buildRelativeTrajectoryPositions(importPosition, relativeTrack, coordinate, time);
     }, false),
-    referenceFrame: Cesium.ReferenceFrame.FIXED,
     style: {
       width: 2,
       color: "#ff6600",
@@ -603,12 +555,12 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
         width: 1,
         opacity: 0.5,
         arcType: Cesium.ArcType.NONE,
-        material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(IMAGE_DIRECTION_COLOR)),
+        material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString("#00ccff")),
         label: {
           text: "成像",
           font_size: 16,
           font_family: "楷体",
-          color: IMAGE_DIRECTION_COLOR,
+          color: "#00ccff",
           outline: true,
           outlineColor: "#000000",
           outlineWidth: 2,
@@ -623,16 +575,6 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
     satelliteSceneLayer.removeGraphic(imageDirectionLine);
   }
 }
-
-/**
- * 将 satellite.js 的 ECI 矢量（km 或 km/s）转为 Cesium Cartesian3（m）
- * @param {{x:number,y:number,z:number}} vec - ECI 矢量
- * @returns {object} Cesium Cartesian3
- */
-const eciKmToCartesian3 = (vec) => {
-  const Cesium = mars3d.Cesium;
-  return new Cesium.Cartesian3(vec.x * KM_TO_M, vec.y * KM_TO_M, vec.z * KM_TO_M);
-};
 
 /**
  * 判断锚点卫星 graphic 是否处于惯性系渲染
@@ -804,7 +746,7 @@ const computeOrbitFrameAxesEci = (originEci, velEciKm) => {
   if (!originEci || !velEciKm) return null;
 
   const r = originEci;
-  const v = eciKmToCartesian3(velEciKm);
+  const v = new Cesium.Cartesian3(velEciKm.x * 1000, velEciKm.y * 1000, velEciKm.z * 1000);
   const rMag = Cesium.Cartesian3.magnitude(r);
   if (rMag < 1) return null;
 
@@ -948,7 +890,7 @@ const toggleImportSatelliteAxisSet = (satelliteSceneLayer, show, graphicIds, axi
   const isInertial = isInertialGraphic(importGraphic);
   axisConfig.forEach((config) => {
     satelliteSceneLayer.addGraphic(
-      createAxisLineGraphic(config, SATELLITE_AXIS_LENGTH, importGraphic, isInertial, (time) => {
+      createAxisLineGraphic(config, 5_000_000, importGraphic, isInertial, (time) => {
         const axes = resolveAxesFn(time, importGraphic, isInertial);
         return axes;
       }),
@@ -997,33 +939,12 @@ export const toggleSatelliteOrbitCoordinateAxis = (satelliteSceneLayer, showSate
 };
 
 /**
- * 获取太阳在 ECI 坐标系下的位置（km）
- * @param {Date} date - UTC 时间
- * @returns {{x:number,y:number,z:number}|null} 太阳 ECI 位置
- */
-const getSunEciKm = (date) => {
-  const jd = satellite.jday(date);
-  const sunPos = satellite.sunPos(jd);
-  const rsun = sunPos && sunPos.rsun;
-  if (!rsun) return null;
-
-  const sunEci = {
-    x: (rsun.x ?? rsun[0]) * AU_KM,
-    y: (rsun.y ?? rsun[1]) * AU_KM,
-    z: (rsun.z ?? rsun[2]) * AU_KM,
-  };
-  const magnitude = Math.sqrt(sunEci.x * sunEci.x + sunEci.y * sunEci.y + sunEci.z * sunEci.z);
-  return magnitude ? sunEci : null;
-};
-
-/**
  * 将惯性系坐标转换到地固系（与 mars3d 卫星 positionShow 的渲染坐标系一致）
  * @param {object} position - 惯性系坐标（Cartesian3）
  * @param {object} time - Cesium JulianDate
  * @returns {object|null} 地固系坐标
  */
 const inertialToFixed = (position, time) => {
-  const Cesium = mars3d.Cesium;
   const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
   if (!icrfToFixed) return null;
   return Cesium.Matrix3.multiplyByVector(icrfToFixed, position, new Cesium.Cartesian3());
@@ -1036,14 +957,16 @@ const inertialToFixed = (position, time) => {
  * @returns {Array} 线段端点数组
  */
 const buildLightDirectionPositions = (time, satPosition) => {
-  const Cesium = mars3d.Cesium;
   if (!satPosition) return [];
 
   const sunEciKm = getSunEciKm(Cesium.JulianDate.toDate(time));
   if (!sunEciKm) return [];
 
   const sunInertialM = new Cesium.Cartesian3(sunEciKm.x * 1000, sunEciKm.y * 1000, sunEciKm.z * 1000);
-  const sunPosition = inertialToFixed(sunInertialM, time);
+  const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
+  if (!icrfToFixed) return [];
+
+  const sunPosition = Cesium.Matrix3.multiplyByVector(icrfToFixed, sunInertialM, new Cesium.Cartesian3());
   if (!sunPosition) return [];
 
   const sunToSat = Cesium.Cartesian3.subtract(satPosition, sunPosition, new Cesium.Cartesian3());
@@ -1051,7 +974,7 @@ const buildLightDirectionPositions = (time, satPosition) => {
   if (!magnitude) return [];
 
   const direction = Cesium.Cartesian3.divideByScalar(sunToSat, magnitude, new Cesium.Cartesian3());
-  const offset = Cesium.Cartesian3.multiplyByScalar(direction, LIGHT_DIRECTION_LINE_LENGTH, new Cesium.Cartesian3());
+  const offset = Cesium.Cartesian3.multiplyByScalar(direction, 10_000_000, new Cesium.Cartesian3());
   const startPosition = Cesium.Cartesian3.subtract(satPosition, offset, new Cesium.Cartesian3());
 
   return [startPosition, satPosition];
@@ -1067,10 +990,7 @@ export function toggleSatelliteLightDirection(satelliteSceneLayer, showSatellite
   if (!satelliteSceneLayer) return;
 
   const existingLine = satelliteSceneLayer.getGraphicById("satelliteLightDirection");
-  if (existingLine) {
-    satelliteSceneLayer.removeGraphic(existingLine);
-  }
-
+  if (existingLine) satelliteSceneLayer.removeGraphic(existingLine);
   if (!showSatelliteLightDirection) return;
 
   const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
@@ -1079,8 +999,6 @@ export function toggleSatelliteLightDirection(satelliteSceneLayer, showSatellite
   const importGraphic = importGraphicLine || importGraphicLineECI;
 
   if (!importGraphic) return;
-
-  const Cesium = mars3d.Cesium;
 
   const lightDirectionLine = new mars3d.graphic.PolylineEntity({
     id: "satelliteLightDirection",
@@ -1093,12 +1011,12 @@ export function toggleSatelliteLightDirection(satelliteSceneLayer, showSatellite
       width: 8,
       opacity: 1,
       arcType: Cesium.ArcType.NONE,
-      material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(LIGHT_DIRECTION_COLOR)),
+      material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString("#ffff00")),
       label: {
         text: "光照",
         font_size: 16,
         font_family: "楷体",
-        color: LIGHT_DIRECTION_COLOR,
+        color: "#ffff00",
         outline: true,
         outlineColor: "#000000",
         outlineWidth: 2,

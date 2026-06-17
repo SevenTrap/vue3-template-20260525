@@ -14,7 +14,7 @@ alwaysApply: false
 
 ## 卫星与轨道
 
-- 轨道/卫星逻辑放在 `src/models/`（如 `SatelliteClass`、`SatellitePropagator`、`satelliteOrbitPredictor`）
+- 轨道/卫星逻辑放在 `src/models/SatelliteClass`
 - Mars3D 图层样式与工具函数放在 `src/utils/mars3d/` 或视图下的 `utils/`
 - TLE、LLA 等数据放 `public/data/`，大文件避免打进 bundle
 

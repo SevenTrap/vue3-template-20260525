@@ -81,7 +81,7 @@ export const calculateSatellitePosition = (noradID, tles, startTime, endTime, ti
 };
 
 /**
- * 在 import 冻结 LVLH 局部坐标系下，计算 threat 相对运动轨迹并映射为 ECEF 经纬高
+ * 在 import 冻结 LVLH 局部坐标系下，计算 threat 相对运动轨迹
  * @param {Array} threatTrack - 主动卫星轨迹
  * @param {Array} importTrack - 从动卫星轨迹
  * @param {number|string} startTimeMs - 相对运动开始时间（毫秒时间戳或时间字符串）
@@ -120,4 +120,36 @@ export const calculateSatelliteRelativePosition = (threatTrack, importTrack, sta
   }
 
   return relativeTrack;
+};
+
+/**
+ * 将 import 实时位置与相对偏移轨迹合成为 Cartesian3 数组
+ * @param {object} importCartesian3 - importGraphic.positionShow（地固系）
+ * @param {Array} track - relativeTrack
+ * @param {"ECEF"|"ECI"} coordinate - 当前坐标系
+ * @param {object} time - Cesium JulianDate
+ * @returns {Array} Cartesian3 数组
+ */
+export const buildRelativeTrajectoryPositions = (importCartesian3, track, coordinate, time) => {
+  const Cesium = mars3d.Cesium;
+
+  if (coordinate === "ECEF") {
+    const cartographic = Cesium.Cartographic.fromCartesian(importCartesian3, Cesium.Ellipsoid.WGS84, new Cesium.Cartographic());
+    const baseLng = Cesium.Math.toDegrees(cartographic.longitude);
+    const baseLat = Cesium.Math.toDegrees(cartographic.latitude);
+    const baseAlt = cartographic.height;
+
+    return track.map((item) => Cesium.Cartesian3.fromDegrees(baseLng + item.lng, baseLat + item.lat, baseAlt + item.alt));
+  }
+
+  const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time);
+  if (!Cesium.defined(icrfToFixed)) return [];
+
+  const fixedToIcrf = Cesium.Matrix3.transpose(icrfToFixed, new Cesium.Matrix3());
+  const eciPosition = Cesium.Matrix3.multiplyByVector(fixedToIcrf, importCartesian3, new Cesium.Cartesian3());
+
+  return track.map((item) => {
+    const eciPoint = new Cesium.Cartesian3(eciPosition.x + item.x, eciPosition.y + item.y, eciPosition.z + item.z);
+    return Cesium.Matrix3.multiplyByVector(icrfToFixed, eciPoint, new Cesium.Cartesian3());
+  });
 };
