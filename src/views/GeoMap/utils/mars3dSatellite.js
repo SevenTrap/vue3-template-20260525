@@ -1,7 +1,7 @@
 import * as mars3d from "mars3d";
 import * as satellite from "satellite.js";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
-import { buildSatelliteClassEpochMap, pickSatByTime } from "./satelliteCalculate";
+import { buildSatelliteClassEpochMap, pickSatByTime, calculateSatelliteRelativePosition } from "./satelliteCalculate";
 
 /** 天文单位（km），用于将 sunPos 的 rsun(AU) 换算为 km */
 const AU_KM = 149597870.7;
@@ -112,10 +112,84 @@ export function toggleThreatSatelliteTrajectory(satelliteLayer, showThreatSatell
   graphicPath.path.opacity = showThreatSatelliteTrajectory ? 0.5 : 0;
 }
 
+/**
+ * 将 import 实时位置与相对偏移轨迹合成为 ECEF Cartesian3 数组
+ * @param {object} importCartesian3 - importGraphic.positionShow
+ * @param {Array<{lng:number,lat:number,alt:number}>} track - relativeTrack
+ * @returns {Array} Cartesian3 数组
+ */
+const buildRelativeTrajectoryPositions = (importCartesian3, track, coordinate) => {
+  const Cesium = mars3d.Cesium;
+
+  if (coordinate === "ECEF") {
+    const cartographic = Cesium.Cartographic.fromCartesian(importCartesian3, Cesium.Ellipsoid.WGS84, new Cesium.Cartographic());
+    const baseLng = Cesium.Math.toDegrees(cartographic.longitude);
+    const baseLat = Cesium.Math.toDegrees(cartographic.latitude);
+    const baseAlt = cartographic.height;
+
+    return track.map((item) => Cesium.Cartesian3.fromDegrees(baseLng + item.lng, baseLat + item.lat, baseAlt + item.alt));
+  } else {
+    return track.map((item) => Cesium.Cartesian3.fromDegrees(item.x + importCartesian3.x, item.y + importCartesian3.y, item.z + importCartesian3.z));
+  }
+};
+
+/**
+ * 切换相对运动轨迹显示状态
+ * @param {object} satelliteLayer - 卫星图层
+ * @param {boolean} showRelativeTrajectories - 是否显示相对轨迹
+ * @returns {void}
+ */
 export function toggleRelativeTrajectories(satelliteLayer, showRelativeTrajectories) {
   if (!satelliteLayer) return;
-  const graphic = satelliteLayer.getGraphicById(`relativeTrajectories`);
-  if (!graphic) return;
+
+  const { threatSatelliteNoradID, importSatelliteNoradID } = geoMapStore.currentSceneConfig;
+  const coordinate = geoMapStore.coordinate;
+  const relativeTrajectoryId = `${threatSatelliteNoradID}-relative-trajectory`;
+  const existingGraphic = satelliteLayer.getGraphicById(relativeTrajectoryId);
+
+  if (!showRelativeTrajectories) {
+    if (existingGraphic) satelliteLayer.removeGraphic(existingGraphic);
+    return;
+  }
+
+  if (existingGraphic) return;
+
+  const { clockStartTime, clockEndTime } = geoMapStore;
+  if (!clockStartTime || !clockEndTime) return;
+
+  const threatTrack = geoMapStore.satelliteTracks.get(threatSatelliteNoradID);
+  const importTrack = geoMapStore.satelliteTracks.get(importSatelliteNoradID);
+  const importGraphicECEF = satelliteLayer.getGraphicById(`${importSatelliteNoradID}ECEF`);
+  const importGraphicECI = satelliteLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+  const importGraphic = geoMapStore.coordinate === "ECEF" ? importGraphicECEF : importGraphicECI;
+  if (!threatTrack || !importTrack || !importGraphic) return;
+
+  const relativeTrack = calculateSatelliteRelativePosition(threatTrack, importTrack, clockStartTime, clockEndTime, coordinate);
+  if (!relativeTrack.length) return;
+
+  const Cesium = mars3d.Cesium;
+  const relativePathGraphic = new mars3d.graphic.PolylineEntity({
+    id: relativeTrajectoryId,
+    name: relativeTrajectoryId,
+    positions: new Cesium.CallbackProperty(() => {
+      const importPosition = importGraphic.positionShow;
+      if (!importPosition) return [];
+      return buildRelativeTrajectoryPositions(importPosition, relativeTrack, coordinate);
+    }, false),
+    referenceFrame: coordinate === "ECEF" ? Cesium.ReferenceFrame.FIXED : Cesium.ReferenceFrame.INERTIAL,
+    style: {
+      width: 2,
+      color: "#ff6600",
+      opacity: 0.8,
+      arcType: Cesium.ArcType.NONE,
+      material: new Cesium.PolylineDashMaterialProperty({
+        color: Cesium.Color.fromCssColorString("#ff6600").withAlpha(0.8),
+        dashLength: 6,
+      }),
+    },
+  });
+
+  satelliteLayer.addGraphic(relativePathGraphic);
 }
 
 /**

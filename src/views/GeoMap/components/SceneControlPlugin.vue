@@ -355,6 +355,10 @@ export default {
 
       toggleSatelliteCoordinateAxis(satelliteSceneLayer, this.showSatelliteBodyCoordinateAxisScene);
       toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, this.showSatelliteOrbitCoordinateAxisScene);
+
+      if (this.showRelativeTrajectoryScene) {
+        toggleRelativeTrajectories(satelliteSceneLayer, true);
+      }
     },
 
     handleApplyView(presetId) {

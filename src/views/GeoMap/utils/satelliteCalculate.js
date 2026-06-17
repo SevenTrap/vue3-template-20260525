@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import * as mars3d from "mars3d";
 import SatelliteClass from "@/models/SatelliteClass";
 
 /**
@@ -52,7 +53,16 @@ export const getSatelliteEciStateAtTime = (noradID, tles, timeMs) => {
   return satelliteClass.getEciState(new Date(timeMs));
 };
 
-export function calculateSatellitePosition(noradID, tles, startTime, endTime, timeStep) {
+/**
+ * 计算卫星在指定时间窗内的轨迹
+ * @param {string} noradID - 卫星 NORAD ID
+ * @param {Array<{tle1:string,tle2:string}>} tles - 两行根数列表
+ * @param {string|number} startTime - 开始时间
+ * @param {string|number} endTime - 结束时间
+ * @param {number} timeStep - 步长（ms）
+ * @returns {Array} 卫星轨迹点列表
+ */
+export const calculateSatellitePosition = (noradID, tles, startTime, endTime, timeStep) => {
   const satelliteTracks = [];
   const startTimeMs = dayjs(startTime).valueOf();
   const endTimeMs = dayjs(endTime).valueOf();
@@ -68,4 +78,46 @@ export function calculateSatellitePosition(noradID, tles, startTime, endTime, ti
   }
 
   return satelliteTracks;
-}
+};
+
+/**
+ * 在 import 冻结 LVLH 局部坐标系下，计算 threat 相对运动轨迹并映射为 ECEF 经纬高
+ * @param {Array} threatTrack - 主动卫星轨迹
+ * @param {Array} importTrack - 从动卫星轨迹
+ * @param {number|string} startTimeMs - 相对运动开始时间（毫秒时间戳或时间字符串）
+ * @param {number|string} endTimeMs - 相对运动结束时间（毫秒时间戳或时间字符串）
+ * @returns {Array<{time:string,lng:number,lat:number,alt:number}>} mars3d Satellite position list
+ */
+export const calculateSatelliteRelativePosition = (threatTrack, importTrack, startTimeMs, endTimeMs, coordinate) => {
+  const relativeTrack = [];
+
+  if (coordinate === "ECEF") {
+    for (let i = 0; i < threatTrack.length; i++) {
+      const threatState = threatTrack[i];
+      const importState = importTrack[i];
+      if (threatState.timeMs < startTimeMs || threatState.timeMs > endTimeMs) continue;
+
+      relativeTrack.push({
+        time: threatState.time,
+        lng: threatState.lon - importState.lon,
+        lat: threatState.lat - importState.lat,
+        alt: (threatState.altKm - importState.altKm) * 1000,
+      });
+    }
+  } else {
+    for (let i = 0; i < threatTrack.length; i++) {
+      const threatState = threatTrack[i];
+      const importState = importTrack[i];
+      if (threatState.timeMs < startTimeMs || threatState.timeMs > endTimeMs) continue;
+
+      relativeTrack.push({
+        time: threatState.time,
+        x: (threatState.posEci.x - importState.posEci.x) * 1000,
+        y: (threatState.posEci.y - importState.posEci.y) * 1000,
+        z: (threatState.posEci.z - importState.posEci.z) * 1000,
+      });
+    }
+  }
+
+  return relativeTrack;
+};
