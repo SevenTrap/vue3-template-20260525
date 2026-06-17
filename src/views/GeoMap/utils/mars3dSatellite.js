@@ -1,29 +1,17 @@
 import * as mars3d from "mars3d";
 import * as satellite from "satellite.js";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
-import { buildSatelliteClassEpochMap, pickSatByTime, calculateSatelliteRelativePosition, buildRelativeTrajectoryPositions } from "./satelliteCalculate";
+import {
+  buildSatelliteClassEpochMap,
+  pickSatByTime,
+  calculateSatelliteRelativePosition,
+  buildRelativeTrajectoryPositions,
+  getSatelliteEciStateAtTime,
+} from "./satelliteCalculate";
 import { getSunEciKm } from "@/utils/mars3d/mars3dSatellite";
 
 const Cesium = mars3d.Cesium;
 const geoMapStore = useGeoMapStore();
-
-/** 本体坐标轴 graphic ID */
-const BODY_AXIS_GRAPHIC_IDS = ["importSatelliteBodyAxisX", "importSatelliteBodyAxisY", "importSatelliteBodyAxisZ"];
-/** 本体坐标轴：X 滚动（速度方向）、Y 俯仰（右侧）、Z 偏航（对地） */
-const BODY_AXIS_CONFIG = [
-  { id: "importSatelliteBodyAxisX", label: "X", color: "#ff3333", axisKey: "xAxis" },
-  { id: "importSatelliteBodyAxisY", label: "Y", color: "#33ff33", axisKey: "yAxis" },
-  { id: "importSatelliteBodyAxisZ", label: "Z", color: "#3333ff", axisKey: "zAxis" },
-];
-
-/** 轨道坐标轴 graphic ID */
-const ORBIT_AXIS_GRAPHIC_IDS = ["importSatelliteOrbitAxisX", "importSatelliteOrbitAxisY", "importSatelliteOrbitAxisZ"];
-/** 轨道坐标轴配置：X 轨道切线(飞行方向)、Y 轨道法线(Z×X)、Z 指向地心(天底) */
-const ORBIT_AXIS_CONFIG = [
-  { id: "importSatelliteOrbitAxisX", label: "X", color: "#ff4444", axisKey: "xAxis" },
-  { id: "importSatelliteOrbitAxisY", label: "Y", color: "#44ff44", axisKey: "yAxis" },
-  { id: "importSatelliteOrbitAxisZ", label: "Z", color: "#4488ff", axisKey: "zAxis" },
-];
 
 /** 从动卫星轨道轴 TLE 历元缓存，避免每帧重建 SatelliteClass 列表 */
 let importMotionTlesRef = null;
@@ -918,10 +906,106 @@ const toggleImportSatelliteAxisSet = (satelliteSceneLayer, show, graphicIds, axi
 export const toggleSatelliteCoordinateAxis = (satelliteSceneLayer, showSatelliteCoordinateAxis) => {
   if (!satelliteSceneLayer) return;
 
-  toggleImportSatelliteAxisSet(satelliteSceneLayer, showSatelliteCoordinateAxis, BODY_AXIS_GRAPHIC_IDS, BODY_AXIS_CONFIG, (time, importGraphic, isInertial) => {
-    const origin = importGraphic.positionShow;
-    if (!origin) return null;
-    return computeBodyFrameAxes(time, origin, importGraphic.model, isInertial);
+  const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+
+  const bodyAxisGraphicIdsX = `${importSatelliteNoradID}BodyAxisX`;
+  const bodyAxisGraphicIdsY = `${importSatelliteNoradID}BodyAxisY`;
+  const bodyAxisGraphicIdsZ = `${importSatelliteNoradID}BodyAxisZ`;
+
+  const bodyAxisGraphicX = satelliteSceneLayer.getGraphicById(bodyAxisGraphicIdsX);
+  const bodyAxisGraphicY = satelliteSceneLayer.getGraphicById(bodyAxisGraphicIdsY);
+  const bodyAxisGraphicZ = satelliteSceneLayer.getGraphicById(bodyAxisGraphicIdsZ);
+
+  if (bodyAxisGraphicX) satelliteSceneLayer.removeGraphic(bodyAxisGraphicX);
+  if (bodyAxisGraphicY) satelliteSceneLayer.removeGraphic(bodyAxisGraphicY);
+  if (bodyAxisGraphicZ) satelliteSceneLayer.removeGraphic(bodyAxisGraphicZ);
+
+  if (!showSatelliteCoordinateAxis) return;
+
+  const importGraphicECEF = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`);
+  const importGraphicECI = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+  const importGraphic = importGraphicECEF || importGraphicECI;
+  if (!importGraphic) return;
+
+  const axisConfigs = [
+    {
+      id: bodyAxisGraphicIdsX,
+      label: "本体-X",
+      color: "#ff3333", // 红色
+      localDirection: new Cesium.Cartesian3(1, 0, 0),
+    },
+    {
+      id: bodyAxisGraphicIdsY,
+      label: "本体-Y",
+      color: "#33ff33", // 绿色
+      localDirection: new Cesium.Cartesian3(0, 1, 0),
+    },
+    {
+      id: bodyAxisGraphicIdsZ,
+      label: "本体-Z",
+      color: "#3333ff", // 蓝色
+      localDirection: new Cesium.Cartesian3(0, 0, 1),
+    },
+  ];
+
+  axisConfigs.forEach((config) => {
+    // 为每个轴单独创建闭包 Scratch 变量，避免每帧 new 产生 GC 压力，同时防止多轴计算相互干扰
+    const scratchMatrix = new Cesium.Matrix4();
+    const scratchHpr = new Cesium.HeadingPitchRoll();
+    const scratchLocalOffset = new Cesium.Cartesian3();
+    const scratchEndPosition = new Cesium.Cartesian3();
+
+    // 预先计算该轴在局部坐标系下的长度偏移向量
+    Cesium.Cartesian3.multiplyByScalar(config.localDirection, 10_000_000, scratchLocalOffset);
+
+    const axisGraphic = new mars3d.graphic.PolylineEntity({
+      id: config.id,
+      name: config.id,
+      positions: new Cesium.CallbackProperty((time) => {
+        // importGraphic 应该是你上下文中的全局/闭包变量
+        const position = importGraphic.positionShow; // 卫星当前实时世界坐标
+        const model = importGraphic.model;
+
+        if (!position || !model) return [];
+
+        // 将角度转为弧度并更新 HPR 缓存
+        scratchHpr.heading = Cesium.Math.toRadians(model.heading || 0);
+        scratchHpr.pitch = Cesium.Math.toRadians(model.pitch || 0);
+        scratchHpr.roll = Cesium.Math.toRadians(model.roll || 0);
+
+        // 计算“局部坐标系”到“地球固定坐标系(ECEF)”的转换矩阵
+        const transformMatrix = Cesium.Transforms.headingPitchRollToFixedFrame(
+          position,
+          scratchHpr,
+          Cesium.Ellipsoid.WGS84,
+          Cesium.Transforms.eastNorthUpToFixedFrame,
+          scratchMatrix,
+        );
+
+        // 使用矩阵将局部轴向端点，转换到世界坐标系下的绝对点
+        Cesium.Matrix4.multiplyByPoint(transformMatrix, scratchLocalOffset, scratchEndPosition);
+
+        // 返回 [卫星当前点, 轴向端点]。使用 clone 确保 Cesium 底层能检测到位置的实时变化
+        return [Cesium.Cartesian3.clone(position), Cesium.Cartesian3.clone(scratchEndPosition)];
+      }, false),
+      style: {
+        width: 8, // 稍微加粗，带箭头的线更明显
+        opacity: 1,
+        arcType: Cesium.ArcType.NONE,
+        material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(config.color)),
+        label: {
+          text: config.label,
+          font_size: 16,
+          font_family: "楷体",
+          color: config.color,
+          outline: true,
+          outlineColor: "#000000",
+          outlineWidth: 2,
+        },
+      },
+    });
+
+    satelliteSceneLayer.addGraphic(axisGraphic);
   });
 };
 
@@ -934,19 +1018,88 @@ export const toggleSatelliteCoordinateAxis = (satelliteSceneLayer, showSatellite
 export const toggleSatelliteOrbitCoordinateAxis = (satelliteSceneLayer, showSatelliteOrbitCoordinateAxis) => {
   if (!satelliteSceneLayer) return;
 
-  toggleImportSatelliteAxisSet(
-    satelliteSceneLayer,
-    showSatelliteOrbitCoordinateAxis,
-    ORBIT_AXIS_GRAPHIC_IDS,
-    ORBIT_AXIS_CONFIG,
-    (time, importGraphic, isInertial) => {
-      const motionState = getImportSatelliteMotionState(time);
-      if (!motionState) return null;
-      const origin = importGraphic.positionShow;
-      if (!origin) return null;
-      return computeOrbitFrameAxes(time, origin, motionState.velEci, isInertial);
+  const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+  const { satelliteNoradIDs, satelliteTles } = geoMapStore.currentSceneConfig;
+  const index = satelliteNoradIDs.indexOf(importSatelliteNoradID);
+  if (index < 0) return;
+  const tles = satelliteTles[index];
+  if (!tles?.length) return;
+
+  const orbitAxisGraphicIdsX = `${importSatelliteNoradID}OrbitAxisX`;
+  const orbitAxisGraphicIdsY = `${importSatelliteNoradID}OrbitAxisY`;
+  const orbitAxisGraphicIdsZ = `${importSatelliteNoradID}OrbitAxisZ`;
+
+  const orbitAxisGraphicX = satelliteSceneLayer.getGraphicById(orbitAxisGraphicIdsX);
+  const orbitAxisGraphicY = satelliteSceneLayer.getGraphicById(orbitAxisGraphicIdsY);
+  const orbitAxisGraphicZ = satelliteSceneLayer.getGraphicById(orbitAxisGraphicIdsZ);
+
+  if (orbitAxisGraphicX) satelliteSceneLayer.removeGraphic(orbitAxisGraphicX);
+  if (orbitAxisGraphicY) satelliteSceneLayer.removeGraphic(orbitAxisGraphicY);
+  if (orbitAxisGraphicZ) satelliteSceneLayer.removeGraphic(orbitAxisGraphicZ);
+
+  if (!showSatelliteOrbitCoordinateAxis) return;
+
+  const importGraphicECEF = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`);
+  const importGraphicECI = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+  const importGraphic = importGraphicECEF || importGraphicECI;
+  if (!importGraphic) return;
+
+  const axisConfigs = [
+    {
+      id: orbitAxisGraphicIdsX,
+      label: "轨道-X",
+      color: "#ff3333", // 红色
+      localDirection: new Cesium.Cartesian3(1, 0, 0),
     },
-  );
+    {
+      id: orbitAxisGraphicIdsY,
+      label: "轨道-Y",
+      color: "#33ff33", // 绿色
+      localDirection: new Cesium.Cartesian3(0, 1, 0),
+    },
+    {
+      id: orbitAxisGraphicIdsZ,
+      label: "轨道-Z",
+      color: "#3333ff", // 蓝色
+      localDirection: new Cesium.Cartesian3(0, 0, 1),
+    },
+  ];
+
+  axisConfigs.forEach((config) => {
+    const axisGraphic = new mars3d.graphic.PolylineEntity({
+      id: config.id,
+      name: config.id,
+      positions: new Cesium.CallbackProperty((time) => {
+        const currentState = getSatelliteEciStateAtTime(importSatelliteNoradID, tles, time);
+        if (!currentState) return [];
+        const position = new Cesium.Cartesian3(currentState.posEci.x * 1000, currentState.posEci.y * 1000, currentState.posEci.z * 1000);
+        const velocity = new Cesium.Cartesian3(currentState.velEci.x * 1000, currentState.velEci.y * 1000, currentState.velEci.z * 1000);
+
+        const endPosition = Cesium.Cartesian3.add(
+          position,
+          Cesium.Cartesian3.multiplyByScalar(velocity, 1000, new Cesium.Cartesian3()),
+          new Cesium.Cartesian3(),
+        );
+        return [Cesium.Cartesian3.clone(position), Cesium.Cartesian3.clone(endPosition)];
+      }, false),
+      style: {
+        width: 8,
+        opacity: 1,
+        arcType: Cesium.ArcType.NONE,
+        material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(config.color)),
+      },
+      label: {
+        text: config.label,
+        font_size: 16,
+        font_family: "楷体",
+        color: config.color,
+        outline: true,
+        outlineColor: "#000000",
+        outlineWidth: 2,
+      },
+    });
+    satelliteSceneLayer.addGraphic(axisGraphic);
+  });
 };
 
 /**
