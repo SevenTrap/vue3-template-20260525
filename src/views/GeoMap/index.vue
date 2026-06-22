@@ -17,7 +17,7 @@
   <!-- <GeoSatRelativeEchartsPlugin></GeoSatRelativeEchartsPlugin> -->
 
   <!-- 卫星经度与相对同步轨道高度插件 -->
-  <!-- <GeoLngHeightEchartsPlugin></GeoLngHeightEchartsPlugin> -->
+  <GeoLngHeightEchartsPlugin></GeoLngHeightEchartsPlugin>
 
   <!-- 场景控制插件 -->
   <SceneControlPlugin></SceneControlPlugin>
@@ -96,9 +96,10 @@ export default {
       this.initSatelliteTracks();
     });
 
+    // 每秒更新一次场景时间
     this.timer = setInterval(() => {
       this.updateSceneTime();
-    }, 100);
+    }, 1000);
   },
 
   computed: {

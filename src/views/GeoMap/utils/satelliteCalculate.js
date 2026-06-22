@@ -153,3 +153,12 @@ export const buildRelativeTrajectoryPositions = (importCartesian3, track, coordi
     return Cesium.Matrix3.multiplyByVector(icrfToFixed, eciPoint, new Cesium.Cartesian3());
   });
 };
+
+// 计算同步轨道高度差
+export function calculateHeightDiff(altKm, reserve = false) {
+  if (!Number.isFinite(altKm)) return null;
+  if (reserve) {
+    return Number((altKm + SYSTEM_CONFIG_Satellite.geoAltitudeKm).toFixed(2));
+  }
+  return Number((altKm - SYSTEM_CONFIG_Satellite.geoAltitudeKm).toFixed(2));
+}

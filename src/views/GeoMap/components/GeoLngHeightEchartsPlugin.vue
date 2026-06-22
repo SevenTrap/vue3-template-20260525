@@ -5,41 +5,21 @@
 </template>
 
 <script>
-import dayjs from "dayjs";
 import * as echarts from "echarts";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
-import { GEO_ALTITUDE_KM } from "@/views/GeoMap/utils/satelliteLngHeight";
-import { findTrackIndexByTimeMs } from "@/views/GeoMap/utils/mars3dRelativeTrajectory";
+import { calculateHeightDiff } from "../utils/satelliteCalculate";
 
 const geoMapStore = useGeoMapStore();
 
 const THREAT_COLOR = "#2f6bff"; // 威胁目标：蓝色
 const IMPORT_COLOR = "#ff4d4f"; // 被威胁目标：红色
 
-/**
- * 为轨迹点补充相对同步轨道高度差
- * @param {Array} track - 卫星轨迹点列表
- * @returns {Array} 含 heightDiff 的轨迹点列表
- */
-const toTrackWithHeightDiff = (track) =>
-  (track || []).map((p) => ({
-    ...p,
-    heightDiff: Number.isFinite(p.altKm) ? Number((p.altKm - GEO_ALTITUDE_KM).toFixed(2)) : null,
-  }));
-
 export default {
   name: "GeoLngHeightEchartsPlugin",
-  data() {
-    return {
-      threatTrack: [],
-      importTrack: [],
-      distances: [],
-      sunAngles: [],
-    };
-  },
+
   computed: {
-    ...mapState(useGeoMapStore, ["geoLngHeightEchartsPlugin", "satRelativeData", "currentSceneTimeMs", "currentSceneConfig"]),
+    ...mapState(useGeoMapStore, ["geoLngHeightEchartsPlugin", "currentSceneTimeMs", "currentSceneConfig", "satelliteTracks"]),
 
     pluginTitle() {
       if (!this.currentSceneConfig.threatSatelliteName || !this.currentSceneConfig.importSatelliteName) return "经高图";
@@ -51,25 +31,16 @@ export default {
       if (!visible) return;
       this.$nextTick(() => {
         this.ensureChartReady();
-        this.initChart();
+        this.updateChart();
       });
     },
     currentSceneTimeMs() {
       if (!this.geoLngHeightEchartsPlugin) return;
-
-      const currentSceneTime = dayjs(this.currentSceneTimeMs).second(0).millisecond(0).format("YYYY-MM-DD HH:mm:ss");
-      this.initChart(currentSceneTime);
-
-      // this.updateRealtimeMarker();
+      this.updateChart();
     },
   },
-  mounted() {},
 
   methods: {
-    /**
-     * 确保 ECharts 实例已创建并完成尺寸适配
-     * @returns {void}
-     */
     ensureChartReady() {
       const container = this.$refs.lngHeightEchartsContainer;
       if (!container) return;
@@ -78,97 +49,81 @@ export default {
       }
       this.chartInstance.resize();
     },
-    handlePanelClose() {
-      geoMapStore.SET_COMPONENT_VISIBLE_FALSE("geoLngHeightEchartsPlugin");
-    },
 
-    /**
-     * 从 store 的 satRelativeData2 加载轨迹并补充相对同步轨道高度差
-     * @returns {void}
-     */
-    loadChartData() {
-      const data = this.satRelativeData2 || {};
-      this.threatTrack = toTrackWithHeightDiff(data.threatTrack);
-      this.importTrack = toTrackWithHeightDiff(data.importTrack);
-      this.distances = data.distances || [];
-      this.sunAngles = data.sunAngles || [];
-    },
+    // 获取指定时间范围的卫星数据
+    getTracksByTimeRange(track, clockStartTime, clockEndTime) {
+      const result = [];
 
-    /**
-     * 根据 web 球当前时间更新实时位置标记
-     * @returns {void}
-     */
-    updateRealtimeMarker() {
-      if (!this.chartInstance || !this.threatTrack.length) return;
+      for (let i = 0; i < track.length; i++) {
+        const point = track[i];
+        if (!point || point.timeMs < clockStartTime || point.timeMs > clockEndTime) continue;
 
-      const idx = findTrackIndexByTimeMs(this.threatTrack, this.currentSceneTimeMs);
-      const threat = this.threatTrack[idx];
-      const importSat = this.importTrack[idx];
-      if (!threat || !importSat) return;
-
-      this.chartInstance.setOption({
-        series: [
-          {
-            markPoint: {
-              symbol: "circle",
-              symbolSize: 12,
-              itemStyle: { color: THREAT_COLOR, borderColor: "#fff", borderWidth: 2 },
-              data: [{ coord: [threat.lon, threat.heightDiff], name: "当前位置" }],
-            },
-          },
-          {
-            markPoint: {
-              symbol: "circle",
-              symbolSize: 12,
-              itemStyle: { color: IMPORT_COLOR, borderColor: "#fff", borderWidth: 2 },
-              data: [{ coord: [importSat.lon, importSat.heightDiff], name: "当前位置" }],
-            },
-          },
-        ],
-      });
-    },
-
-    /**
-     * 初始化/刷新图表
-     * @returns {void}
-     */
-    initChart(currentSceneTime = "") {
-      const { threatTrack, importTrack, threatLons, importLons, threatHeightDiffs, importHeightDiffs, threatLngHeightDiffs, importLngHeightDiffs, times } =
-        this.satRelativeData;
-
-      let metricThreat = null;
-      let metricImport = null;
-
-      if (currentSceneTime) {
-        const currentSceneTimeMs = dayjs(currentSceneTime).valueOf();
-        // console.log("currentSceneTimeMs", currentSceneTimeMs);
-        // console.log("this.satRelativeData.startTime", this.satRelativeData.startTime);
-        // console.log("this.satRelativeData.endTime", this.satRelativeData.endTime);
-        if (currentSceneTimeMs < this.satRelativeData.startTime) {
-          metricThreat = threatLngHeightDiffs[0];
-          metricImport = importLngHeightDiffs[0];
-        } else if (currentSceneTimeMs > this.satRelativeData.endTime) {
-          metricThreat = threatLngHeightDiffs[threatLngHeightDiffs.length - 1];
-          metricImport = importLngHeightDiffs[importLngHeightDiffs.length - 1];
-        } else {
-          const index = times.findIndex((time) => time === currentSceneTime);
-          metricThreat = threatLngHeightDiffs[index];
-          metricImport = importLngHeightDiffs[index];
-        }
-      } else {
-        metricThreat = threatLngHeightDiffs[0];
-        metricImport = importLngHeightDiffs[0];
+        const heightDiff = calculateHeightDiff(point.altKm);
+        if (heightDiff === null) continue;
+        result.push([point.lon, heightDiff, point]);
       }
 
-      console.log("metricThreat", metricThreat);
-      console.log("metricImport", metricImport);
+      return result;
+    },
 
+    // 获取当前时刻的卫星数据
+    getcurrentTimeTrack(track) {
+      if (!track) return null;
+      if (!this.currentSceneTimeMs) return track[0];
+
+      const startTimeMs = track[0].timeMs;
+      const endTimeMs = track[track.length - 1].timeMs;
+
+      if (this.currentSceneTimeMs < startTimeMs) return track[0];
+      if (this.currentSceneTimeMs > endTimeMs) return track[track.length - 1];
+
+      for (let i = 0; i < track.length; i++) {
+        if (track[i].timeMs > this.currentSceneTimeMs) {
+          return track[i];
+        }
+      }
+    },
+
+    updateChart() {
       if (!this.chartInstance) return;
-      this.chartInstance.resize();
+
+      const clockStartTime = geoMapStore.clockStartTime;
+      const clockEndTime = geoMapStore.clockEndTime;
+      const echartsLegend = [];
+      const echartsSeries = [];
+
+      for (const [norad, track] of this.satelliteTracks.entries()) {
+        echartsLegend.push(`${norad}`);
+        const seriesData = this.getTracksByTimeRange(track, clockStartTime, clockEndTime);
+        const currentTrack = this.getcurrentTimeTrack(track);
+        const heightDiff = calculateHeightDiff(currentTrack.altKm);
+
+        echartsSeries.push({
+          name: norad,
+          type: "line",
+          showSymbol: false,
+          smooth: true,
+          itemStyle: { color: THREAT_COLOR },
+          lineStyle: { color: THREAT_COLOR, width: 1.5 },
+          data: seriesData,
+          zlevel: 1,
+        });
+
+        echartsSeries.push({
+          id: `scatter-${norad}`,
+          name: `${norad} - 当前时刻`,
+          type: "scatter",
+          showSymbol: true,
+          symbolSize: 12,
+          itemStyle: { color: "#ff4d4f" }, // 将当前闪烁点改为红色以便区分
+          data: [[currentTrack.lon, heightDiff]],
+          zlevel: 10,
+        });
+      }
 
       const option = {
         legend: {
-          data: [`威胁目标 ${this.currentSceneConfig.threatSatelliteName}`, `被威胁目标 ${this.currentSceneConfig.importSatelliteName}`],
+          data: echartsLegend,
           top: 8,
           itemStyle: {
             color: "#ffffff",
@@ -204,7 +159,11 @@ export default {
               backgroundColor: "#505765",
             },
           },
-          formatter: (params) => this.formatTooltip(params),
+          formatter: function (params) {
+            if (!params) return "";
+            if (!params[0].value[2]) return "";
+            return `时间：${params[0].value[2].time}<br/> 经度：${params[0].value[0].toFixed(2)}°<br/> 高度：${params[0].value[1].toFixed(2)} km`;
+          },
         },
         grid: [{ left: 50, right: 80, top: 40, bottom: 50 }],
         dataZoom: [
@@ -295,78 +254,14 @@ export default {
             color: "#ffffff",
           },
         },
-        series: [
-          {
-            name: `威胁目标 ${this.currentSceneConfig.threatSatelliteName}`,
-            type: "line",
-            showSymbol: false,
-            smooth: true,
-            itemStyle: { color: THREAT_COLOR },
-            lineStyle: { color: THREAT_COLOR, width: 1.5 },
-            data: threatLngHeightDiffs,
-            zlevel: 1,
-          },
-          {
-            name: `被威胁目标 ${this.currentSceneConfig.importSatelliteName}`,
-            type: "line",
-            showSymbol: false,
-            smooth: true,
-            itemStyle: { color: IMPORT_COLOR },
-            lineStyle: { color: IMPORT_COLOR, width: 1.5 },
-            data: importLngHeightDiffs,
-            zlevel: 1,
-          },
-          {
-            name: "当前时刻",
-            type: "scatter",
-            showSymbol: true,
-            symbolSize: 10,
-            itemStyle: { color: THREAT_COLOR },
-            lineStyle: { color: THREAT_COLOR, width: 1.5 },
-            data: [metricThreat],
-            zlevel: 10,
-          },
-          {
-            name: "当前时刻",
-            type: "scatter",
-            showSymbol: true,
-            symbolSize: 10,
-            itemStyle: { color: IMPORT_COLOR },
-            lineStyle: { color: IMPORT_COLOR, width: 1.5 },
-            data: [metricImport],
-            zlevel: 10,
-          },
-        ],
+        series: echartsSeries,
       };
 
-      this.chartInstance && this.chartInstance.setOption(option, { notMerge: false, lazyUpdate: true });
-
-      // this.updateRealtimeMarker();
+      this.chartInstance.setOption(option, { notMerge: false, lazyUpdate: true });
     },
 
-    /**
-     * 生成 tooltip 内容
-     * @param {object|Array} params - ECharts tooltip 回调参数（axis 触发时为数组）
-     * @returns {string} HTML 字符串
-     */
-    formatTooltip(params) {
-      const firstParam = Array.isArray(params) ? params[0] : params;
-      const i = firstParam && firstParam.dataIndex;
-      const threat = this.satRelativeData.threatTrack[i];
-      const importSat = this.satRelativeData.importTrack[i];
-      if (!threat || !importSat) return "";
-
-      const fmt = (v, unit = "") => (Number.isFinite(v) ? `${v.toFixed(2)}${unit}` : "--");
-      const distance = this.satRelativeData.distances[i];
-      const sunAngle = this.satRelativeData.sunAngles[i];
-
-      return [
-        `时间：${threat.time}`,
-        `威胁目标 ${this.currentSceneConfig.threatSatelliteNoradID}：经度 ${fmt(threat.lon, "°")}，相对高度 ${fmt(threat.heightDiff, " km")}`,
-        `被威胁目标 ${this.currentSceneConfig.importSatelliteNoradID}：经度 ${fmt(importSat.lon, "°")}，相对高度 ${fmt(importSat.heightDiff, " km")}`,
-        `两星距离：${fmt(distance, " km")}`,
-        `光照角：${fmt(sunAngle, "°")}`,
-      ].join("<br/>");
+    handlePanelClose() {
+      geoMapStore.SET_COMPONENT_VISIBLE_FALSE("geoLngHeightEchartsPlugin");
     },
   },
   beforeUnmount() {
