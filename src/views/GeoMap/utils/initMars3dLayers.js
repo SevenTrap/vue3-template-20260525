@@ -3,37 +3,14 @@ import { globalViewer } from "@/utils/initEarth.js";
 
 let satelliteLayer = null;
 let satelliteSceneLayer = null;
-let satellitePathLayer = null;
-let satelliteLinkLayer = null;
 
 // 初始化页面中涉及的所有图层
 export function initMars3dLayers() {
-  satelliteLayer = new mars3d.layer.GraphicLayer({ name: "卫星轨道图层" });
+  satelliteLayer = new mars3d.layer.GraphicLayer({ name: "卫星基础图层" });
   satelliteSceneLayer = new mars3d.layer.GraphicLayer({ name: "卫星场景图层" });
-  satellitePathLayer = new mars3d.layer.GraphicLayer({ name: "卫星轨迹图层" });
-  satelliteLinkLayer = new mars3d.layer.GraphicLayer({ name: "卫星链路图层" });
 
   globalViewer.addLayer(satelliteLayer);
   globalViewer.addLayer(satelliteSceneLayer);
-  globalViewer.addLayer(satellitePathLayer);
-  globalViewer.addLayer(satelliteLinkLayer);
-
-  // satelliteLayer.on(mars3d.EventType.click, (event) => {
-  //   console.log("点击了卫星", event);
-  // });
-
-  // satelliteLayer.on(mars3d.EventType.change, (event) => {
-  //   requestAnimationFrame(() => {
-  //     console.log("卫星状态变化", event);
-  //   });
-  // });
-
-  // satelliteSceneLayer.on(mars3d.EventType.change, (event) => {
-  //   console.log("卫星场景状态变化", event);
-  //   requestAnimationFrame(() => {
-  //     console.log("卫星状态变化", event);
-  //   });
-  // });
 }
 
-export { satelliteLayer, satelliteSceneLayer, satellitePathLayer, satelliteLinkLayer };
+export { satelliteLayer, satelliteSceneLayer };

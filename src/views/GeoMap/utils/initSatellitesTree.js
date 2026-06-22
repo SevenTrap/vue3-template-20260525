@@ -63,7 +63,7 @@ export async function initSatellitesTree() {
           type: "LEO",
           model: satelliteModel,
         });
-      } else if (satelliteModel.a < 40000) {
+      } else if (satelliteModel.a < 36000) {
         // 中轨卫星
         satellitesTree[0].children[1].children.push({
           id: satelliteModel.noradID,
