@@ -8,7 +8,7 @@
 import * as echarts from "echarts";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
-import { calculateHeightDiff } from "../utils/satelliteCalculate";
+import { calculateHeightDiff, getCurrentTimeMsTrack, substringArrByTimeRange } from "../utils/satelliteCalculate";
 
 const geoMapStore = useGeoMapStore();
 
@@ -66,24 +66,6 @@ export default {
       return result;
     },
 
-    // 获取当前时刻的卫星数据
-    getcurrentTimeTrack(track) {
-      if (!track) return null;
-      if (!this.currentSceneTimeMs) return track[0];
-
-      const startTimeMs = track[0].timeMs;
-      const endTimeMs = track[track.length - 1].timeMs;
-
-      if (this.currentSceneTimeMs < startTimeMs) return track[0];
-      if (this.currentSceneTimeMs > endTimeMs) return track[track.length - 1];
-
-      for (let i = 0; i < track.length; i++) {
-        if (track[i].timeMs > this.currentSceneTimeMs) {
-          return track[i];
-        }
-      }
-    },
-
     updateChart() {
       if (!this.chartInstance) return;
 
@@ -94,8 +76,12 @@ export default {
 
       for (const [norad, track] of this.satelliteTracks.entries()) {
         echartsLegend.push(`${norad}`);
+
+        // 获取时间范围内的轨迹
         const seriesData = this.getTracksByTimeRange(track, clockStartTime, clockEndTime);
-        const currentTrack = this.getcurrentTimeTrack(track);
+        // 获取当前时间对应的轨迹点
+        const currentTrack = getCurrentTimeMsTrack(track, this.currentSceneTimeMs);
+        // 获取高度差
         const heightDiff = calculateHeightDiff(currentTrack.altKm);
 
         echartsSeries.push({
@@ -114,7 +100,7 @@ export default {
           name: `${norad} - 当前时刻`,
           type: "scatter",
           showSymbol: true,
-          symbolSize: 12,
+          symbolSize: 10,
           itemStyle: { color: "#ff4d4f" }, // 将当前闪烁点改为红色以便区分
           data: [[currentTrack.lon, heightDiff]],
           zlevel: 10,

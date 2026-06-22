@@ -14,7 +14,7 @@
   <SatelliteTreePlugin></SatelliteTreePlugin>
 
   <!-- GEO卫星相对距离与光照角插件 -->
-  <!-- <GeoSatRelativeEchartsPlugin></GeoSatRelativeEchartsPlugin> -->
+  <GeoSatRelativeEchartsPlugin></GeoSatRelativeEchartsPlugin>
 
   <!-- 卫星经度与相对同步轨道高度插件 -->
   <GeoLngHeightEchartsPlugin></GeoLngHeightEchartsPlugin>

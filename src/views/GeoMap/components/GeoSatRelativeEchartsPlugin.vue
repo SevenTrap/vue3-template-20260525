@@ -15,7 +15,7 @@ import dayjs from "dayjs";
 import * as echarts from "echarts";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
-import { buildRiskRanges } from "../utils/satelliteLngHeight";
+import { calculateDistanceAndSunAngleDeg, substringArrByTimeRange, getCurrentTimeMsTrack, buildRiskRanges } from "../utils/satelliteCalculate";
 
 const geoMapStore = useGeoMapStore();
 const DISTANCE_COLOR = "#2f6bff";
@@ -30,11 +30,18 @@ export default {
     };
   },
   computed: {
-    ...mapState(useGeoMapStore, ["geoSatRelativeEchartsPlugin", "satRelativeData", "currentSceneConfig", "currentSceneTimeMs"]),
+    ...mapState(useGeoMapStore, [
+      "geoSatRelativeEchartsPlugin",
+      "currentSceneConfig",
+      "satelliteTracks",
+      "currentSceneTimeMs",
+      "clockStartTime",
+      "clockEndTime",
+    ]),
 
     pluginTitle() {
-      if (!this.satRelativeData.threatSatelliteName || !this.satRelativeData.importSatelliteName) return "GEO相对距离与光照角";
-      return `${this.satRelativeData.threatSatelliteName} vs ${this.satRelativeData.importSatelliteName} - 相对距离与光照角`;
+      if (!this.currentSceneConfig.threatSatelliteName || !this.currentSceneConfig.importSatelliteName) return "GEO相对距离与光照角";
+      return `${this.currentSceneConfig.threatSatelliteName} vs ${this.currentSceneConfig.importSatelliteName} - 相对距离与光照角`;
     },
   },
   watch: {
@@ -47,8 +54,7 @@ export default {
     },
     currentSceneTimeMs() {
       if (!this.geoSatRelativeEchartsPlugin) return;
-      const currentSceneTime = dayjs(this.currentSceneTimeMs).second(0).millisecond(0).format("YYYY-MM-DD HH:mm:ss");
-      this.initChart(currentSceneTime);
+      this.initChart();
     },
   },
 
@@ -66,36 +72,26 @@ export default {
       geoMapStore.SET_COMPONENT_VISIBLE_FALSE("geoSatRelativeEchartsPlugin");
     },
 
-    handleThresholdChange() {
-      if (!this.geoSatRelativeEchartsPlugin) return;
-      this.initChart();
-    },
-
-    /**
-     * 初始化/刷新图表
-     * @returns {void}
-     */
     initChart(currentSceneTime = "") {
-      const { metrics, times, distances, sunAngles } = this.satRelativeData;
-      let metric = null;
-
-      if (currentSceneTime) {
-        const currentSceneTimeMs = dayjs(currentSceneTime).valueOf();
-        if (currentSceneTimeMs < this.satRelativeData.startTime) {
-          metric = metrics[0];
-        } else if (currentSceneTimeMs > this.satRelativeData.endTime) {
-          metric = metrics[metrics.length - 1];
-        } else {
-          metric = metrics.find((metric) => metric.time === currentSceneTime);
-        }
-      } else {
-        metric = metrics[0];
-      }
-
-      const riskRanges = buildRiskRanges(metrics, this.distanceThreshold, this.sunAngleThreshold);
-
       if (!this.chartInstanceSunAngle) return;
-      this.chartInstanceSunAngle.resize();
+
+      const { threatSatelliteNoradID, importSatelliteNoradID } = this.currentSceneConfig;
+      const threatTracks = this.satelliteTracks.get(threatSatelliteNoradID);
+      const importTracks = this.satelliteTracks.get(importSatelliteNoradID);
+      if (!threatTracks || !importTracks) return;
+
+      // 计算两颗卫星的距离和太阳角（threatTracks看向importTracks）
+      const distanceAndSunAngleDeg = calculateDistanceAndSunAngleDeg(threatTracks, importTracks);
+      // 根据时间窗口截取数组
+      const relativeTrajectoryPositions = substringArrByTimeRange(distanceAndSunAngleDeg, this.clockStartTime, this.clockEndTime);
+      // 获取当前时间对应的轨迹
+      let currentTrack = getCurrentTimeMsTrack(relativeTrajectoryPositions, this.currentSceneTimeMs);
+
+      // 格式化处理echarts显示数据
+      const times = relativeTrajectoryPositions.map((item) => item.time);
+      const sunAngleData = relativeTrajectoryPositions.map((item) => [item.time, item.sunAngleDeg, item]);
+      const distanceData = relativeTrajectoryPositions.map((item) => [item.time, item.distanceKm, item]);
+      const riskRanges = buildRiskRanges(relativeTrajectoryPositions, this.distanceThreshold, this.sunAngleThreshold);
 
       const option = {
         legend: {
@@ -137,7 +133,6 @@ export default {
             filterMode: "none",
           },
         ],
-
         xAxis: [
           {
             type: "category",
@@ -225,7 +220,7 @@ export default {
             showSymbol: false,
             itemStyle: { color: DISTANCE_COLOR },
             lineStyle: { color: DISTANCE_COLOR, width: 1.5 },
-            data: distances,
+            data: distanceData,
             markArea: {
               silent: true,
               itemStyle: {
@@ -241,7 +236,7 @@ export default {
             showSymbol: false,
             itemStyle: { color: SUN_ANGLE_COLOR },
             lineStyle: { color: SUN_ANGLE_COLOR, width: 1.5 },
-            data: sunAngles,
+            data: sunAngleData,
           },
 
           {
@@ -252,7 +247,7 @@ export default {
             symbolSize: 10,
             itemStyle: { color: DISTANCE_COLOR },
             lineStyle: { color: DISTANCE_COLOR, width: 1.5 },
-            data: [[metric.time, metric.distanceKm]],
+            data: [[currentTrack.time, currentTrack.distanceKm]],
           },
           {
             name: "当前时刻",
@@ -262,31 +257,27 @@ export default {
             symbolSize: 10,
             itemStyle: { color: SUN_ANGLE_COLOR },
             lineStyle: { color: SUN_ANGLE_COLOR, width: 1.5 },
-            data: [[metric.time, metric.sunAngleDeg]],
+            data: [[currentTrack.time, currentTrack.sunAngleDeg]],
           },
         ],
       };
 
-      this.chartInstanceSunAngle &&
-        this.chartInstanceSunAngle.setOption(option, {
-          notMerge: false,
-          lazyUpdate: true,
-        });
+      this.chartInstanceSunAngle.setOption(option, {
+        notMerge: false,
+        lazyUpdate: true,
+      });
     },
 
     formatTooltip(params) {
-      const firstParam = Array.isArray(params) ? params[0] : params;
-      const i = firstParam && firstParam.dataIndex;
-      const metric = this.satRelativeData.metrics[i];
-      if (!metric) return "";
+      const currentParams = Array.isArray(params) ? params[0] : params;
+      const track = currentParams.data[2];
 
-      const fmt = (value, unit) => (Number.isFinite(value) ? `${value.toFixed(2)}${unit}` : "--");
       return [
-        `时间：${metric.time}`,
+        `时间：${track.time}`,
         `主动卫星：${this.currentSceneConfig.threatSatelliteName}`,
         `从动卫星：${this.currentSceneConfig.importSatelliteName}`,
-        `两星距离：${fmt(metric.distanceKm, " km")}`,
-        `太阳光照角：${fmt(metric.sunAngleDeg, "°")}`,
+        `两星距离：${track.distanceKm} km`,
+        `太阳光照角：${track.sunAngleDeg} °`,
         `阈值：距离 < ${this.distanceThreshold} km，光照角 < ${this.sunAngleThreshold}°`,
       ].join("<br/>");
     },

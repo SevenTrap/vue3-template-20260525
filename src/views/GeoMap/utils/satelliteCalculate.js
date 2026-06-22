@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import * as mars3d from "mars3d";
+import * as satellite from "satellite.js";
 import SatelliteClass from "@/models/SatelliteClass";
 
 /**
@@ -162,3 +163,184 @@ export function calculateHeightDiff(altKm, reserve = false) {
   }
   return Number((altKm - SYSTEM_CONFIG_Satellite.geoAltitudeKm).toFixed(2));
 }
+
+/**
+ * 计算两个三维点的差向量
+ * @param {{x:number,y:number,z:number}} endVec - 终点向量
+ * @param {{x:number,y:number,z:number}} startVec - 起点向量
+ * @returns {{x:number,y:number,z:number}} 差向量
+ */
+const subtractVec = (endVec, startVec) => ({
+  x: endVec.x - startVec.x,
+  y: endVec.y - startVec.y,
+  z: endVec.z - startVec.z,
+});
+
+/**
+ * 校验三维向量是否有效
+ * @param {{x:number,y:number,z:number}} p - 三维向量
+ * @returns {boolean} 是否为有效向量
+ */
+const isValidVec = (p) => !!p && [p.x, p.y, p.z].every((v) => Number.isFinite(v));
+/**
+ * 获取太阳在 ECI 坐标系下的位置（km）
+ * @param {Date} date - UTC 时间
+ * @returns {{x:number,y:number,z:number}|null} 太阳 ECI 位置
+ */
+const getSunEci = (date) => {
+  const jd = satellite.jday(date);
+  const sunPos = satellite.sunPos(jd);
+  const rsun = sunPos && sunPos.rsun;
+  if (!rsun) return null;
+  const sunEci = {
+    x: (rsun.x ?? rsun[0]) * SYSTEM_CONFIG_Satellite.auKm,
+    y: (rsun.y ?? rsun[1]) * SYSTEM_CONFIG_Satellite.auKm,
+    z: (rsun.z ?? rsun[2]) * SYSTEM_CONFIG_Satellite.auKm,
+  };
+  return isValidVec(sunEci) ? sunEci : null;
+};
+
+/**
+ * 计算两个三维向量的夹角（度）
+ * @param {{x:number,y:number,z:number}} v1 - 向量1
+ * @param {{x:number,y:number,z:number}} v2 - 向量2
+ * @returns {number} 夹角（度），0~180
+ */
+const computeAngleDeg = (v1, v2) => {
+  const dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+  const norm1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
+  const norm2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y + v2.z * v2.z);
+  if (!norm1 || !norm2) return NaN;
+  let cosTheta = dot / (norm1 * norm2);
+  if (cosTheta > 1) cosTheta = 1;
+  if (cosTheta < -1) cosTheta = -1;
+  return (Math.acos(cosTheta) * 180) / Math.PI;
+};
+
+/**
+ * 计算指定时刻两星相对指标
+ * @param {{x:number,y:number,z:number}} threatEci - 主动卫星 T 的 ECI 位置（km）
+ * @param {{x:number,y:number,z:number}} importEci - 从动卫星 I 的 ECI 位置（km）
+ * @param {Date} date - 计算时刻
+ * @returns {{distanceKm:number|null,sunAngleDeg:number|null}} 距离与光照角（∠TIS，顶点在 I）
+ */
+const computeRelativeMetric = (threatEci, importEci, date) => {
+  const importToThreat = subtractVec(threatEci, importEci);
+  const vecX2 = importToThreat.x * importToThreat.x;
+  const vecY2 = importToThreat.y * importToThreat.y;
+  const vecZ2 = importToThreat.z * importToThreat.z;
+  const distanceKm = Math.sqrt(vecX2 + vecY2 + vecZ2);
+  const sunEci = getSunEci(date);
+  let sunAngleDeg = null;
+
+  if (sunEci) {
+    const importToSun = subtractVec(sunEci, importEci);
+    sunAngleDeg = computeAngleDeg(importToThreat, importToSun);
+    sunAngleDeg = sunAngleDeg;
+  }
+  return { distanceKm, sunAngleDeg };
+};
+
+// 根据卫星的tracks计算卫星距离和太阳角
+export function calculateDistanceAndSunAngleDeg(threatTracks, importTracks) {
+  let distanceAndSunAngleDeg = [];
+
+  for (let i = 0; i < threatTracks.length; i += 1) {
+    const threatEci = threatTracks[i].posEci;
+    const importEci = importTracks[i].posEci;
+
+    const { distanceKm, sunAngleDeg } = computeRelativeMetric(threatEci, importEci, new Date(threatTracks[i].timeMs));
+
+    distanceAndSunAngleDeg.push({
+      time: threatTracks[i].time,
+      timeMs: threatTracks[i].timeMs,
+      threatTrack: threatTracks[i],
+      importTrack: importTracks[i],
+      distanceKm: Number(distanceKm.toFixed(2)),
+      sunAngleDeg: Number(sunAngleDeg.toFixed(2)),
+    });
+  }
+
+  return distanceAndSunAngleDeg;
+}
+
+/**
+ * 根据开始时间和结束时间截取数组
+ * @param {Array} arr - 数组
+ * @param {number} startTimeMs - 开始时间毫秒数
+ * @param {number} endTimeMs - 结束时间毫秒数
+ * @returns {Array} 截取后的数组
+ * */
+export function substringArrByTimeRange(arr, startTimeMs, endTimeMs) {
+  return arr.filter((item) => {
+    return item.timeMs >= startTimeMs && item.timeMs <= endTimeMs;
+  });
+}
+
+// 根据时间戳获取当前时间戳【最近】轨道数据
+export function getCurrentTimeMsTrack(track, currentTimeMs) {
+  if (!track || !track.length) return null;
+  if (!currentTimeMs) return track[0];
+  if (currentTimeMs < track[0].timeMs) return track[0];
+  if (currentTimeMs > track[track.length - 1].timeMs) return track[track.length - 1];
+
+  for (let i = 0; i < track.length; i++) {
+    if (track[i].timeMs >= currentTimeMs) {
+      return track[i];
+    }
+  }
+}
+
+/**
+ * 判断距离与光照角是否同时命中阈值
+ * @param {number|null} distance - 两星距离（km）
+ * @param {number|null} sunAngle - 太阳光照角（°）
+ * @param {number} distanceThreshold - 距离阈值（km）
+ * @param {number} sunAngleThreshold - 光照角阈值（°）
+ * @returns {boolean} 是否命中阈值
+ */
+const isRiskPoint = (distance, sunAngle, distanceThreshold, sunAngleThreshold) =>
+  Number.isFinite(distance) && Number.isFinite(sunAngle) && distance < distanceThreshold && sunAngle < sunAngleThreshold;
+
+/**
+ * 根据逐点命中状态生成连续风险区间
+ * @param {Array<{timeMs:number,time:string,distanceKm:number|null,sunAngleDeg:number|null}>} tracks - 相对指标序列
+ * @param {number} distanceThreshold - 距离阈值（km）
+ * @param {number} sunAngleThreshold - 光照角阈值（°）
+ * @returns {Array<{startIndex:number,endIndex:number,startTime:string,endTime:string,startTimeMs:number,endTimeMs:number}>} 连续风险区间
+ */
+export const buildRiskRanges = (tracks, distanceThreshold, sunAngleThreshold) => {
+  const ranges = [];
+  let currentRange = null;
+
+  tracks.forEach((item, index) => {
+    const matched = isRiskPoint(item.distanceKm, item.sunAngleDeg, distanceThreshold, sunAngleThreshold);
+    if (matched && !currentRange) {
+      currentRange = {
+        startIndex: index,
+        endIndex: index,
+        startTime: item.time,
+        endTime: item.time,
+        startTimeMs: item.timeMs,
+        endTimeMs: item.timeMs,
+      };
+      return;
+    }
+
+    if (matched && currentRange) {
+      currentRange.endIndex = index;
+      currentRange.endTime = item.time;
+      currentRange.endTimeMs = item.timeMs;
+      return;
+    }
+
+    if (!matched && currentRange) {
+      ranges.push(currentRange);
+      currentRange = null;
+    }
+  });
+
+  if (currentRange) ranges.push(currentRange);
+
+  return ranges;
+};

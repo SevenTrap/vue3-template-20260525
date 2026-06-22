@@ -1,9 +1,0 @@
----
-description: 验证阶段不使用 npm run build
-alwaysApply: true
----
-
-# 验证约定
-
-- 后续任务的验证阶段不要执行 `npm run build`。
-- 可以继续保留其他验证方式，例如纯函数边界检查、静态代码检查、页面手动交互验证或用户明确指定的验证命令。
