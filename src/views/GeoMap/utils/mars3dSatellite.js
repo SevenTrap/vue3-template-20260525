@@ -634,15 +634,14 @@ export const toggleSatelliteCoordinateAxis = (satelliteSceneLayer, showSatellite
       id: config.id,
       name: config.id,
       positions: new Cesium.CallbackProperty((time) => {
-        const currentState = getSatelliteEciStateAtTime(importSatelliteNoradID, tles, time);
+        // const currentState = getSatelliteEciStateAtTime(importSatelliteNoradID, tles, time);
 
-        // const position = importGraphic.positionShow; // 卫星当前实时世界坐标
-        const position = {
-          x: currentState.posEcf.x * 1000,
-          y: currentState.posEcf.y * 1000,
-          z: currentState.posEcf.z * 1000,
-        };
-
+        // const position = {
+        //   x: currentState.posEcf.x * 1000,
+        //   y: currentState.posEcf.y * 1000,
+        //   z: currentState.posEcf.z * 1000,
+        // };
+        const position = importGraphic.positionShow; // 卫星当前实时世界坐标
         const model = importGraphic.model;
 
         if (!position || !model) return [];
@@ -766,12 +765,14 @@ export const toggleSatelliteOrbitCoordinateAxis = (satelliteSceneLayer, showSate
       positions: new Cesium.CallbackProperty((time) => {
         // 1. 获取当前卫星的实时 state 位置
         const currentState = getSatelliteEciStateAtTime(importSatelliteNoradID, tles, time);
+        const currentSatECEF = importGraphic.positionShow;
         if (!currentState || !currentState.posEci || !currentState.velEci || !currentState.posEcf) return [];
 
         // 2. 提取基础数据并将单位从千米(km)转换为米(m)
         Cesium.Cartesian3.fromElements(currentState.posEci.x * 1000, currentState.posEci.y * 1000, currentState.posEci.z * 1000, scratchPosEci);
         Cesium.Cartesian3.fromElements(currentState.velEci.x * 1000, currentState.velEci.y * 1000, currentState.velEci.z * 1000, scratchVelEci);
-        Cesium.Cartesian3.fromElements(currentState.posEcf.x * 1000, currentState.posEcf.y * 1000, currentState.posEcf.z * 1000, scratchPosEcf);
+        // Cesium.Cartesian3.fromElements(currentState.posEcf.x * 1000, currentState.posEcf.y * 1000, currentState.posEcf.z * 1000, scratchPosEcf);
+        Cesium.Cartesian3.fromElements(currentSatECEF.x, currentSatECEF.y, currentSatECEF.z, scratchPosEcf);
 
         // 3. 在惯性系（ECI）中通过向量叉乘构建三轴标准单位向量
         // X 轴：沿速度方向 (In-track)
@@ -819,6 +820,225 @@ export const toggleSatelliteOrbitCoordinateAxis = (satelliteSceneLayer, showSate
       },
     });
     satelliteSceneLayer.addGraphic(axisGraphic);
+  });
+};
+
+/**
+ * 以卫星为中心，实时建立轨道全向坐标轴（含负轴）及三个轴面的完整 Grid 网格（跨四个象限）
+ * @param {Object} satelliteSceneLayer Mars3D 图层对象
+ * @param {Boolean} showGrid 是否显示网格和坐标轴
+ */
+export const toggleSatelliteLocalGridSystem = (satelliteSceneLayer, showGrid) => {
+  if (!satelliteSceneLayer) return;
+
+  const { importSatelliteNoradID, satelliteNoradIDs, satelliteTles } = geoMapStore.currentSceneConfig;
+  const index = satelliteNoradIDs.indexOf(importSatelliteNoradID);
+  if (index < 0) return;
+  const tles = satelliteTles[index];
+  if (!tles?.length) return;
+
+  const importGraphicECEF = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECEF`);
+  const importGraphicECI = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+  const importGraphic = importGraphicECEF || importGraphicECI;
+  if (!importGraphic) return;
+
+  // 定义所有需要创建的 Graphic ID
+  const gridIds = {
+    axisX: `${importSatelliteNoradID}OrbitGrid_AxisX`,
+    axisY: `${importSatelliteNoradID}OrbitGrid_AxisY`,
+    axisZ: `${importSatelliteNoradID}OrbitGrid_AxisZ`,
+    planeXY: `${importSatelliteNoradID}OrbitGrid_PlaneXY_All`,
+    planeYZ: `${importSatelliteNoradID}OrbitGrid_PlaneYZ_All`,
+    planeXZ: `${importSatelliteNoradID}OrbitGrid_PlaneXZ_All`,
+  };
+
+  // 1. 清理旧的图形
+  Object.values(gridIds).forEach((id) => {
+    const oldGraphic = satelliteSceneLayer.getGraphicById(id);
+    if (oldGraphic) satelliteSceneLayer.removeGraphic(oldGraphic);
+  });
+
+  if (!showGrid) return;
+
+  // 2. 局部网格参数配置 (单位：米)
+  const maxRange = 100_000; // 延伸到 100km
+  const step = 10_000; // 间隔 10km
+
+  // 3. 基础坐标轴配置（双向绘制：从 -100km 到 +100km）
+  const axisConfigs = [
+    { id: gridIds.axisX, label: "轨道-X", color: "#ff3333", type: "X" },
+    { id: gridIds.axisY, label: "轨道-Y", color: "#33ff33", type: "Y" },
+    { id: gridIds.axisZ, label: "轨道-Z", color: "#3333ff", type: "Z" },
+  ];
+
+  // 4. 三个完整网格面的颜色配置
+  const planeConfigs = [
+    { id: gridIds.planeXY, color: "rgba(255,255,51,0.35)", planeType: "XY" }, // 黄色
+    { id: gridIds.planeYZ, color: "rgba(51,255,255,0.35)", planeType: "YZ" }, // 青色
+    { id: gridIds.planeXZ, color: "rgba(255,51,255,0.35)", planeType: "XZ" }, // 紫色
+  ];
+
+  // ================= 核心数学计算公共方法 =================
+  const scratchPosEci = new Cesium.Cartesian3();
+  const scratchVelEci = new Cesium.Cartesian3();
+  const scratchPosEcf = new Cesium.Cartesian3();
+  const scratchX = new Cesium.Cartesian3();
+  const scratchY = new Cesium.Cartesian3();
+  const scratchZ = new Cesium.Cartesian3();
+  const scratchIcrfToFixed = new Cesium.Matrix3();
+
+  const getOrbitBaseFrame = (time) => {
+    const currentState = getSatelliteEciStateAtTime(importSatelliteNoradID, tles, time);
+    const currentSatECEF = importGraphic.positionShow;
+    if (!currentState || !currentState.posEci || !currentState.velEci || !currentState.posEcf) return null;
+
+    Cesium.Cartesian3.fromElements(currentState.posEci.x * 1000, currentState.posEci.y * 1000, currentState.posEci.z * 1000, scratchPosEci);
+    Cesium.Cartesian3.fromElements(currentState.velEci.x * 1000, currentState.velEci.y * 1000, currentState.velEci.z * 1000, scratchVelEci);
+    // Cesium.Cartesian3.fromElements(currentState.posEcf.x * 1000, currentState.posEcf.y * 1000, currentState.posEcf.z * 1000, scratchPosEcf);
+    Cesium.Cartesian3.fromElements(currentSatECEF.x, currentSatECEF.y, currentSatECEF.z, scratchPosEcf);
+
+    Cesium.Cartesian3.normalize(scratchVelEci, scratchX);
+    Cesium.Cartesian3.cross(scratchPosEci, scratchVelEci, scratchZ);
+    Cesium.Cartesian3.normalize(scratchZ, scratchZ);
+    Cesium.Cartesian3.cross(scratchZ, scratchX, scratchY);
+
+    const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time, scratchIcrfToFixed);
+    if (!icrfToFixed) return null;
+
+    const ecefX = new Cesium.Cartesian3();
+    const ecefY = new Cesium.Cartesian3();
+    const ecefZ = new Cesium.Cartesian3();
+    Cesium.Matrix3.multiplyByVector(icrfToFixed, scratchX, ecefX);
+    Cesium.Matrix3.multiplyByVector(icrfToFixed, scratchY, ecefY);
+    Cesium.Matrix3.multiplyByVector(icrfToFixed, scratchZ, ecefZ);
+
+    return { centerEcef: Cesium.Cartesian3.clone(scratchPosEcf), ecefX, ecefY, ecefZ };
+  };
+
+  const convertLocalToEcef = (localX, localY, localZ, frame, resultCartesian) => {
+    const offsetX = Cesium.Cartesian3.multiplyByScalar(frame.ecefX, localX, new Cesium.Cartesian3());
+    const offsetY = Cesium.Cartesian3.multiplyByScalar(frame.ecefY, localY, new Cesium.Cartesian3());
+    const offsetZ = Cesium.Cartesian3.multiplyByScalar(frame.ecefZ, localZ, new Cesium.Cartesian3());
+
+    Cesium.Cartesian3.add(frame.centerEcef, offsetX, resultCartesian);
+    Cesium.Cartesian3.add(resultCartesian, offsetY, resultCartesian);
+    Cesium.Cartesian3.add(resultCartesian, offsetZ, resultCartesian);
+    return resultCartesian;
+  };
+
+  // ================= 渲染 1: 贯穿正负轴的坐标轴线 =================
+  axisConfigs.forEach((config) => {
+    const axisGraphic = new mars3d.graphic.PolylineEntity({
+      id: config.id,
+      name: config.id,
+      positions: new Cesium.CallbackProperty((time) => {
+        const frame = getOrbitBaseFrame(time);
+        if (!frame) return [];
+
+        const startPos = new Cesium.Cartesian3();
+        const endPos = new Cesium.Cartesian3();
+
+        // 轴线改为从 -maxRange 绘制到 +maxRange，使轴线贯穿整个网格面
+        if (config.type === "X") {
+          convertLocalToEcef(-maxRange, 0, 0, frame, startPos);
+          convertLocalToEcef(maxRange + 10_000, 0, 0, frame, endPos);
+        } else if (config.type === "Y") {
+          convertLocalToEcef(0, -maxRange, 0, frame, startPos);
+          convertLocalToEcef(0, maxRange + 10_000, 0, frame, endPos);
+        } else {
+          convertLocalToEcef(0, 0, -maxRange, frame, startPos);
+          convertLocalToEcef(0, 0, maxRange + 10_000, frame, endPos);
+        }
+
+        return [startPos, endPos];
+      }, false),
+      style: {
+        width: 4,
+        arcType: Cesium.ArcType.NONE,
+        // 这里沿用箭头材质，箭头会在 +100km 正半轴端点显示。如果不需要箭头，可直接换成普通颜色材质
+        material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(config.color)),
+        label: {
+          text: config.label,
+          font_size: 14,
+          font_family: "楷体",
+          color: config.color,
+          outline: true,
+          outlineColor: "#000000",
+          outlineWidth: 2,
+        },
+      },
+    });
+    satelliteSceneLayer.addGraphic(axisGraphic);
+  });
+
+  // ================= 渲染 2: 跨越正负轴的全向 Grid 网格 =================
+  /**
+   * 核心修改：生成从 -maxRange 到 +maxRange 的全向网格点集
+   */
+  const generateLocalGridPointsAllQuadrants = (planeType) => {
+    const points = [];
+    let count = 0;
+
+    // 1. 扫描平行于B轴的平行线 (A轴从 -maxRange 变动到 maxRange)
+    for (let a = -maxRange; a <= maxRange; a += step) {
+      if (count % 2 === 0) {
+        points.push({ a: a, b: -maxRange }, { a: a, b: maxRange });
+      } else {
+        points.push({ a: a, b: maxRange }, { a: a, b: -maxRange });
+      }
+      count++;
+    }
+
+    // 回到左下角起点，准备交叉扫描
+    points.push({ a: -maxRange, b: -maxRange });
+    count = 0;
+
+    // 2. 扫描平行于A轴的平行线 (B轴从 -maxRange 变动到 maxRange)
+    for (let b = -maxRange; b <= maxRange; b += step) {
+      if (count % 2 === 0) {
+        points.push({ a: -maxRange, b: b }, { a: maxRange, b: b });
+      } else {
+        points.push({ a: maxRange, b: b }, { a: -maxRange, b: b });
+      }
+      count++;
+    }
+
+    // 映射到三维局部轴面
+    return points.map((p) => {
+      if (planeType === "XY") return [p.a, p.b, 0];
+      if (planeType === "YZ") return [0, p.a, p.b];
+      return [p.a, 0, p.b]; // XZ
+    });
+  };
+
+  planeConfigs.forEach((config) => {
+    const localTemplate = generateLocalGridPointsAllQuadrants(config.planeType);
+    const resultPositions = Array.from({ length: localTemplate.length }, () => new Cesium.Cartesian3());
+
+    const gridPlaneGraphic = new mars3d.graphic.PolylineEntity({
+      id: config.id,
+      name: config.id,
+      positions: new Cesium.CallbackProperty((time) => {
+        const frame = getOrbitBaseFrame(time);
+        if (!frame) return [];
+
+        for (let i = 0; i < localTemplate.length; i++) {
+          const loc = localTemplate[i];
+          convertLocalToEcef(loc[0], loc[1], loc[2], frame, resultPositions[i]);
+        }
+        return resultPositions;
+      }, false),
+      style: {
+        width: 1,
+        color: config.color,
+        arcType: Cesium.ArcType.NONE,
+        material: mars3d.MaterialUtil.createMaterialProperty(mars3d.MaterialType.PolylineDash, {
+          color: config.color,
+          dashLength: 6, // 适当缩短虚线间隔，全向网格大范围下看起来更紧凑精致
+        }),
+      },
+    });
+    satelliteSceneLayer.addGraphic(gridPlaneGraphic);
   });
 };
 

@@ -57,6 +57,7 @@ export const useGeoMapStore = defineStore("geoMap", {
     showSatelliteSensorScene: false, // 显示卫星传感器
     showSatelliteBodyCoordinateAxisScene: false, // 显示卫星本体坐标系
     showSatelliteOrbitCoordinateAxisScene: false, // 显示卫星轨道坐标系
+    showSatelliteGrid: false, // 显示卫星网格
     showSatelliteLightDirectionScene: false, // 显示卫星光照方向
     showSatelliteImageDirectionScene: false, // 显示卫星成像方向
   }),

@@ -159,6 +159,10 @@
               label="轨道坐标系"
             ></el-checkbox>
           </div>
+
+          <div class="button-group-item">
+            <el-checkbox size="small" :model-value="showSatelliteGrid" @change="handleToggleSate('showSatelliteGrid')" label="局部坐标系"></el-checkbox>
+          </div>
         </div>
       </div>
     </div>
@@ -189,6 +193,7 @@ import {
   toggleSatelliteImageDirection,
   toggleImportSatelliteTrajectory,
   toggleThreatSatelliteTrajectory,
+  toggleSatelliteLocalGridSystem,
 } from "../utils/mars3dSatellite.js";
 import {
   unlockCameraFromInertial,
@@ -258,6 +263,7 @@ export default {
       "showSatelliteLightDirectionScene",
       "showSatelliteImageDirectionScene",
       "showSatelliteOrbitCoordinateAxisScene",
+      "showSatelliteGrid",
     ]),
   },
   mounted() {
@@ -326,6 +332,11 @@ export default {
     // 显示卫星轨道坐标轴
     showSatelliteOrbitCoordinateAxisScene(newVal) {
       toggleSatelliteOrbitCoordinateAxis(satelliteSceneLayer, newVal);
+    },
+
+    // 显示卫星网格
+    showSatelliteGrid(newVal) {
+      toggleSatelliteLocalGridSystem(satelliteSceneLayer, newVal);
     },
   },
   methods: {
