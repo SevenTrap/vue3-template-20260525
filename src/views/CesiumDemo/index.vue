@@ -12,7 +12,7 @@
 <script>
 import { initViewer, globalViewer } from "@/utils/initEarth";
 import { initLayers } from "./configs/initLayer.js";
-import { addGeoCirclePositions, addGeoCircleLabel } from "@/utils/mars3d/mars3dGeoStyle.js";
+import { addGeoCirclePositions, addGeoCircleLabel } from "@/utils/mars3dGeoStyle";
 
 import MenuBar from "./components/MenuBar.vue";
 import SSTLayer from "./components/SSTLayer/index.vue";

@@ -38,7 +38,7 @@ import {
   removeGeoCircleLabel,
   addPatrolArea,
   removePatrolArea,
-} from "@/utils/mars3d/mars3dGeoStyle.js";
+} from "@/utils/mars3dGeoStyle";
 
 import MenuBarPlugin from "./components/MenuBarPlugin.vue";
 import MenuTools from "./components/MenuTools.vue";

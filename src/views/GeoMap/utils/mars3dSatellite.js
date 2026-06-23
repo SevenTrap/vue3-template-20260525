@@ -2,7 +2,7 @@ import * as mars3d from "mars3d";
 
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { calculateSatelliteRelativePosition, buildRelativeTrajectoryPositions, getSatelliteEciStateAtTime } from "./satelliteCalculate";
-import { getSunEciKm } from "@/utils/mars3d/mars3dSatellite";
+import { getSunEci } from "@/utils/mars3d";
 
 const Cesium = mars3d.Cesium;
 const geoMapStore = useGeoMapStore();
@@ -819,7 +819,7 @@ export const toggleSatelliteOrbitCoordinateAxis = (satelliteSceneLayer, showSate
 const buildLightDirectionPositions = (time, satPosition) => {
   if (!satPosition) return [];
 
-  const sunEciKm = getSunEciKm(Cesium.JulianDate.toDate(time));
+  const sunEciKm = getSunEci(Cesium.JulianDate.toDate(time));
   if (!sunEciKm) return [];
 
   const sunInertialM = new Cesium.Cartesian3(sunEciKm.x * 1000, sunEciKm.y * 1000, sunEciKm.z * 1000);

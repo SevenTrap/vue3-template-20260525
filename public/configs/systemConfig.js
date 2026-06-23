@@ -19,13 +19,6 @@ const SYSTEM_CONFIG = {
 };
 
 const SYSTEM_CONFIG_Satellite = {
-  geoAltitudeKm: 35786, // 同步轨道高度（km）
-  auKm: 149597870.7, // 天文单位（km）
-  jdUnixEpoch: 2440587.5, // Unix 纪元对应的儒略日
-  msPerDay: 86400000, // 一天的毫秒数
-  earthRadiusKm: 6378.135, // 地球平均半径（km）
-  mu: 398600.8, // 地球引力常数 [km^3/s^2]
-
   satelliteColors: {
     中国: "#ff0000",
     美国: "#0000ff",

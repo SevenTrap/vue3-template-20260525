@@ -1,7 +1,9 @@
 import dayjs from "dayjs";
 import * as mars3d from "mars3d";
 import * as satellite from "satellite.js";
+import { geoAltitudeKm } from "@/utils/constants";
 import SatelliteClass from "@/models/SatelliteClass";
+import { getSunEci } from "@/utils/mars3d";
 
 /**
  * 选取不晚于指定时刻的最新历元 TLE（倒序列表），若早于所有历元则回退最旧一条
@@ -159,9 +161,9 @@ export const buildRelativeTrajectoryPositions = (importCartesian3, track, coordi
 export function calculateHeightDiff(altKm, reserve = false) {
   if (!Number.isFinite(altKm)) return null;
   if (reserve) {
-    return Number((altKm + SYSTEM_CONFIG_Satellite.geoAltitudeKm).toFixed(2));
+    return Number((altKm + geoAltitudeKm).toFixed(2));
   }
-  return Number((altKm - SYSTEM_CONFIG_Satellite.geoAltitudeKm).toFixed(2));
+  return Number((altKm - geoAltitudeKm).toFixed(2));
 }
 
 /**
@@ -175,30 +177,6 @@ const subtractVec = (endVec, startVec) => ({
   y: endVec.y - startVec.y,
   z: endVec.z - startVec.z,
 });
-
-/**
- * 校验三维向量是否有效
- * @param {{x:number,y:number,z:number}} p - 三维向量
- * @returns {boolean} 是否为有效向量
- */
-const isValidVec = (p) => !!p && [p.x, p.y, p.z].every((v) => Number.isFinite(v));
-/**
- * 获取太阳在 ECI 坐标系下的位置（km）
- * @param {Date} date - UTC 时间
- * @returns {{x:number,y:number,z:number}|null} 太阳 ECI 位置
- */
-const getSunEci = (date) => {
-  const jd = satellite.jday(date);
-  const sunPos = satellite.sunPos(jd);
-  const rsun = sunPos && sunPos.rsun;
-  if (!rsun) return null;
-  const sunEci = {
-    x: (rsun.x ?? rsun[0]) * SYSTEM_CONFIG_Satellite.auKm,
-    y: (rsun.y ?? rsun[1]) * SYSTEM_CONFIG_Satellite.auKm,
-    z: (rsun.z ?? rsun[2]) * SYSTEM_CONFIG_Satellite.auKm,
-  };
-  return isValidVec(sunEci) ? sunEci : null;
-};
 
 /**
  * 计算两个三维向量的夹角（度）

@@ -21,18 +21,6 @@ export const ECI_PRESETS = [
   { id: "firstSatPole", label: "第一视角" },
 ];
 
-// USA271 4
-// USA270 3
-// USA325 6
-// USA253 1
-// USA324 5
-// USA254 2
-
-// 62485; shijian-25
-
-export const DEFAULT_NORAD_USA = ["41745", "41744"]; // USA271, USA270
-export const DEFAULT_NORAD_CHINA = ["62485"]; // shijian-25
-
 /**
  * @description 场景列表
  * @param {string} sceneID - 场景ID
@@ -54,20 +42,20 @@ export const DEFAULT_NORAD_CHINA = ["62485"]; // shijian-25
  * */
 export const SCENE_LISTS = [
   {
-    sceneID: "1", // 场景ID
-    startTime: "2026-02-04 12:00:00", // 开始时间
-    endTime: "2026-02-16 12:00:00", // 结束时间
-    closeTime: "2026-02-09 10:23:34", // 接近时间
-    timeFront: 1 * 24 * 60 * 60 * 1000, // 前轨时间：1天
-    timeBack: 1 * 24 * 60 * 60 * 1000, // 后轨时间：1天
-    timeStep: 1 * 60 * 1000, // 默认时间步长：1分钟
+    sceneID: "1",
+    startTime: "2026-02-04 12:00:00",
+    endTime: "2026-02-16 12:00:00",
+    closeTime: "2026-02-09 10:23:34",
+    timeFront: 1 * 24 * 60 * 60 * 1000,
+    timeBack: 1 * 24 * 60 * 60 * 1000,
+    timeStep: 1 * 60 * 1000,
 
-    threatSatelliteNoradID: "25019", // 主动卫星NORAD ID
-    importSatelliteNoradID: "23712", // 从动卫星NORAD ID
-    threatSatelliteName: "敌方卫星", // 主动卫星名称
-    importSatelliteName: "我方卫星", // 从动卫星名称
+    threatSatelliteNoradID: "25019",
+    importSatelliteNoradID: "23712",
+    threatSatelliteName: "敌方卫星",
+    importSatelliteName: "我方卫星",
 
-    satelliteNoradIDs: ["25019", "23712"], // 场景中涉及的卫星NORAD ID
+    satelliteNoradIDs: ["25019", "23712"],
     satelliteTles: [
       [
         {
