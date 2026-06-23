@@ -157,15 +157,6 @@ export const buildRelativeTrajectoryPositions = (importCartesian3, track, coordi
   });
 };
 
-// 计算同步轨道高度差
-export function calculateHeightDiff(altKm, reserve = false) {
-  if (!Number.isFinite(altKm)) return null;
-  if (reserve) {
-    return Number((altKm + geoAltitudeKm).toFixed(2));
-  }
-  return Number((altKm - geoAltitudeKm).toFixed(2));
-}
-
 /**
  * 计算两个三维点的差向量
  * @param {{x:number,y:number,z:number}} endVec - 终点向量

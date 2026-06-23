@@ -24,6 +24,12 @@
       </div>
     </el-tooltip>
 
+    <el-tooltip content="变轨历程图" placement="top">
+      <div class="menu-tool-item" :class="{ active: satelliteOrbitChangeEchartsPlugin }" @click="handleToggleGeoMap('satelliteOrbitChangeEchartsPlugin')">
+        <img class="menu-tool-item-icon" src="/assets/menuBar/icon1.svg" />
+      </div>
+    </el-tooltip>
+
     <el-tooltip content="切换视角" placement="top">
       <div class="menu-tool-item" @click="handleToggleMapView()">
         <img class="menu-tool-item-icon" src="/assets/menuBar/icon7.svg" />
@@ -47,6 +53,7 @@ export default {
       "sceneControlPluginBase",
       "geoSatRelativeEchartsPlugin",
       "geoLngHeightEchartsPlugin",
+      "satelliteOrbitChangeEchartsPlugin",
     ]),
   },
   data() {
@@ -90,7 +97,6 @@ export default {
   position: fixed;
   bottom: 60px;
   right: 20px;
-  width: 200px;
   height: 30px;
   z-index: 9999;
   display: flex;

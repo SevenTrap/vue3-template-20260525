@@ -19,6 +19,9 @@
   <!-- 卫星经度与相对同步轨道高度插件 -->
   <GeoLngHeightEchartsPlugin></GeoLngHeightEchartsPlugin>
 
+  <!-- 变轨历程图 -->
+  <SatelliteOrbitChangeEchartsPlugin></SatelliteOrbitChangeEchartsPlugin>
+
   <!-- 场景控制插件 -->
   <SceneControlPlugin></SceneControlPlugin>
   <SceneControlPluginBase></SceneControlPluginBase>
@@ -41,14 +44,15 @@ import {
 } from "@/utils/mars3dGeoStyle";
 
 import MenuBarPlugin from "./components/MenuBarPlugin.vue";
-import MenuTools from "./components/MenuTools.vue";
 import SatelliteTreePlugin from "./components/SatelliteTreePlugin.vue";
+import HistoryCasePlugin from "./components/HistoryCasePlugin.vue";
+
+import MenuTools from "./components/MenuTools.vue";
 import GeoSatRelativeEchartsPlugin from "./components/GeoSatRelativeEchartsPlugin.vue";
 import GeoLngHeightEchartsPlugin from "./components/GeoLngHeightEchartsPlugin.vue";
-
 import SceneControlPlugin from "./components/SceneControlPlugin.vue";
 import SceneControlPluginBase from "./components/SceneControlPluginBase.vue";
-import HistoryCasePlugin from "./components/HistoryCasePlugin.vue";
+import SatelliteOrbitChangeEchartsPlugin from "./components/SatelliteOrbitChangeEchartsPlugin.vue";
 
 import { calculateSatellitePosition } from "./utils/satelliteCalculate.js";
 import { initMars3dLayers, satelliteSceneLayer } from "./utils/initMars3dLayers.js";
@@ -66,7 +70,7 @@ export default {
     SatelliteTreePlugin,
     GeoSatRelativeEchartsPlugin,
     GeoLngHeightEchartsPlugin,
-
+    SatelliteOrbitChangeEchartsPlugin,
     SceneControlPlugin,
     SceneControlPluginBase,
     HistoryCasePlugin,

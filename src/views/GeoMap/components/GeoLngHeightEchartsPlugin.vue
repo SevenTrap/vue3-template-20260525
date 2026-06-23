@@ -8,7 +8,8 @@
 import * as echarts from "echarts";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
-import { calculateHeightDiff, getCurrentTimeMsTrack, substringArrByTimeRange } from "../utils/satelliteCalculate";
+import { geoAltitudeKm } from "@/utils/constants";
+import { getCurrentTimeMsTrack, substringArrByTimeRange } from "../utils/satelliteCalculate";
 
 const geoMapStore = useGeoMapStore();
 
@@ -58,7 +59,7 @@ export default {
         const point = track[i];
         if (!point || point.timeMs < clockStartTime || point.timeMs > clockEndTime) continue;
 
-        const heightDiff = calculateHeightDiff(point.altKm);
+        const heightDiff = Number((point.altKm - geoAltitudeKm).toFixed(2));
         if (heightDiff === null) continue;
         result.push([point.lon, heightDiff, point]);
       }
@@ -81,8 +82,7 @@ export default {
         const seriesData = this.getTracksByTimeRange(track, clockStartTime, clockEndTime);
         // 获取当前时间对应的轨迹点
         const currentTrack = getCurrentTimeMsTrack(track, this.currentSceneTimeMs);
-        // 获取高度差
-        const heightDiff = calculateHeightDiff(currentTrack.altKm);
+        const heightDiff = Number((currentTrack.altKm - geoAltitudeKm).toFixed(2));
 
         echartsSeries.push({
           name: norad,

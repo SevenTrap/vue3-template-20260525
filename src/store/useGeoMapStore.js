@@ -25,6 +25,7 @@ export const useGeoMapStore = defineStore("geoMap", {
     satelliteTreePlugin: false, // 卫星插件
     geoSatRelativeEchartsPlugin: false, // GEO卫星相对距离与光照角插件
     geoLngHeightEchartsPlugin: false, // GEO卫星高度与经度插件
+    satelliteOrbitChangeEchartsPlugin: false, // 卫星变轨历程图
 
     satRelativeData: markRaw({
       startTime: "",
@@ -35,7 +36,7 @@ export const useGeoMapStore = defineStore("geoMap", {
       sunAngles: [], // threat->import 与 sun->import 的夹角（°），按时间索引对齐
     }),
 
-    sceneControlPlugin: true, // 场景控制插件
+    sceneControlPlugin: false, // 场景控制插件
     historyCasePlugin: false, // 历史案例插件
 
     // 基础场景的通用配置
