@@ -573,7 +573,12 @@ export function toggleSatelliteImageDirection(satelliteSceneLayer, showSatellite
 export const toggleSatelliteCoordinateAxis = (satelliteSceneLayer, showSatelliteCoordinateAxis) => {
   if (!satelliteSceneLayer) return;
 
-  const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+  const { importSatelliteNoradID, satelliteNoradIDs, satelliteTles } = geoMapStore.currentSceneConfig;
+
+  const index = satelliteNoradIDs.indexOf(importSatelliteNoradID);
+  if (index < 0) return;
+  const tles = satelliteTles[index];
+  if (!tles?.length) return;
 
   const bodyAxisGraphicIdsX = `${importSatelliteNoradID}BodyAxisX`;
   const bodyAxisGraphicIdsY = `${importSatelliteNoradID}BodyAxisY`;
@@ -629,8 +634,15 @@ export const toggleSatelliteCoordinateAxis = (satelliteSceneLayer, showSatellite
       id: config.id,
       name: config.id,
       positions: new Cesium.CallbackProperty((time) => {
-        // importGraphic 应该是你上下文中的全局/闭包变量
-        const position = importGraphic.positionShow; // 卫星当前实时世界坐标
+        const currentState = getSatelliteEciStateAtTime(importSatelliteNoradID, tles, time);
+
+        // const position = importGraphic.positionShow; // 卫星当前实时世界坐标
+        const position = {
+          x: currentState.posEcf.x * 1000,
+          y: currentState.posEcf.y * 1000,
+          z: currentState.posEcf.z * 1000,
+        };
+
         const model = importGraphic.model;
 
         if (!position || !model) return [];
@@ -685,8 +697,7 @@ export const toggleSatelliteCoordinateAxis = (satelliteSceneLayer, showSatellite
 export const toggleSatelliteOrbitCoordinateAxis = (satelliteSceneLayer, showSatelliteOrbitCoordinateAxis) => {
   if (!satelliteSceneLayer) return;
 
-  const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
-  const { satelliteNoradIDs, satelliteTles } = geoMapStore.currentSceneConfig;
+  const { importSatelliteNoradID, satelliteNoradIDs, satelliteTles } = geoMapStore.currentSceneConfig;
   const index = satelliteNoradIDs.indexOf(importSatelliteNoradID);
   if (index < 0) return;
   const tles = satelliteTles[index];
@@ -753,15 +764,16 @@ export const toggleSatelliteOrbitCoordinateAxis = (satelliteSceneLayer, showSate
       id: config.id,
       name: config.id,
       positions: new Cesium.CallbackProperty((time) => {
+        // 1. 获取当前卫星的实时 state 位置
         const currentState = getSatelliteEciStateAtTime(importSatelliteNoradID, tles, time);
         if (!currentState || !currentState.posEci || !currentState.velEci || !currentState.posEcf) return [];
 
-        // 3. 提取基础数据并将单位从千米(km)转换为米(m)
+        // 2. 提取基础数据并将单位从千米(km)转换为米(m)
         Cesium.Cartesian3.fromElements(currentState.posEci.x * 1000, currentState.posEci.y * 1000, currentState.posEci.z * 1000, scratchPosEci);
         Cesium.Cartesian3.fromElements(currentState.velEci.x * 1000, currentState.velEci.y * 1000, currentState.velEci.z * 1000, scratchVelEci);
         Cesium.Cartesian3.fromElements(currentState.posEcf.x * 1000, currentState.posEcf.y * 1000, currentState.posEcf.z * 1000, scratchPosEcf);
 
-        // 4. 在惯性系（ECI）中通过向量叉乘构建三轴标准单位向量
+        // 3. 在惯性系（ECI）中通过向量叉乘构建三轴标准单位向量
         // X 轴：沿速度方向 (In-track)
         Cesium.Cartesian3.normalize(scratchVelEci, scratchX);
 
@@ -772,26 +784,26 @@ export const toggleSatelliteOrbitCoordinateAxis = (satelliteSceneLayer, showSate
         // Y 轴：径向向内方向 (Radial) = Z 轴 × X 轴
         Cesium.Cartesian3.cross(scratchZ, scratchX, scratchY);
 
-        // 5. 根据当前轴的类型，提取对应的 ECI 方向向量
+        // 4. 根据当前轴的类型，提取对应的 ECI 方向向量
         let targetDirectionEci;
         if (config.type === "X") targetDirectionEci = scratchX;
         else if (config.type === "Y") targetDirectionEci = scratchY;
         else targetDirectionEci = scratchZ;
 
-        // 6. 核心步骤：因为 Mars3D 地图渲染使用的是地球固定系（ECEF），需要将 ECI 向量旋转到 ECEF
+        // 5. 核心步骤：因为 Mars3D 地图渲染使用的是地球固定系（ECEF），需要将 ECI 向量旋转到 ECEF
         const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(time, scratchIcrfToFixed);
         if (!icrfToFixed) return [];
         Cesium.Matrix3.multiplyByVector(icrfToFixed, targetDirectionEci, scratchDirectionEcef);
 
-        // 7. 计算线段终点：当前卫星的 ECEF 位置 + (ECEF方向 * 轴长)
+        // 6. 计算线段终点：当前卫星的 ECEF 位置 + (ECEF方向 * 轴长)
         Cesium.Cartesian3.multiplyByScalar(scratchDirectionEcef, 10_000_000, scratchOffset);
         Cesium.Cartesian3.add(scratchPosEcf, scratchOffset, scratchEndPosition);
 
-        // 返回 [卫星当前世界坐标, 轴向端点绝对坐标]
+        // 7. 返回 [卫星当前世界坐标, 轴向端点绝对坐标]
         return [Cesium.Cartesian3.clone(scratchPosEcf), Cesium.Cartesian3.clone(scratchEndPosition)];
       }, false),
       style: {
-        width: 4, // 建议 4 左右。原代码的 8 稍微有点过粗，可以根据你的视觉喜好调整
+        width: 4,
         opacity: 1,
         arcType: Cesium.ArcType.NONE,
         material: new Cesium.PolylineArrowMaterialProperty(Cesium.Color.fromCssColorString(config.color)),
