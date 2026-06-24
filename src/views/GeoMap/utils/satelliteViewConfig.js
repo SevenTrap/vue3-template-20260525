@@ -5,6 +5,9 @@ import { useGeoMapStore } from "@/store/useGeoMapStore";
 
 const geoMapStore = useGeoMapStore();
 let icrfListener = null; // 当前 ICRF postUpdate 监听函数
+let lastOffset = new mars3d.Cesium.Cartesian3();
+let isFirstFollow = true;
+let distanceChangedVal = 0.01;
 
 // 设置 ECEF 默认视角
 export function setDefaultPoleECEF(satelliteLayer, noradID) {
@@ -101,6 +104,7 @@ export const unlockCameraFromInertial = (viewer) => {
   if (icrfListener) {
     viewer.scene.postUpdate.removeEventListener(icrfListener);
     icrfListener = null;
+    isFirstFollow = true;
   }
   viewer.scene.camera.lookAtTransform(mars3d.Cesium.Matrix4.IDENTITY);
 };
@@ -156,10 +160,28 @@ const computeThreatViewOffset = (fixedToIcrf, posA_fixed, posB_fixed, scale) => 
  * @param {object} posA_fixed - 卫星的地固坐标
  * @returns {void}
  */
+
 const applyInertialFollowAtSatellite = (camera, icrfToFixed, posA_fixed) => {
   const transform = mars3d.Cesium.Matrix4.fromRotationTranslation(icrfToFixed, posA_fixed);
-  const offset = mars3d.Cesium.Cartesian3.clone(camera.position);
-  camera.lookAtTransform(transform, offset);
+  const currentOffset = mars3d.Cesium.Cartesian3.clone(camera.position);
+
+  if (isFirstFollow) {
+    mars3d.Cesium.Cartesian3.clone(currentOffset, lastOffset);
+    isFirstFollow = false;
+  }
+  const distanceChanged = mars3d.Cesium.Cartesian3.distance(currentOffset, lastOffset);
+
+  if (distanceChanged > distanceChangedVal) {
+    // 如果用户主动缩放/拖拽了，使用最新的 offset
+    mars3d.Cesium.Cartesian3.clone(currentOffset, lastOffset);
+    camera.lookAtTransform(transform, currentOffset);
+  } else {
+    // 2. 如果用户没有操作，使用上一次的 offset，避免每一帧因为浮点数误差导致 offset 微调产生抖动
+    camera.lookAtTransform(transform, lastOffset);
+  }
+
+  // const offset = mars3d.Cesium.Cartesian3.clone(camera.position);
+  // camera.lookAtTransform(transform, offset);
 };
 
 /**

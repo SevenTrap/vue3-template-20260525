@@ -127,9 +127,7 @@ export default {
           right: 12,
           top: 6,
           feature: {
-            dataZoom: {
-              yAxisIndex: "none",
-            },
+            dataZoom: {},
             restore: {},
             saveAsImage: {
               type: "png",

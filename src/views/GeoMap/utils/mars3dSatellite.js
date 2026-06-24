@@ -407,13 +407,24 @@ export function addSatelliteOrbitSceneECI(satelliteSceneLayer, satelliteTracks, 
       referenceFrame: mars3d.Cesium.ReferenceFrame.INERTIAL,
       model: {
         url: "/assets/gltf/weixin.gltf",
-        scale: 1,
+        scale: 10,
         opacity: 1,
-        minimumPixelSize: 90,
+        // minimumPixelSize: 90,
+        maximumScale: 3000000,
         mergeOrientation: false,
         heading: 0,
         pitch: 0,
         roll: 0,
+        // distanceDisplayCondition: true,
+        // distanceDisplayCondition_near: 0.5,
+        // distanceDisplayCondition_far: 100000_000,
+        scaleByDistance: new mars3d.Cesium.NearFarScalar(
+          30_000, // 近距离：5km (5000米)
+          100000000.0, // 近距离时的放大倍数：10倍
+          100000_000, // 远距离：100km (100000米)
+          1000.0, // 远距离时的放大倍数：1倍
+        ),
+        distanceDisplayCondition: new mars3d.Cesium.DistanceDisplayCondition(0.0, 100000_000),
       },
       label: {
         text: `${key}ECI`,
@@ -861,8 +872,8 @@ export const toggleSatelliteLocalGridSystem = (satelliteSceneLayer, showGrid) =>
   if (!showGrid) return;
 
   // 2. 局部网格参数配置 (单位：米)
-  const maxRange = 100_000; // 延伸到 100km
-  const step = 10_000; // 间隔 10km
+  const maxRange = 120_000; // 延伸到 100km
+  const step = 30_000; // 间隔 30km
 
   // 3. 基础坐标轴配置（双向绘制：从 -100km 到 +100km）
   const axisConfigs = [

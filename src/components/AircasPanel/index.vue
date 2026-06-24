@@ -253,7 +253,7 @@ export default {
       }
 
       .close-btn:hover {
-        background: var(--aircas-color-close-button-active-background);
+        background: var(--aircas-color-danger);
       }
     }
   }

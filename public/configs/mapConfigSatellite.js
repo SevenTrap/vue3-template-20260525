@@ -18,6 +18,14 @@ const MAP_CONFIG_Satellite = {
     highDynamicRange: false,
     showSkyAtmosphere: false,
     verticalExaggeration: 1, // 地形夸张倍率
+    contextOptions: {
+      webgl: {
+        alpha: true,
+        depth: true,
+        stencil: true,
+        antialias: true,
+      },
+    },
     globe: {
       showGroundAtmosphere: false,
       depthTestAgainstTerrain: false,
