@@ -254,9 +254,7 @@ export function getCurrentTimeMsTrack(track, currentTimeMs) {
   if (currentTimeMs > track[track.length - 1].timeMs) return track[track.length - 1];
 
   for (let i = 0; i < track.length; i++) {
-    if (track[i].timeMs >= currentTimeMs) {
-      return track[i];
-    }
+    if (track[i].timeMs >= currentTimeMs) return track[i];
   }
 }
 

@@ -2,10 +2,10 @@
   <aircas-panel
     v-show="satelliteOrbitChangeEchartsPlugin"
     title="变轨历程图"
-    width="900"
-    height="500"
+    width="1400"
+    height="670"
     top="120"
-    left="calc(50% - 450px)"
+    left="calc(50% - 700px)"
     @close="handlePanelClose"
   >
     <div class="echarts-container" ref="satelliteOrbitChangeChart"></div>
@@ -89,6 +89,8 @@ export default {
         const allDatePoint = [...commonDatePoint, ...satelliteEpochs].sort((a, b) => a - b);
 
         for (let i = 0; i < allDatePoint.length; i++) {
+          let symbolUrl = null;
+          let symbolSize = 15;
           const currentTimeMs = allDatePoint[i];
           const currentEpoch = pickSatByTime(satelliteEpochs, currentTimeMs);
           const satelliteClass = satelliteClasses.get(currentEpoch);
@@ -112,14 +114,22 @@ export default {
           if (currentTimeTrack.currentLon > maxLon) maxLon = currentTimeTrack.currentLon;
           if (currentTimeTrack.aHeightDiff < minHeight) minHeight = currentTimeTrack.aHeightDiff;
           if (currentTimeTrack.aHeightDiff > maxHeight) maxHeight = currentTimeTrack.aHeightDiff;
+          if (currentTimeTrack.changePoint) {
+            symbolUrl = "path://M512 108.7L634.3 373.5L928 401.3L710.3 589.7L761.7 883.3L512 737.5L262.3 883.3L313.7 589.7L96 401.3L389.7 373.5L512 108.7Z";
+            symbolSize = 25;
+          } else {
+            symbolUrl = "circle";
+          }
 
           const currentTimeSeries = {
             value: [currentTimeTrack.currentLon, currentTimeTrack.aHeightDiff, currentTimeTrack],
-            symbol: currentTimeTrack.changePoint ? "triangle" : "circle",
+            symbol: symbolUrl,
+            symbolSize: symbolSize,
             label: {
               show: currentTimeTrack.changePoint,
               color: "#ffffff",
               align: "center",
+              fontSize: 16,
               formatter: function (params) {
                 return `${params.data.value[2].noradID} \r\n ${params.data.value[2].timeShow} \r\n ${params.data.value[2].aHeightDiff} km`;
               },
@@ -127,7 +137,6 @@ export default {
             labelLine: {
               show: currentTimeTrack.changePoint,
               showAbove: true,
-              length2: 10,
               lineStyle: {
                 color: "#bbb",
               },
@@ -197,6 +206,7 @@ export default {
             restore: {},
             saveAsImage: {
               type: "png",
+              backgroundColor: "#1e1e1e",
               name: `${new Date().getTime()}-变轨历程图`,
             },
           },
@@ -204,7 +214,7 @@ export default {
         tooltip: {
           trigger: "axis",
           axisPointer: {
-            type: "cross",
+            type: "line",
             label: {
               backgroundColor: "#505765",
             },
@@ -218,7 +228,7 @@ export default {
             return result;
           },
         },
-        grid: [{ left: 50, right: 80, top: 40, bottom: 50 }],
+        grid: [{ left: 40, right: 40, top: 40, bottom: 50 }],
         dataZoom: [
           // x 轴：鼠标滚轮/拖拽缩放
           {
@@ -255,9 +265,11 @@ export default {
         ],
         xAxis: {
           type: "value",
-          name: "经度",
+          // name: "经度",
           min: minLon,
           max: maxLon,
+          // minInterval: 0.01,
+          // maxInterval: 10,
           nameLocation: "middle",
           nameGap: 30,
           nameTextStyle: {
@@ -266,7 +278,16 @@ export default {
             fontWeight: 400,
           },
           axisLabel: {
+            show: true,
             color: "#ffffff",
+            fontSize: 14,
+            fontWeight: 600,
+            formatter: (value) => {
+              if (Math.abs(value) === 180) return "";
+              if (Math.abs(value) === 0) return "0°";
+              let sign = value > 0 ? "E" : "W";
+              return Math.abs(value) + "° " + sign;
+            },
           },
           axisLine: {
             lineStyle: {},
@@ -274,18 +295,21 @@ export default {
         },
         yAxis: {
           type: "value",
-          name: "高度",
+          name: "高度/km",
+          nameTextStyle: {
+            fontSize: 14,
+            color: "#ffffff",
+            fontWeight: 600,
+          },
           min: minHeight,
           max: maxHeight,
-          nameLocation: "middle",
-          nameGap: 30,
-          nameTextStyle: {
+          // minInterval: 0.1,
+          // maxInterval: 10,
+          axisLabel: {
+            show: true,
             color: "#ffffff",
             fontSize: 14,
-            fontWeight: 400,
-          },
-          axisLabel: {
-            color: "#ffffff",
+            fontWeight: 600,
           },
           axisLine: {
             lineStyle: {},
@@ -336,7 +360,7 @@ export default {
 
 <style lang="scss" scoped>
 .echarts-container {
-  width: 880px;
-  height: 442px;
+  width: 1380px;
+  height: 610px;
 }
 </style>

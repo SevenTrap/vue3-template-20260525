@@ -1,5 +1,5 @@
 <template>
-  <aircas-panel v-show="geoLngHeightEchartsPlugin" :title="pluginTitle" width="900" height="500" top="120" left="calc(50% - 450px)" @close="handlePanelClose">
+  <aircas-panel v-show="geoLngHeightEchartsPlugin" :title="pluginTitle" width="1400" height="670" top="120" left="calc(50% - 700px)" @close="handlePanelClose">
     <div class="geo-sat-relative-echarts" ref="lngHeightEchartsContainer"></div>
   </aircas-panel>
 </template>
@@ -131,6 +131,7 @@ export default {
             restore: {},
             saveAsImage: {
               type: "png",
+              backgroundColor: "#1e1e1e",
               name: `经高图_${this.currentSceneConfig.threatSatelliteNoradID || "threat"}_${this.currentSceneConfig.importSatelliteNoradID || "import"}`,
             },
           },
@@ -138,7 +139,8 @@ export default {
         tooltip: {
           trigger: "axis",
           axisPointer: {
-            type: "cross",
+            // type: "cross",
+            type: "line",
             label: {
               backgroundColor: "#505765",
             },
@@ -149,7 +151,7 @@ export default {
             return `时间：${params[0].value[2].time}<br/> 经度：${params[0].value[0].toFixed(2)}°<br/> 高度：${params[0].value[1].toFixed(2)} km`;
           },
         },
-        grid: [{ left: 50, right: 80, top: 40, bottom: 50 }],
+        grid: [{ left: 40, right: 40, top: 40, bottom: 50 }],
         dataZoom: [
           // x 轴：鼠标滚轮/拖拽缩放
           {
@@ -186,11 +188,24 @@ export default {
         ],
         xAxis: {
           type: "value",
-          name: "经度/°",
+          // name: "经度/°",
+          name: "",
+          nameGap: 5,
+          // nameRotate: -90,
+          nameLocation: "middle",
+          nameTextStyle: {
+            fontSize: 14,
+            fontWeight: 600,
+            color: "#fff",
+          },
+          position: "bottom",
           scale: true,
+          minInterval: 0.01,
+          maxInterval: 10,
           axisLine: {
             show: true,
             lineStyle: {
+              // type: "dashed",
               color: "#ffffff",
               width: 1,
             },
@@ -211,13 +226,18 @@ export default {
               if (Math.abs(value) === 180) return "";
               if (Math.abs(value) === 0) return "0°";
               let sign = value > 0 ? "E" : "W";
-              return Math.abs(value) + "°" + sign;
+              return Math.abs(value) + "° " + sign;
             },
           },
         },
         yAxis: {
           type: "value",
-          name: "相对高度/km",
+          name: "高度/km",
+          nameTextStyle: {
+            fontSize: 14,
+            color: "#ffffff",
+            fontWeight: 600,
+          },
           scale: true,
           axisLine: {
             show: true,
@@ -236,6 +256,8 @@ export default {
           axisLabel: {
             show: true,
             color: "#ffffff",
+            fontSize: 14,
+            fontWeight: 600,
           },
         },
         series: echartsSeries,
@@ -259,7 +281,7 @@ export default {
 
 <style lang="scss" scoped>
 .geo-sat-relative-echarts {
-  width: 880px;
-  height: 442px;
+  width: 1380px;
+  height: 610px;
 }
 </style>

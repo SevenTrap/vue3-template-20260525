@@ -46,15 +46,7 @@ export function setSouthPoleSideECEF(satelliteLayer, noradID) {
   const graphic = satelliteLayer.getGraphicById(`${noradID}ECEF`);
   if (!graphic) return;
 
-  globalViewer.flyToGraphic(graphic, {
-    scale: 0.8,
-    duration: 1.5,
-    heading: 0,
-    pitch: 89,
-    roll: 0,
-  });
-
-  globalViewer.trackedEntity = graphic;
+  globalViewer.flyToGraphic([graphic]);
 }
 
 // 设置 ECEF 恒星视角
@@ -70,8 +62,6 @@ export function setStarPoleECEF(satelliteLayer, noradID) {
     pitch: -89,
     roll: 0,
   });
-
-  globalViewer.trackedEntity = graphic;
 }
 
 // 设置 ECI 默认视角

@@ -1,5 +1,13 @@
 <template>
-  <aircas-panel v-show="geoSatRelativeEchartsPlugin" :title="pluginTitle" width="900" height="500" top="120" left="calc(50% - 450px)" @close="handlePanelClose">
+  <aircas-panel
+    v-show="geoSatRelativeEchartsPlugin"
+    :title="pluginTitle"
+    width="1400"
+    height="670"
+    top="120"
+    left="calc(50% - 700px)"
+    @close="handlePanelClose"
+  >
     <!-- <div class="geo-sat-relative-echarts__toolbar">
       <span class="geo-sat-relative-echarts__label">距离阈值(km)</span>
       <el-input-number v-model="distanceThreshold" :min="0" :step="10" size="small" controls-position="right" @change="handleThresholdChange" />
@@ -111,7 +119,8 @@ export default {
         tooltip: {
           trigger: "axis",
           axisPointer: {
-            type: "cross",
+            // type: "cross",
+            type: "line",
             label: {
               backgroundColor: "#505765",
             },
@@ -158,13 +167,24 @@ export default {
             axisLabel: {
               show: true,
               color: "#ffffff",
+              fontSize: 14,
+              fontWeight: 600,
+              formatter: (value) => {
+                if (!value) return "";
+                return dayjs(value).format("MM-DD HH:mm");
+              },
             },
           },
         ],
         yAxis: [
           {
             type: "value",
-            name: "距离 / km",
+            name: "距离/km",
+            nameTextStyle: {
+              fontSize: 14,
+              color: "#ffffff",
+              fontWeight: 600,
+            },
             position: "left",
             scale: true,
             axisLine: {
@@ -184,11 +204,18 @@ export default {
             axisLabel: {
               show: true,
               color: "#ffffff",
+              fontSize: 14,
+              fontWeight: 600,
             },
           },
           {
             type: "value",
-            name: "太阳光照角 / °",
+            name: "太阳光照角/°",
+            nameTextStyle: {
+              fontSize: 14,
+              color: "#ffffff",
+              fontWeight: 600,
+            },
             position: "right",
             min: 0,
             max: 180,
@@ -209,10 +236,28 @@ export default {
             axisLabel: {
               show: true,
               color: "#ffffff",
+              fontSize: 14,
+              fontWeight: 600,
             },
           },
         ],
         series: [
+          {
+            name: "命中阈值",
+            type: "line",
+            markArea: {
+              silent: true,
+              itemStyle: {
+                color: "#760031fe",
+              },
+              label: {
+                show: true,
+                color: "#ffffff",
+                fontWeight: 600,
+              },
+              data: this.formatMarkAreaData(riskRanges),
+            },
+          },
           {
             name: "两星距离",
             type: "line",
@@ -221,13 +266,6 @@ export default {
             itemStyle: { color: DISTANCE_COLOR },
             lineStyle: { color: DISTANCE_COLOR, width: 1.5 },
             data: distanceData,
-            markArea: {
-              silent: true,
-              itemStyle: {
-                color: "rgba(250, 173, 20, 0.18)",
-              },
-              data: this.formatMarkAreaData(riskRanges),
-            },
           },
           {
             name: "太阳光照角",
@@ -311,7 +349,7 @@ export default {
 
 <style lang="scss" scoped>
 .geo-sat-relative-echarts {
-  width: 880px;
-  height: 440px;
+  width: 1380px;
+  height: 610px;
 }
 </style>

@@ -14,7 +14,7 @@ export function initViewer(el, mapConfig = {}) {
     globalViewer = new mars3d.Map(el, MAP_CONFIG);
   }
 
-  skyShow();
+  // skyShow();
 
   return globalViewer;
 }
