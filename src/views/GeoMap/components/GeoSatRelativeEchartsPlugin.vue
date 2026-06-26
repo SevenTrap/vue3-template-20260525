@@ -1,19 +1,31 @@
 <template>
   <aircas-panel
     v-show="geoSatRelativeEchartsPlugin"
-    :title="pluginTitle"
+    title="距离与太阳光照角分析插件"
     width="1400"
     height="670"
     top="120"
     left="calc(50% - 700px)"
     @close="handlePanelClose"
   >
-    <!-- <div class="geo-sat-relative-echarts__toolbar">
-      <span class="geo-sat-relative-echarts__label">距离阈值(km)</span>
-      <el-input-number v-model="distanceThreshold" :min="0" :step="10" size="small" controls-position="right" @change="handleThresholdChange" />
-      <span class="geo-sat-relative-echarts__label">光照角阈值(°)</span>
-      <el-input-number v-model="sunAngleThreshold" :min="0" :max="180" :step="5" size="small" controls-position="right" @change="handleThresholdChange" />
-    </div> -->
+    <div class="echarts-header">
+      <div class="satellite-configs">
+        <label>卫星：</label>
+      </div>
+
+      <div class="echarts-configs">
+        <div class="config-item">
+          <label>距离阈值：</label>
+          <el-input-number v-model="distanceThreshold" :min="0" :max="10000" size="small" />
+        </div>
+
+        <div class="config-item">
+          <label>角度阈值：</label>
+          <el-input-number v-model="sunAngleThreshold" :min="0" :max="180" size="small" />
+        </div>
+      </div>
+    </div>
+
     <div class="geo-sat-relative-echarts" ref="chartContainerSunAngle"></div>
   </aircas-panel>
 </template>
@@ -46,11 +58,6 @@ export default {
       "clockStartTime",
       "clockEndTime",
     ]),
-
-    pluginTitle() {
-      if (!this.currentSceneConfig.threatSatelliteName || !this.currentSceneConfig.importSatelliteName) return "GEO相对距离与光照角";
-      return `${this.currentSceneConfig.threatSatelliteName} vs ${this.currentSceneConfig.importSatelliteName} - 相对距离与光照角`;
-    },
   },
   watch: {
     geoSatRelativeEchartsPlugin(visible) {
@@ -348,8 +355,32 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.echarts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #ffffff;
+  font-size: 14px;
+
+  .satellite-configs {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .echarts-configs {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    .config-item {
+      margin-right: 20px;
+    }
+  }
+}
+
 .geo-sat-relative-echarts {
   width: 1380px;
-  height: 610px;
+  height: 585px;
 }
 </style>

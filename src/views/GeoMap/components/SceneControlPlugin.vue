@@ -201,6 +201,7 @@ import {
   lockCameraToInertialSouthPoleSide,
   lockCameraToInertialSatellite,
   lockCameraToInertialSatelliteThreat,
+  removeTickListener,
 } from "../utils/satelliteViewConfig.js";
 
 import { ECEF_PRESETS, ECI_PRESETS } from "../configs/index.js";
@@ -374,10 +375,11 @@ export default {
 
     handleApplyView(presetId) {
       this.viewMode = presetId;
-      const { importSatelliteNoradID } = this.currentSceneConfig;
+      removeTickListener();
+      const { importSatelliteNoradID, threatSatelliteNoradID } = this.currentSceneConfig;
 
       if (this.coordinate === "ECI") {
-        this.applyEciView(presetId, importSatelliteNoradID); // 应用 ECI 视角
+        this.applyEciView(presetId, importSatelliteNoradID, threatSatelliteNoradID); // 应用 ECI 视角
       } else {
         this.applyEcefView(presetId, importSatelliteNoradID); // 应用 ECEF 视角
       }
@@ -417,32 +419,37 @@ export default {
     },
 
     // 应用 ECI 视角预设
-    applyEciView(presetId, importSatelliteNoradID) {
+    applyEciView(presetId, importSatelliteNoradID, threatSatelliteNoradID) {
       globalViewer.trackedEntity = null;
       globalViewer.clock.shouldAnimate = false;
       unlockCameraFromInertial(globalViewer);
 
       switch (presetId) {
+        // 默认视角
         case "default":
           lockCameraToInertial(globalViewer);
           setDefaultPoleECI(satelliteSceneLayer, importSatelliteNoradID);
           break;
 
+        // 南极俯视
         case "southPoleFront":
           lockCameraToInertial(globalViewer);
           setSouthPoleFrontECI(satelliteSceneLayer);
           break;
 
+        // 南极视角
         case "southPoleSide":
-          lockCameraToInertialSouthPoleSide(globalViewer);
+          lockCameraToInertialSouthPoleSide(satelliteSceneLayer, importSatelliteNoradID);
           break;
 
+        // 从星视角
         case "importSatellite":
-          lockCameraToInertialSatellite(globalViewer);
+          lockCameraToInertialSatellite(satelliteSceneLayer, importSatelliteNoradID);
           break;
 
+        // 第一视角
         case "firstSatPole":
-          lockCameraToInertialSatelliteThreat(globalViewer);
+          lockCameraToInertialSatelliteThreat(satelliteSceneLayer, importSatelliteNoradID, threatSatelliteNoradID);
           break;
 
         default:

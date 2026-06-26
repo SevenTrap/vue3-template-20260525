@@ -3,8 +3,10 @@ import { globalViewer } from "@/utils/initEarth";
 import { satelliteSceneLayer } from "./initMars3dLayers";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 
+const Cesium = mars3d.Cesium;
 const geoMapStore = useGeoMapStore();
 let icrfListener = null; // 当前 ICRF postUpdate 监听函数
+let tickListener = null;
 let lastOffset = new mars3d.Cesium.Cartesian3();
 let isFirstFollow = true;
 let distanceChangedVal = 0.01;
@@ -39,14 +41,20 @@ export function setSouthPoleFrontECEF(satelliteLayer) {
   });
 }
 
-// 设置 ECEF 南极侧视
+// 设置 ECEF 南极视角
 export function setSouthPoleSideECEF(satelliteLayer, noradID) {
   if (!satelliteLayer || !noradID) return;
 
   const graphic = satelliteLayer.getGraphicById(`${noradID}ECEF`);
   if (!graphic) return;
+  globalViewer.flyToGraphic(graphic, {
+    duration: 1.5,
+    heading: 0,
+    pitch: 0,
+    roll: 0,
+  });
 
-  globalViewer.flyToGraphic([graphic]);
+  globalViewer.trackedEntity = null;
 }
 
 // 设置 ECEF 恒星视角
@@ -62,6 +70,8 @@ export function setStarPoleECEF(satelliteLayer, noradID) {
     pitch: -89,
     roll: 0,
   });
+
+  globalViewer.trackedEntity = graphic;
 }
 
 // 设置 ECI 默认视角
@@ -240,25 +250,39 @@ const icrfPostUpdateSouthPoleSide = (scene, time) => {
  * @param {object} viewer - mars3d 的 globalViewer
  * @returns {void}
  */
-export const lockCameraToInertialSouthPoleSide = (viewer) => {
-  if (!viewer || icrfListener) return;
+export const lockCameraToInertialSouthPoleSide = (satelliteLayer, noradID) => {
+  if (!satelliteLayer || !noradID) return;
 
-  const time = viewer.clock.currentTime;
-  const icrfToFixed = mars3d.Cesium.Transforms.computeIcrfToFixedMatrix(time);
-  const fixedToIcrf = mars3d.Cesium.Transforms.computeFixedToIcrfMatrix(time);
-  if (!mars3d.Cesium.defined(icrfToFixed) || !mars3d.Cesium.defined(fixedToIcrf)) return;
+  const graphic = satelliteLayer.getGraphicById(`${noradID}ECI`);
+  if (!graphic) return;
+  globalViewer.flyToGraphic(graphic, {
+    duration: 1.5,
+    heading: 0,
+    pitch: 0,
+    roll: 0,
+  });
 
-  const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
-  const satelliteGraphic = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
-  if (!satelliteGraphic?.positionShow) return;
-
-  const initialOffset = computeSouthPoleSideOffset(fixedToIcrf, satelliteGraphic.positionShow);
-  if (!initialOffset) return;
-
-  initInertialViewAtSatellite(viewer, icrfToFixed, satelliteGraphic.positionShow, initialOffset);
-  icrfListener = icrfPostUpdateSouthPoleSide;
-  viewer.scene.postUpdate.addEventListener(icrfListener);
+  globalViewer.trackedEntity = null;
 };
+// export const lockCameraToInertialSouthPoleSide = (viewer) => {
+//   if (!viewer || icrfListener) return;
+
+//   const time = viewer.clock.currentTime;
+//   const icrfToFixed = mars3d.Cesium.Transforms.computeIcrfToFixedMatrix(time);
+//   const fixedToIcrf = mars3d.Cesium.Transforms.computeFixedToIcrfMatrix(time);
+//   if (!mars3d.Cesium.defined(icrfToFixed) || !mars3d.Cesium.defined(fixedToIcrf)) return;
+
+//   const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+//   const satelliteGraphic = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+//   if (!satelliteGraphic?.positionShow) return;
+
+//   const initialOffset = computeSouthPoleSideOffset(fixedToIcrf, satelliteGraphic.positionShow);
+//   if (!initialOffset) return;
+
+//   initInertialViewAtSatellite(viewer, icrfToFixed, satelliteGraphic.positionShow, initialOffset);
+//   icrfListener = icrfPostUpdateSouthPoleSide;
+//   viewer.scene.postUpdate.addEventListener(icrfListener);
+// };
 
 /**
  * 从星视角 postUpdate：每帧更新 transform，保留用户拖动/缩放偏移
@@ -284,25 +308,40 @@ const icrfPostUpdateSatellite = (scene, time) => {
  * @param {object} viewer - mars3d 的 globalViewer
  * @returns {void}
  */
-export const lockCameraToInertialSatellite = (viewer) => {
-  if (!viewer || icrfListener) return;
+export const lockCameraToInertialSatellite = (satelliteLayer, noradID) => {
+  if (!satelliteLayer || !noradID) return;
 
-  const time = viewer.clock.currentTime;
-  const icrfToFixed = mars3d.Cesium.Transforms.computeIcrfToFixedMatrix(time);
-  const fixedToIcrf = mars3d.Cesium.Transforms.computeFixedToIcrfMatrix(time);
-  if (!mars3d.Cesium.defined(icrfToFixed) || !mars3d.Cesium.defined(fixedToIcrf)) return;
+  const graphic = satelliteLayer.getGraphicById(`${noradID}ECI`);
+  if (!graphic) return;
 
-  const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
-  const satelliteGraphic = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
-  if (!satelliteGraphic?.positionShow) return;
+  globalViewer.flyToGraphic(graphic, {
+    duration: 1.5,
+    heading: 0,
+    pitch: -89,
+    roll: 0,
+  });
 
-  const initialOffset = computeSatelliteViewOffset(fixedToIcrf, satelliteGraphic.positionShow, 0.3);
-  if (!initialOffset) return;
-
-  initInertialViewAtSatellite(viewer, icrfToFixed, satelliteGraphic.positionShow, initialOffset);
-  icrfListener = icrfPostUpdateSatellite;
-  viewer.scene.postUpdate.addEventListener(icrfListener);
+  globalViewer.trackedEntity = graphic;
 };
+// export const lockCameraToInertialSatellite = (viewer) => {
+//   if (!viewer || icrfListener) return;
+
+//   const time = viewer.clock.currentTime;
+//   const icrfToFixed = mars3d.Cesium.Transforms.computeIcrfToFixedMatrix(time);
+//   const fixedToIcrf = mars3d.Cesium.Transforms.computeFixedToIcrfMatrix(time);
+//   if (!mars3d.Cesium.defined(icrfToFixed) || !mars3d.Cesium.defined(fixedToIcrf)) return;
+
+//   const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+//   const satelliteGraphic = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+//   if (!satelliteGraphic?.positionShow) return;
+
+//   const initialOffset = computeSatelliteViewOffset(fixedToIcrf, satelliteGraphic.positionShow, 0.3);
+//   if (!initialOffset) return;
+
+//   initInertialViewAtSatellite(viewer, icrfToFixed, satelliteGraphic.positionShow, initialOffset);
+//   icrfListener = icrfPostUpdateSatellite;
+//   viewer.scene.postUpdate.addEventListener(icrfListener);
+// };
 
 /**
  * 第一视角 postUpdate：每帧更新 transform，保留用户拖动/缩放偏移
@@ -328,24 +367,58 @@ const icrfPostUpdateSatelliteThreat = (scene, time) => {
  * @param {object} viewer - mars3d 的 globalViewer
  * @returns {void}
  */
-export const lockCameraToInertialSatelliteThreat = (viewer) => {
-  if (!viewer || icrfListener) return;
+export const lockCameraToInertialSatelliteThreat = (satelliteSceneLayer, importSatelliteNoradID, threatSatelliteNoradID) => {
+  if (!satelliteSceneLayer || !importSatelliteNoradID) return;
 
-  const time = viewer.clock.currentTime;
-  const icrfToFixed = mars3d.Cesium.Transforms.computeIcrfToFixedMatrix(time);
-  const fixedToIcrf = mars3d.Cesium.Transforms.computeFixedToIcrfMatrix(time);
-  if (!mars3d.Cesium.defined(icrfToFixed) || !mars3d.Cesium.defined(fixedToIcrf)) return;
+  removeTickListener();
 
-  const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
-  const threatSatelliteNoradID = geoMapStore.currentSceneConfig.threatSatelliteNoradID;
-  const importGraphic = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
-  const threatGraphic = satelliteSceneLayer.getGraphicById(`${threatSatelliteNoradID}ECI`);
-  if (!importGraphic?.positionShow || !threatGraphic?.positionShow) return;
+  tickListener = (clock) => {
+    const importGraphic = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+    const threatGraphic = satelliteSceneLayer.getGraphicById(`${threatSatelliteNoradID}ECI`);
+    if (!importGraphic || !threatGraphic) return;
 
-  const initialOffset = computeThreatViewOffset(fixedToIcrf, importGraphic.positionShow, threatGraphic.positionShow, 0.3);
-  if (!initialOffset) return;
+    const importPosition = importGraphic.positionShow;
+    const threatPosition = threatGraphic.positionShow;
 
-  initInertialViewAtSatellite(viewer, icrfToFixed, importGraphic.positionShow, initialOffset);
-  icrfListener = icrfPostUpdateSatelliteThreat;
-  viewer.scene.postUpdate.addEventListener(icrfListener);
+    // 4. 使用 camera.setView 直接精确控制相机的位置和视线
+    globalViewer.camera.setView({
+      destination: threatPosition, // 相机位置锁定在 B 星
+      orientation: {
+        // 视线方向：从 B 指向 A
+        direction: Cesium.Cartesian3.normalize(Cesium.Cartesian3.subtract(importPosition, threatPosition, new Cesium.Cartesian3()), new Cesium.Cartesian3()),
+        // 相机上方朝向：以 B 星顶部的天顶方向（地心指向B）作为 Up 向量
+        up: Cesium.Cartesian3.normalize(importPosition, new Cesium.Cartesian3()),
+      },
+    });
+  };
+
+  globalViewer.clock.onTick.addEventListener(tickListener);
 };
+
+export function removeTickListener() {
+  if (tickListener) {
+    globalViewer.clock.onTick.removeEventListener(tickListener);
+    tickListener = null;
+  }
+}
+// export const lockCameraToInertialSatelliteThreat = (viewer) => {
+//   if (!viewer || icrfListener) return;
+
+//   const time = viewer.clock.currentTime;
+//   const icrfToFixed = mars3d.Cesium.Transforms.computeIcrfToFixedMatrix(time);
+//   const fixedToIcrf = mars3d.Cesium.Transforms.computeFixedToIcrfMatrix(time);
+//   if (!mars3d.Cesium.defined(icrfToFixed) || !mars3d.Cesium.defined(fixedToIcrf)) return;
+
+//   const importSatelliteNoradID = geoMapStore.currentSceneConfig.importSatelliteNoradID;
+//   const threatSatelliteNoradID = geoMapStore.currentSceneConfig.threatSatelliteNoradID;
+//   const importGraphic = satelliteSceneLayer.getGraphicById(`${importSatelliteNoradID}ECI`);
+//   const threatGraphic = satelliteSceneLayer.getGraphicById(`${threatSatelliteNoradID}ECI`);
+//   if (!importGraphic?.positionShow || !threatGraphic?.positionShow) return;
+
+//   const initialOffset = computeThreatViewOffset(fixedToIcrf, importGraphic.positionShow, threatGraphic.positionShow, 0.3);
+//   if (!initialOffset) return;
+
+//   initInertialViewAtSatellite(viewer, icrfToFixed, importGraphic.positionShow, initialOffset);
+//   icrfListener = icrfPostUpdateSatelliteThreat;
+//   viewer.scene.postUpdate.addEventListener(icrfListener);
+// };

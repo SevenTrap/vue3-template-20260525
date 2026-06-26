@@ -9,14 +9,14 @@ export const BASE_VIEW_PRESETS = [
 export const ECEF_PRESETS = [
   { id: "default", label: "默认视角" },
   { id: "southPoleFront", label: "南极俯视" },
-  { id: "southPoleSide", label: "南极侧视" },
+  { id: "southPoleSide", label: "南极视角" },
   { id: "starPole", label: "恒星视角" },
 ];
 
 export const ECI_PRESETS = [
   { id: "default", label: "默认视角" },
   { id: "southPoleFront", label: "南极俯视" },
-  { id: "southPoleSide", label: "南极侧视" },
+  { id: "southPoleSide", label: "南极视角" },
   { id: "importSatellite", label: "从星固定" },
   { id: "firstSatPole", label: "第一视角" },
 ];

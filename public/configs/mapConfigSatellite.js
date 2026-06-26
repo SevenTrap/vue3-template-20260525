@@ -33,7 +33,9 @@ const MAP_CONFIG_Satellite = {
       enableLighting: true,
     },
     cameraController: {
-      zoomFactor: 1.0,
+      zoomFactor: 0.1,
+      inertiaSpin: 0.1,
+      inertiaZoom: 0.2,
       minimumZoomDistance: 1,
       maximumZoomDistance: 200_000_000,
       enableRotate: true,
