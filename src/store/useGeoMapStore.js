@@ -23,6 +23,7 @@ export const useGeoMapStore = defineStore("geoMap", {
     satelliteModels: markRaw(new Map()), // NORAD -> SatelliteClass 实例
 
     satelliteTreePlugin: false, // 卫星插件
+    satelliteSummaryChartPlugin: false, // 卫星总结图插件
     geoSatRelativeEchartsPlugin: false, // GEO卫星相对距离与光照角插件
     geoLngHeightEchartsPlugin: false, // GEO卫星高度与经度插件
     satelliteOrbitChangeEchartsPlugin: false, // 卫星变轨历程图

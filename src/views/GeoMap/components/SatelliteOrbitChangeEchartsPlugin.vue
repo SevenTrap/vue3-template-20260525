@@ -30,7 +30,9 @@ let startOffset = null;
 export default {
   name: "SatelliteOrbitChangeEchartsPlugin",
   data() {
-    return {};
+    return {
+      allSatelliteData: [],
+    };
   },
 
   computed: {
@@ -43,6 +45,7 @@ export default {
 
       this.$nextTick(() => {
         this.ensureChartReady();
+        this.initChartData();
         this.initEcharts();
       });
     },
@@ -59,70 +62,92 @@ export default {
       return Math.round(item * -0.0128 * 100) / 100;
     },
 
-    initEcharts() {
-      if (!this.chartInstance) return;
-
+    initChartData() {
       const { satelliteNoradIDs, satelliteTles, startTime, endTime } = this.currentSceneConfig;
       const startDateMs = dayjs(startTime).hour(0).minute(0).second(0).millisecond(0).valueOf();
       const endDateMs = dayjs(endTime).hour(23).minute(59).second(59).millisecond(999).valueOf();
       const commonDatePoint = [];
       const allSatelliteData = [];
-      const allSatelliteSeriesData = [];
 
       for (let i = startDateMs; i <= endDateMs; i += 1000 * 60 * 60 * 24) {
         const currentDate12 = dayjs(i).hour(12).minute(0).second(0).millisecond(0).valueOf();
         commonDatePoint.push(currentDate12);
       }
 
-      let minLon = 999;
-      let maxLon = -999;
-      let minHeight = 9999;
-      let maxHeight = -9999;
-
       for (let i = 0; i < satelliteNoradIDs.length; i++) {
-        let startLon = null;
         const currentSatelliteData = [];
-        const currentSatelliteSeriesData = [];
         const satelliteNoradID = satelliteNoradIDs[i];
         const currentSatelliteTles = satelliteTles[i];
         const { satelliteEpochs, satelliteClasses } = buildSatelliteClassEpochMap(satelliteNoradID, currentSatelliteTles);
         const allDatePoint = [...commonDatePoint, ...satelliteEpochs].sort((a, b) => a - b);
 
         for (let i = 0; i < allDatePoint.length; i++) {
-          let symbolUrl = null;
-          let symbolSize = 15;
           const currentTimeMs = allDatePoint[i];
           const currentEpoch = pickSatByTime(satelliteEpochs, currentTimeMs);
           const satelliteClass = satelliteClasses.get(currentEpoch);
-          const aHeightDiff = Number((satelliteClass.a - geoAltitudeKm - earthRadiusKm).toFixed(2));
+          const aHeightDiff = Number(satelliteClass.a - geoAltitudeKm - earthRadiusKm);
           const degOneDay = this.formatHeightToDeg(aHeightDiff);
           const currentTimeTrack = satelliteClass.getState(new Date(currentTimeMs));
           const timeShow = dayjs(currentTimeMs).format("MM-DD HH:mm");
+
           currentTimeTrack.timeShow = timeShow;
           currentTimeTrack.a = satelliteClass.a;
           currentTimeTrack.aHeightDiff = aHeightDiff;
+          currentTimeTrack.currentHeightDiff = currentTimeTrack.altKm - geoAltitudeKm;
           currentTimeTrack.changePoint = String(currentTimeMs).length === 13 ? false : true;
+          currentTimeTrack.degOneDay = degOneDay;
+          currentTimeTrack.currentLon = currentTimeTrack.lon;
 
-          if (i === 0) {
-            currentTimeTrack.currentLon = currentTimeTrack.lon;
-          } else {
-            let curDegByTime = (degOneDay * (currentTimeMs - allDatePoint[i - 1])) / (24 * 60 * 60 * 1000);
-            currentTimeTrack.currentLon = currentSatelliteData[i - 1].currentLon + curDegByTime;
-          }
+          currentSatelliteData.push(currentTimeTrack);
+        }
+
+        allSatelliteData.push(currentSatelliteData);
+
+        this.allSatelliteData = allSatelliteData;
+      }
+    },
+
+    initEcharts() {
+      if (!this.chartInstance) return;
+      const allSatelliteData = this.allSatelliteData;
+
+      if (allSatelliteData.length === 0) {
+        this.chartInstance.clear();
+        return;
+      }
+
+      const satelliteNoradIDs = this.currentSceneConfig.satelliteNoradIDs;
+      const allSatelliteSeriesData = [];
+
+      let minLon = 999;
+      let maxLon = -999;
+      let minHeight = 9999;
+      let maxHeight = -9999;
+
+      for (let si = 0; si < allSatelliteData.length; si++) {
+        const currentSatelliteSeriesData = [];
+        const currentSatelliteData = allSatelliteData[si];
+
+        for (let di = 1; di < currentSatelliteData.length; di++) {
+          let symbolUrl = null;
+          let symbolSize = null;
+          const currentTimeTrack = currentSatelliteData[di];
 
           if (currentTimeTrack.currentLon < minLon) minLon = currentTimeTrack.currentLon;
           if (currentTimeTrack.currentLon > maxLon) maxLon = currentTimeTrack.currentLon;
-          if (currentTimeTrack.aHeightDiff < minHeight) minHeight = currentTimeTrack.aHeightDiff;
-          if (currentTimeTrack.aHeightDiff > maxHeight) maxHeight = currentTimeTrack.aHeightDiff;
+          if (currentTimeTrack.currentHeightDiff < minHeight) minHeight = currentTimeTrack.currentHeightDiff;
+          if (currentTimeTrack.currentHeightDiff > maxHeight) maxHeight = currentTimeTrack.currentHeightDiff;
+
           if (currentTimeTrack.changePoint) {
             symbolUrl = "path://M512 108.7L634.3 373.5L928 401.3L710.3 589.7L761.7 883.3L512 737.5L262.3 883.3L313.7 589.7L96 401.3L389.7 373.5L512 108.7Z";
             symbolSize = 25;
           } else {
             symbolUrl = "circle";
+            symbolSize = 15;
           }
 
           const currentTimeSeries = {
-            value: [currentTimeTrack.currentLon, currentTimeTrack.aHeightDiff, currentTimeTrack],
+            value: [currentTimeTrack.currentLon, currentTimeTrack.currentHeightDiff, currentTimeTrack],
             symbol: symbolUrl,
             symbolSize: symbolSize,
             label: {
@@ -130,8 +155,10 @@ export default {
               color: "#ffffff",
               align: "center",
               fontSize: 16,
+              fontWeight: 600,
+              offset: di % 2 === 0 ? [0, -60] : [0, 60],
               formatter: function (params) {
-                return `${params.data.value[2].noradID} \r\n ${params.data.value[2].timeShow} \r\n ${params.data.value[2].aHeightDiff} km`;
+                return `${params.data.value[2].noradID} \r\n ${params.data.value[2].timeShow} \r\n ${params.data.value[2].currentHeightDiff.toFixed(2)} km`;
               },
             },
             labelLine: {
@@ -142,17 +169,17 @@ export default {
               },
             },
           };
-          currentSatelliteData.push(currentTimeTrack);
+
           currentSatelliteSeriesData.push(currentTimeSeries);
         }
 
         const seriesData = {
-          name: satelliteNoradID,
+          name: currentSatelliteData[0].noradID,
           type: "line",
           showSymbol: true,
           symbolSize: 10,
           labelLayout: (params) => {
-            const key = params.text;
+            const key = params.seriesIndex + "-" + params.dataIndex;
             const offset = draggedLabelOffsets[key];
 
             if (offset) {
@@ -173,7 +200,6 @@ export default {
           data: currentSatelliteSeriesData,
         };
 
-        allSatelliteData.push(currentSatelliteData);
         allSatelliteSeriesData.push(seriesData);
       }
 
@@ -320,10 +346,12 @@ export default {
 
       this.chartInstance.setOption(option);
 
-      this.chartInstance.getZr().on("mousedown", (e) => {
+      this.chartInstance.on("mousedown", (event) => {
+        const e = event.event;
+
         if (e.target && e.target.parent?.style?.text) {
           isDragging = true;
-          dragIndex = e.target.parent.style.text;
+          dragIndex = event.seriesIndex + "-" + event.dataIndex;
           startPos = [e.offsetX, e.offsetY];
           startOffset = draggedLabelOffsets[dragIndex] || { dx: 0, dy: 0 };
         }

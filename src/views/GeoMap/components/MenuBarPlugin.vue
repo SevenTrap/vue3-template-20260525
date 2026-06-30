@@ -19,6 +19,12 @@
       </div>
     </el-tooltip>
 
+    <el-tooltip content="总结图" placement="right">
+      <div class="menu-item" :class="{ active: satelliteSummaryChartPlugin }" @click="handleToggleGeoMap('satelliteSummaryChartPlugin')">
+        <img src="/assets/menuBar/icon6.svg" />
+      </div>
+    </el-tooltip>
+
     <el-tooltip content="历史案例" placement="right">
       <div class="menu-item" :class="{ active: historyCasePlugin }" @click="handleToggleGeoMap('historyCasePlugin')">
         <img src="/assets/menuBar/icon6.svg" />
@@ -54,7 +60,13 @@ export default {
   name: "MenuBar",
 
   computed: {
-    ...mapState(useGeoMapStore, ["satelliteTreePlugin", "geoSatRelativeEchartsPlugin", "geoLngHeightEchartsPlugin", "historyCasePlugin"]),
+    ...mapState(useGeoMapStore, [
+      "satelliteTreePlugin",
+      "geoSatRelativeEchartsPlugin",
+      "geoLngHeightEchartsPlugin",
+      "historyCasePlugin",
+      "satelliteSummaryChartPlugin",
+    ]),
     ...mapState(useAircasPluginStore, ["aircasManagerLayersPlugin", "aircasGraphicLayersPlugin"]),
   },
 

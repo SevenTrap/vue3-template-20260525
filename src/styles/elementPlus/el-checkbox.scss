@@ -1,0 +1,11 @@
+.aircas-el-checkbox-group {
+  .el-checkbox__label {
+    color: #8d9095;
+  }
+
+  .is-checked {
+    .el-checkbox__label {
+      color: #000000;
+    }
+  }
+}

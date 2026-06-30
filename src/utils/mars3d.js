@@ -46,3 +46,8 @@ export const getSunEci = (date) => {
   };
   return isValidVec(sunEci) ? sunEci : null;
 };
+
+// 计算高轨道卫星的漂移率
+export function calculateDegOneDay(aHeightDiffKm) {
+  return Math.round(Number(aHeightDiffKm) * -0.0128 * 100) / 100;
+}
