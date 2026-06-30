@@ -10,7 +10,9 @@
 
   <AircasGraphicLayersPlugin></AircasGraphicLayersPlugin>
 
+  <SatelliteSituationChart></SatelliteSituationChart>
   <SatelliteSummaryChart></SatelliteSummaryChart>
+  <SatelliteOverviewChart></SatelliteOverviewChart>
 
   <!-- 卫星树插件 -->
   <SatelliteTreePlugin></SatelliteTreePlugin>
@@ -47,6 +49,8 @@ import {
 
 import MenuBarPlugin from "./components/MenuBarPlugin.vue";
 import SatelliteTreePlugin from "./components/SatelliteTreePlugin.vue";
+import SatelliteSituationChart from "./components/SatelliteSituationChart.vue";
+import SatelliteOverviewChart from "./components/SatelliteOverviewChart.vue";
 import SatelliteSummaryChart from "./components/SatelliteSummaryChart.vue";
 import HistoryCasePlugin from "./components/HistoryCasePlugin.vue";
 
@@ -77,7 +81,9 @@ export default {
     SceneControlPlugin,
     SceneControlPluginBase,
     HistoryCasePlugin,
+    SatelliteSituationChart,
     SatelliteSummaryChart,
+    SatelliteOverviewChart,
   },
 
   data() {

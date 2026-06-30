@@ -146,11 +146,10 @@ export function calculateSummaryChartData(satelliteNoradIDs, satelliteTles, star
   const startDateMs = dayjs(startTime).hour(0).minute(0).second(0).millisecond(0).valueOf();
   const endDateMs = dayjs(endTime).hour(23).minute(59).second(59).millisecond(999).valueOf();
   const commonDateTime = [];
-  const summaryChartData = [];
+  const allChartData = [];
 
-  for (let i = startDateMs; i <= endDateMs; i += 1000 * 60 * 60 * 24) {
-    const currentDate12 = dayjs(i).hour(12).minute(0).second(0).millisecond(0).valueOf();
-    commonDateTime.push(currentDate12);
+  for (let i = startDateMs; i <= endDateMs; i += 1000 * 60 * 60 * 1) {
+    commonDateTime.push(i);
   }
 
   for (let si = 0; si < satelliteNoradIDs.length; si++) {
@@ -186,10 +185,8 @@ export function calculateSummaryChartData(satelliteNoradIDs, satelliteTles, star
       currentSatelliteData.push(currentTimeTrack);
     }
 
-    summaryChartData.push(currentSatelliteData);
+    allChartData.push(currentSatelliteData);
   }
 
-  // console.log("calculateSummaryChartData", summaryChartData);
-
-  return summaryChartData;
+  return allChartData;
 }

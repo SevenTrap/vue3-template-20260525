@@ -1,4 +1,4 @@
-<!-- 卫星的态势图 -->
+<!-- 卫星的总览图 -->
 
 <template>
   <el-dialog
@@ -16,7 +16,7 @@
     <template #header>
       <div class="my-header">
         <div class="config-items">
-          <p class="title">总结图</p>
+          <p class="title">总览图</p>
 
           <div class="config-item">
             <label>卫星：</label>
@@ -57,18 +57,6 @@
             ></el-date-picker>
           </div>
 
-          <!-- <div class="config-item">
-            <label>显示方式：</label>
-            <el-select class="aircas-el-select" v-model="displayMode" placeholder="显示方式" style="width: 120px" size="small">
-              <el-option label="全部显示" value="allPoint"></el-option>
-              <el-option label="全部隐藏" value="nonePoint"></el-option>
-              <el-option label="首尾" value="firstLastPoint"></el-option>
-              <el-option label="变轨" value="changePoint"></el-option>
-              <el-option label="间隔" value="intervalPoint"></el-option>
-              <el-option label="当前时间" value="currentTimePoint"></el-option>
-            </el-select>
-          </div> -->
-
           <div class="config-item">
             <el-button class="aircas-el-button" type="primary" @click="handleSearch" size="small">查询</el-button>
           </div>
@@ -81,7 +69,6 @@
               <el-checkbox label="倾角" value="labelInclination" />
               <el-checkbox label="漂移率" value="labelDriftRate" />
               <el-checkbox label="高度差" value="labelHeightDiff" />
-              <el-checkbox label="变轨点" value="labelChangePoint" />
             </el-checkbox-group>
           </div>
         </div>
@@ -90,7 +77,7 @@
 
     <template #default>
       <div class="my-content">
-        <div class="satellite-chart" ref="satelliteSummaryChartContainer"></div>
+        <div class="satellite-overview-chart" ref="satelliteOverviewChartContainer"></div>
       </div>
     </template>
   </el-dialog>
@@ -103,7 +90,7 @@ import dayjs from "dayjs";
 import { useGeoMapStore } from "@/store/useGeoMapStore.js";
 import { geoAltitudeKm, earthRadiusKm } from "@/utils/constants";
 import { buildSatelliteClassEpochMap, pickSatByTime } from "../utils/satelliteCalculate";
-import { calculateSummaryChartData } from "../utils/satelliteSummaryChart";
+import { calculateOverviewChartData } from "../utils/satelliteOverviewChart";
 
 const draggedLabelOffsets = {};
 let isDragging = false;
@@ -112,7 +99,7 @@ let startPos = null;
 let startOffset = null;
 
 export default {
-  name: "SatelliteSummaryChart",
+  name: "SatelliteOverviewChart",
 
   data() {
     return {
@@ -130,19 +117,19 @@ export default {
     };
   },
   computed: {
-    ...mapState(useGeoMapStore, ["satelliteSummaryChartPlugin", "currentSceneConfig"]),
+    ...mapState(useGeoMapStore, ["satelliteOverviewChartPlugin", "currentSceneConfig"]),
     isOpen: {
       get() {
-        return this.satelliteSummaryChartPlugin;
+        return this.satelliteOverviewChartPlugin;
       },
       set(value) {
         const geoMapStore = useGeoMapStore();
-        geoMapStore.satelliteSummaryChartPlugin = value;
+        geoMapStore.satelliteOverviewChartPlugin = value;
       },
     },
   },
   watch: {
-    satelliteSummaryChartPlugin(visible) {
+    satelliteOverviewChartPlugin(visible) {
       if (!visible || this.chartInstance) return;
       this.$nextTick(() => {
         this.ensureChartReady();
@@ -154,7 +141,7 @@ export default {
   },
   methods: {
     ensureChartReady() {
-      const container = this.$refs.satelliteSummaryChartContainer;
+      const container = this.$refs.satelliteOverviewChartContainer;
       if (!container) return;
       if (!this.chartInstance) {
         this.chartInstance = echarts.init(container);
@@ -229,7 +216,7 @@ export default {
       const satelliteNoradIDs = this.selectedSatellite;
       const startTime = this.dateRange[0];
       const endTime = this.dateRange[1];
-      const allChartData = calculateSummaryChartData(satelliteNoradIDs, satelliteTles, startTime, endTime);
+      const allChartData = calculateOverviewChartData(satelliteNoradIDs, satelliteTles);
       this.allChartData = allChartData;
     },
 
@@ -254,7 +241,7 @@ export default {
             symbolUrl = "path://M512 108.7L634.3 373.5L928 401.3L710.3 589.7L761.7 883.3L512 737.5L262.3 883.3L313.7 589.7L96 401.3L389.7 373.5L512 108.7Z";
             symbolSize = 25;
           } else {
-            symbolUrl = "none";
+            symbolUrl = "circle";
             symbolSize = 15;
           }
 
@@ -265,6 +252,7 @@ export default {
               currentTimeTrack.labelShow = false;
             }
           } else {
+            if (currentTimeTrack.isChangePoint) continue;
             if (checkedChartConfig.length > 0) {
               currentTimeTrack.labelShow = true;
             } else {
@@ -311,15 +299,12 @@ export default {
           };
 
           currentSeriesData.push(currentTimeSeries);
-
-          console.log("currentSeriesData", currentSeriesData);
         }
 
         const seriesData = {
           name: legendName,
           type: "line",
           showSymbol: true,
-          smooth: true,
           labelLayout: (params) => {
             const key = params.seriesIndex + "-" + params.dataIndex;
             const offset = draggedLabelOffsets[key];
@@ -570,7 +555,7 @@ export default {
     justify-content: center;
     align-items: center;
 
-    .satellite-chart {
+    .satellite-overview-chart {
       width: 1380px;
       height: 610px;
     }

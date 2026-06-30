@@ -16,7 +16,7 @@
     <template #header>
       <div class="my-header">
         <div class="config-items">
-          <p class="title">总结图</p>
+          <p class="title">态势图</p>
 
           <div class="config-item">
             <label>卫星：</label>
@@ -90,7 +90,7 @@
 
     <template #default>
       <div class="my-content">
-        <div class="satellite-chart" ref="satelliteSummaryChartContainer"></div>
+        <div class="satellite-chart" ref="satelliteSituationChartContainer"></div>
       </div>
     </template>
   </el-dialog>
@@ -103,7 +103,7 @@ import dayjs from "dayjs";
 import { useGeoMapStore } from "@/store/useGeoMapStore.js";
 import { geoAltitudeKm, earthRadiusKm } from "@/utils/constants";
 import { buildSatelliteClassEpochMap, pickSatByTime } from "../utils/satelliteCalculate";
-import { calculateSummaryChartData } from "../utils/satelliteSummaryChart";
+import { calculateSituationChartData } from "../utils/satelliteSituationChart";
 
 const draggedLabelOffsets = {};
 let isDragging = false;
@@ -112,7 +112,7 @@ let startPos = null;
 let startOffset = null;
 
 export default {
-  name: "SatelliteSummaryChart",
+  name: "SatelliteSituationChart",
 
   data() {
     return {
@@ -130,19 +130,19 @@ export default {
     };
   },
   computed: {
-    ...mapState(useGeoMapStore, ["satelliteSummaryChartPlugin", "currentSceneConfig"]),
+    ...mapState(useGeoMapStore, ["satelliteSituationChartPlugin", "currentSceneConfig"]),
     isOpen: {
       get() {
-        return this.satelliteSummaryChartPlugin;
+        return this.satelliteSituationChartPlugin;
       },
       set(value) {
         const geoMapStore = useGeoMapStore();
-        geoMapStore.satelliteSummaryChartPlugin = value;
+        geoMapStore.satelliteSituationChartPlugin = value;
       },
     },
   },
   watch: {
-    satelliteSummaryChartPlugin(visible) {
+    satelliteSituationChartPlugin(visible) {
       if (!visible || this.chartInstance) return;
       this.$nextTick(() => {
         this.ensureChartReady();
@@ -154,7 +154,7 @@ export default {
   },
   methods: {
     ensureChartReady() {
-      const container = this.$refs.satelliteSummaryChartContainer;
+      const container = this.$refs.satelliteSituationChartContainer;
       if (!container) return;
       if (!this.chartInstance) {
         this.chartInstance = echarts.init(container);
@@ -229,7 +229,7 @@ export default {
       const satelliteNoradIDs = this.selectedSatellite;
       const startTime = this.dateRange[0];
       const endTime = this.dateRange[1];
-      const allChartData = calculateSummaryChartData(satelliteNoradIDs, satelliteTles, startTime, endTime);
+      const allChartData = calculateSituationChartData(satelliteNoradIDs, satelliteTles, startTime, endTime);
       this.allChartData = allChartData;
     },
 
@@ -254,7 +254,7 @@ export default {
             symbolUrl = "path://M512 108.7L634.3 373.5L928 401.3L710.3 589.7L761.7 883.3L512 737.5L262.3 883.3L313.7 589.7L96 401.3L389.7 373.5L512 108.7Z";
             symbolSize = 25;
           } else {
-            symbolUrl = "none";
+            symbolUrl = "circle";
             symbolSize = 15;
           }
 
@@ -265,6 +265,7 @@ export default {
               currentTimeTrack.labelShow = false;
             }
           } else {
+            if (currentTimeTrack.isChangePoint) continue;
             if (checkedChartConfig.length > 0) {
               currentTimeTrack.labelShow = true;
             } else {
@@ -319,7 +320,6 @@ export default {
           name: legendName,
           type: "line",
           showSymbol: true,
-          smooth: true,
           labelLayout: (params) => {
             const key = params.seriesIndex + "-" + params.dataIndex;
             const offset = draggedLabelOffsets[key];

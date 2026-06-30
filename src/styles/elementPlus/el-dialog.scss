@@ -1,4 +1,8 @@
 .aircas-el-dialog {
-  background-color: aliceblue !important;
+  background-color: #ffffff !important;
   padding: 10px;
+
+  .el-dialog__header {
+    padding-bottom: 10px;
+  }
 }

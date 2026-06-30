@@ -19,8 +19,20 @@
       </div>
     </el-tooltip>
 
+    <el-tooltip content="总览图" placement="right">
+      <div class="menu-item" :class="{ active: satelliteOverviewChartPlugin }" @click="handleToggleGeoMap('satelliteOverviewChartPlugin')">
+        <img src="/assets/menuBar/icon6.svg" />
+      </div>
+    </el-tooltip>
+
     <el-tooltip content="总结图" placement="right">
       <div class="menu-item" :class="{ active: satelliteSummaryChartPlugin }" @click="handleToggleGeoMap('satelliteSummaryChartPlugin')">
+        <img src="/assets/menuBar/icon6.svg" />
+      </div>
+    </el-tooltip>
+
+    <el-tooltip content="态势图" placement="right">
+      <div class="menu-item" :class="{ active: satelliteSituationChartPlugin }" @click="handleToggleGeoMap('satelliteSituationChartPlugin')">
         <img src="/assets/menuBar/icon6.svg" />
       </div>
     </el-tooltip>
@@ -66,6 +78,8 @@ export default {
       "geoLngHeightEchartsPlugin",
       "historyCasePlugin",
       "satelliteSummaryChartPlugin",
+      "satelliteSituationChartPlugin",
+      "satelliteOverviewChartPlugin",
     ]),
     ...mapState(useAircasPluginStore, ["aircasManagerLayersPlugin", "aircasGraphicLayersPlugin"]),
   },

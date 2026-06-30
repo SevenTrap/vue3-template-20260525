@@ -16,12 +16,20 @@
       <div class="echarts-configs">
         <div class="config-item">
           <label>距离阈值：</label>
-          <el-input-number v-model="distanceThreshold" :min="0" :max="10000" size="small" />
+          <el-input-number v-model="distanceThreshold" :min="0" :max="10000" size="small">
+            <template #suffix>
+              <span>千米</span>
+            </template>
+          </el-input-number>
         </div>
 
         <div class="config-item">
           <label>角度阈值：</label>
-          <el-input-number v-model="sunAngleThreshold" :min="0" :max="180" size="small" />
+          <el-input-number v-model="sunAngleThreshold" :min="0" :max="180" size="small">
+            <template #suffix>
+              <span>度</span>
+            </template>
+          </el-input-number>
         </div>
       </div>
     </div>
