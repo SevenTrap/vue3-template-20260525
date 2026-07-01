@@ -3,9 +3,8 @@ import { geoAltitudeKm, earthRadiusKm } from "@/utils/constants";
 import { calculateDegOneDay } from "@/utils/mars3d";
 import { buildSatelliteClassEpochMap, pickSatByTime } from "./satelliteCalculate";
 
-const summaryChartOption = {
+export const summaryChartOption = {
   legend: {
-    // data: satelliteNoradIDs,
     top: 8,
     itemStyle: {
       color: "#000000",
@@ -22,7 +21,6 @@ const summaryChartOption = {
     top: 6,
     feature: {
       dataZoom: {},
-      restore: {},
       saveAsImage: {
         type: "png",
         backgroundColor: "#ffffff",
@@ -41,7 +39,7 @@ const summaryChartOption = {
     formatter: function (params) {
       let result = "";
       for (let i = 0; i < params.length; i++) {
-        result += `时间：${params[i].value[2].timeShow}<br/> 经度：${params[i].value[0].toFixed(2)}°<br/> 高度：${params[i].value[1].toFixed(2)} km`;
+        result += `${params[i].value[2].name}<br/> 时间：${params[i].value[2].timeShow}<br/> 经度：${params[i].value[0].toFixed(2)}°<br/> 高度差：${params[i].value[1].toFixed(2)} km`;
       }
 
       return result;
@@ -49,7 +47,6 @@ const summaryChartOption = {
   },
   grid: [{ left: 40, right: 40, top: 40, bottom: 50 }],
   dataZoom: [
-    // x 轴：鼠标滚轮/拖拽缩放
     {
       type: "inside",
       xAxisIndex: 0,
@@ -65,7 +62,6 @@ const summaryChartOption = {
       bottom: 5,
       filterMode: "none",
     },
-    // y 轴：鼠标滚轮/拖拽缩放（垂直）
     {
       type: "inside",
       yAxisIndex: 0,
@@ -84,11 +80,16 @@ const summaryChartOption = {
   ],
   xAxis: {
     type: "value",
-    // name: "经度",
-    // min: minLon,
-    // max: maxLon,
-    // minInterval: 0.01,
-    // maxInterval: 10,
+    name: "经度",
+    min: function (value) {
+      const halfValue = (value.max - value.min) / 2;
+      return Number(Number(value.min - halfValue).toFixed(2));
+    },
+    max: function (value) {
+      const halfValue = (value.max - value.min) / 2;
+      return Number(Number(value.max + halfValue).toFixed(2));
+    },
+
     nameLocation: "middle",
     nameGap: 30,
     nameTextStyle: {
@@ -122,10 +123,14 @@ const summaryChartOption = {
       color: "#000000",
       fontWeight: 600,
     },
-    // min: minHeight,
-    // max: maxHeight,
-    // minInterval: 0.1,
-    // maxInterval: 10,
+    min: function (value) {
+      const halfValue = (value.max - value.min) / 2;
+      return Number(Number(value.min - halfValue).toFixed(2));
+    },
+    max: function (value) {
+      const halfValue = (value.max - value.min) / 2;
+      return Number(Number(value.max + halfValue).toFixed(2));
+    },
     axisLabel: {
       show: true,
       color: "#000000",
@@ -138,17 +143,16 @@ const summaryChartOption = {
       },
     },
   },
-  // series: allSatelliteSeriesData,
 };
 
 // 计算总结图的数据
-export function calculateSummaryChartData(satelliteNoradIDs, satelliteTles, startTime, endTime) {
+export function calculateSummaryChartData(satelliteNoradIDs, satelliteTles, startTime, endTime, interval = 1 * 60 * 60 * 1000) {
   const startDateMs = dayjs(startTime).hour(0).minute(0).second(0).millisecond(0).valueOf();
   const endDateMs = dayjs(endTime).hour(23).minute(59).second(59).millisecond(999).valueOf();
   const commonDateTime = [];
   const allChartData = [];
 
-  for (let i = startDateMs; i <= endDateMs; i += 1000 * 60 * 60 * 1) {
+  for (let i = startDateMs; i <= endDateMs; i += interval) {
     commonDateTime.push(i);
   }
 
@@ -157,9 +161,15 @@ export function calculateSummaryChartData(satelliteNoradIDs, satelliteTles, star
     const satelliteNoradID = satelliteNoradIDs[si];
     const currentSatelliteTles = satelliteTles[si];
     const { satelliteEpochs, satelliteClasses } = buildSatelliteClassEpochMap(satelliteNoradID, currentSatelliteTles);
-    const allDateTime = [...commonDateTime, ...satelliteEpochs].sort((a, b) => a - b);
 
-    // console.log("allDateTime", allDateTime, satelliteEpochs, commonDateTime);
+    // 如果tle的历元时间不在startTime、endTime之间，则不显示该时间的轨迹
+    for (let ei = 0; ei < satelliteEpochs.length; ei++) {
+      const currentEpoch = satelliteEpochs[ei];
+      if (currentEpoch < startDateMs || currentEpoch > endDateMs) continue;
+      commonDateTime.push(currentEpoch);
+    }
+
+    const allDateTime = commonDateTime.sort((a, b) => a - b);
 
     for (let di = 0; di < allDateTime.length; di++) {
       const currentTimeMs = allDateTime[di];

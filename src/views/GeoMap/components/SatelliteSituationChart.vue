@@ -170,7 +170,7 @@ export default {
         setTimeout(() => {
           this.satellites = this.satelliteAll.filter((satellite) => satellite.label.includes(query));
 
-          console.log("查询卫星列表", this.satellites);
+          // console.log("查询卫星列表", this.satellites);
           this.loading = false;
         }, 500);
       } else {
@@ -313,7 +313,7 @@ export default {
 
           currentSeriesData.push(currentTimeSeries);
 
-          console.log("currentSeriesData", currentSeriesData);
+          // console.log("currentSeriesData", currentSeriesData);
         }
 
         const seriesData = {

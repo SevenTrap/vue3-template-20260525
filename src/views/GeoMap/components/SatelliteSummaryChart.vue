@@ -58,14 +58,11 @@
           </div>
 
           <!-- <div class="config-item">
-            <label>显示方式：</label>
-            <el-select class="aircas-el-select" v-model="displayMode" placeholder="显示方式" style="width: 120px" size="small">
-              <el-option label="全部显示" value="allPoint"></el-option>
-              <el-option label="全部隐藏" value="nonePoint"></el-option>
-              <el-option label="首尾" value="firstLastPoint"></el-option>
-              <el-option label="变轨" value="changePoint"></el-option>
-              <el-option label="间隔" value="intervalPoint"></el-option>
-              <el-option label="当前时间" value="currentTimePoint"></el-option>
+            <label>间隔：</label>
+            <el-select class="aircas-el-select" v-model="interval" placeholder="选择间隔" style="width: 120px" size="small">
+              <el-option label="1分钟" :value="60 * 1000"></el-option>
+              <el-option label="30分钟" :value="30 * 60 * 1000"></el-option>
+              <el-option label="1小时" :value="60 * 60 * 1000"></el-option>
             </el-select>
           </div> -->
 
@@ -75,12 +72,13 @@
 
           <div class="config-item">
             <el-checkbox-group class="aircas-el-checkbox-group" v-model="checkedChartConfig" size="small" @change="handleChangeChartConfig">
-              <el-checkbox label="时间" value="labelDateTime" />
-              <el-checkbox label="名字" value="labelName" />
-              <el-checkbox label="经度" value="labelLongitude" />
-              <el-checkbox label="倾角" value="labelInclination" />
-              <el-checkbox label="漂移率" value="labelDriftRate" />
-              <el-checkbox label="高度差" value="labelHeightDiff" />
+              <!-- <el-checkbox label="时间" value="labelDateTime" /> -->
+              <!-- <el-checkbox label="名字" value="labelName" /> -->
+              <!-- <el-checkbox label="经度" value="labelLongitude" /> -->
+              <!-- <el-checkbox label="倾角" value="labelInclination" /> -->
+              <!-- <el-checkbox label="漂移率" value="labelDriftRate" /> -->
+              <!-- <el-checkbox label="高度差" value="labelHeightDiff" /> -->
+              <el-checkbox label="标牌" value="labelShow" />
               <el-checkbox label="变轨点" value="labelChangePoint" />
             </el-checkbox-group>
           </div>
@@ -103,7 +101,7 @@ import dayjs from "dayjs";
 import { useGeoMapStore } from "@/store/useGeoMapStore.js";
 import { geoAltitudeKm, earthRadiusKm } from "@/utils/constants";
 import { buildSatelliteClassEpochMap, pickSatByTime } from "../utils/satelliteCalculate";
-import { calculateSummaryChartData } from "../utils/satelliteSummaryChart";
+import { calculateSummaryChartData, summaryChartOption } from "../utils/satelliteSummaryChart";
 
 const draggedLabelOffsets = {};
 let isDragging = false;
@@ -124,9 +122,8 @@ export default {
       selectedSatelliteTles: [],
       dateRange: [],
       defaultTime: [new Date(0, 0, 0, 0, 0, 0), new Date(0, 0, 0, 23, 59, 59)],
-      checkedChartConfig: [],
-      displayMode: "allPoint",
-      range: 0,
+      interval: 60 * 60 * 1000,
+      checkedChartConfig: ["labelShow", "labelChangePoint"],
     };
   },
   computed: {
@@ -170,7 +167,7 @@ export default {
         setTimeout(() => {
           this.satellites = this.satelliteAll.filter((satellite) => satellite.label.includes(query));
 
-          console.log("查询卫星列表", this.satellites);
+          // console.log("查询卫星列表", this.satellites);
           this.loading = false;
         }, 500);
       } else {
@@ -200,21 +197,6 @@ export default {
     },
 
     handleSearch() {
-      switch (this.displayMode) {
-        case "allPoint":
-          break;
-        case "nonePoint":
-          this.chartInstance.clear();
-          break;
-        case "firstLastPoint":
-          break;
-        case "changePoint":
-          break;
-        case "intervalPoint":
-          break;
-        case "currentTimePoint":
-          break;
-      }
       this.initChartData();
       this.updateChart();
     },
@@ -229,7 +211,7 @@ export default {
       const satelliteNoradIDs = this.selectedSatellite;
       const startTime = this.dateRange[0];
       const endTime = this.dateRange[1];
-      const allChartData = calculateSummaryChartData(satelliteNoradIDs, satelliteTles, startTime, endTime);
+      const allChartData = calculateSummaryChartData(satelliteNoradIDs, satelliteTles, startTime, endTime, this.interval);
       this.allChartData = allChartData;
     },
 
@@ -244,33 +226,28 @@ export default {
         const currentSatelliteData = allChartData[si];
         const legendName = currentSatelliteData[0].name;
         legendData.push(legendName);
+        const currentSatelliteDataLength = currentSatelliteData.length;
 
-        for (let di = 0; di < currentSatelliteData.length; di++) {
-          let symbolUrl = null;
-          let symbolSize = null;
+        for (let di = 0; di < currentSatelliteDataLength; di++) {
+          let symbolUrl = "emptyCircle";
+          let symbolSize = 5;
           const currentTimeTrack = currentSatelliteData[di];
 
           if (currentTimeTrack.isChangePoint) {
-            symbolUrl = "path://M512 108.7L634.3 373.5L928 401.3L710.3 589.7L761.7 883.3L512 737.5L262.3 883.3L313.7 589.7L96 401.3L389.7 373.5L512 108.7Z";
-            symbolSize = 25;
+            if (checkedChartConfig.includes("labelChangePoint")) {
+              symbolUrl = "path://M512 108.7L634.3 373.5L928 401.3L710.3 589.7L761.7 883.3L512 737.5L262.3 883.3L313.7 589.7L96 401.3L389.7 373.5L512 108.7Z";
+              symbolSize = 15;
+            }
+
+            if (checkedChartConfig.includes("labelShow")) {
+              currentTimeTrack.labelShow = true;
+            } else {
+              currentTimeTrack.labelShow = false;
+            }
           } else {
-            symbolUrl = "none";
-            symbolSize = 15;
+            currentTimeTrack.labelShow = false;
           }
 
-          if (checkedChartConfig.includes("labelChangePoint")) {
-            if (checkedChartConfig.length > 1) {
-              currentTimeTrack.labelShow = true;
-            } else {
-              currentTimeTrack.labelShow = false;
-            }
-          } else {
-            if (checkedChartConfig.length > 0) {
-              currentTimeTrack.labelShow = true;
-            } else {
-              currentTimeTrack.labelShow = false;
-            }
-          }
           const offsetMap = [
             [0, 60],
             [0, -60],
@@ -282,27 +259,22 @@ export default {
             symbol: symbolUrl,
             symbolSize: symbolSize,
             label: {
-              show: currentTimeTrack.labelShow || currentTimeTrack.isChangePoint,
+              show: currentTimeTrack.labelShow,
               color: "#000000",
               position: positionMap[di % 2],
               offset: offsetMap[di % 2],
+              align: "center",
               fontSize: 16,
               formatter: function (params) {
                 let result = "";
-                if (checkedChartConfig.includes("labelName")) result += `${params.data.value[2].name} \r\n`;
-                if (checkedChartConfig.includes("labelDateTime")) result += `${params.data.value[2].timeShow} \r\n`;
-                if (checkedChartConfig.includes("labelDriftRate")) result += `${params.data.value[2].degOneDay.toFixed(3)}°/天 \r\n`;
-                if (checkedChartConfig.includes("labelHeightDiff")) result += `${params.data.value[2].currentHeightDiff.toFixed(1)}km \r\n`;
-                if (checkedChartConfig.includes("labelLongitude")) result += `${params.data.value[2].currentLon.toFixed(4)}° \r\n`;
-                if (checkedChartConfig.includes("labelInclination")) result += `${params.data.value[2].inclination.toFixed(3)}° \r\n`;
-                if (checkedChartConfig.includes("labelChangePoint") && currentTimeTrack.isChangePoint) result += `${params.data.value[2].isChangePoint} \r\n`;
-                if (result.length) result = result.slice(0, -2);
-
+                result += `${params.data.value[2].name} \r\n`;
+                result += `${params.data.value[2].timeShow} \r\n`;
+                result += `变轨量：${params.data.value[2].currentHeightDiff.toFixed(3)}km`;
                 return result;
               },
             },
             labelLine: {
-              show: currentTimeTrack.labelShow || currentTimeTrack.isChangePoint,
+              show: currentTimeTrack.labelShow,
               showAbove: true,
               lineStyle: {
                 color: "#000000",
@@ -311,9 +283,12 @@ export default {
           };
 
           currentSeriesData.push(currentTimeSeries);
-
-          console.log("currentSeriesData", currentSeriesData);
         }
+
+        currentSeriesData[0].symbol = "circle";
+        currentSeriesData[0].symbolSize = 15;
+        currentSeriesData[currentSatelliteDataLength - 1].symbol = "triangle";
+        currentSeriesData[currentSatelliteDataLength - 1].symbolSize = 15;
 
         const seriesData = {
           name: legendName,
@@ -340,160 +315,29 @@ export default {
             };
           },
           data: currentSeriesData,
+          markLine: {
+            symbol: "none",
+            lineStyle: {
+              type: "dashed",
+              width: 2,
+            },
+            data: [
+              {
+                xAxis: currentSeriesData[currentSatelliteDataLength - 1].value[0],
+              },
+            ],
+          },
         };
 
         allSatelliteSeriesData.push(seriesData);
       }
 
-      const option = {
-        legend: {
-          data: legendData,
-          top: 8,
-          itemStyle: {
-            color: "#000000",
-            fontSize: 14,
-            fontWeight: 400,
-          },
-          textStyle: {
-            color: "#000000",
-          },
-        },
-        toolbox: {
-          show: true,
-          right: 12,
-          top: 6,
-          feature: {
-            dataZoom: {},
-            saveAsImage: {
-              type: "png",
-              backgroundColor: "#ffffff",
-              name: `${new Date().getTime()}-变轨历程图`,
-            },
-          },
-        },
-        tooltip: {
-          trigger: "axis",
-          axisPointer: {
-            type: "line",
-            label: {
-              backgroundColor: "#505765",
-            },
-          },
-          formatter: function (params) {
-            let result = "";
-            for (let i = 0; i < params.length; i++) {
-              result += `名称：${params[i].value[2].name}<br/> 时间：${params[i].value[2].timeShow}<br/> 经度：${params[i].value[0].toFixed(2)}°<br/> 高度：${params[i].value[1].toFixed(2)} km`;
-            }
+      console.log("allSatelliteSeriesData", allSatelliteSeriesData);
 
-            return result;
-          },
-        },
-        grid: [{ left: 60, right: 50, top: 40, bottom: 50 }],
-        dataZoom: [
-          // x 轴：鼠标滚轮/拖拽缩放
-          {
-            type: "inside",
-            xAxisIndex: 0,
-            filterMode: "none",
-            zoomOnMouseWheel: true,
-            moveOnMouseWheel: false,
-            moveOnMouseMove: true,
-          },
-          {
-            type: "slider",
-            xAxisIndex: 0,
-            height: 20,
-            bottom: 5,
-            filterMode: "none",
-          },
-          // y 轴：鼠标滚轮/拖拽缩放（垂直）
-          {
-            type: "inside",
-            yAxisIndex: 0,
-            filterMode: "none",
-            zoomOnMouseWheel: true,
-            moveOnMouseWheel: false,
-            moveOnMouseMove: true,
-          },
-          {
-            type: "slider",
-            yAxisIndex: 0,
-            width: 20,
-            right: 5,
-            filterMode: "none",
-          },
-        ],
-        xAxis: {
-          type: "value",
-          name: "经度",
-          min: function (value) {
-            const halfValue = (value.max - value.min) / 2;
-            return Number(Number(value.min - halfValue).toFixed(2));
-          },
-          max: function (value) {
-            const halfValue = (value.max - value.min) / 2;
-            return Number(Number(value.max + halfValue).toFixed(2));
-          },
-          minInterval: 0.001,
-          nameLocation: "middle",
-          nameGap: 30,
-          nameTextStyle: {
-            color: "#000000",
-            fontSize: 14,
-            fontWeight: 400,
-          },
-          axisLabel: {
-            show: true,
-            color: "#000000",
-            fontSize: 14,
-            fontWeight: 600,
-            formatter: (value) => {
-              if (Math.abs(value) === 180) return "";
-              if (Math.abs(value) === 0) return "0°";
-              let sign = value > 0 ? "E" : "W";
-              return Math.abs(value) + "° " + sign;
-            },
-          },
-          axisLine: {
-            lineStyle: {
-              color: "#000000",
-            },
-          },
-        },
-        yAxis: {
-          type: "value",
-          name: "高度/km",
-          nameTextStyle: {
-            fontSize: 14,
-            color: "#000000",
-            fontWeight: 600,
-          },
-          min: function (value) {
-            const halfValue = (value.max - value.min) / 2;
-            return Number(Number(value.min - halfValue).toFixed(2));
-          },
-          max: function (value) {
-            const halfValue = (value.max - value.min) / 2;
-            return Number(Number(value.max + halfValue).toFixed(2));
-          },
-          minInterval: 0.01,
-          axisLabel: {
-            show: true,
-            color: "#000000",
-            fontSize: 14,
-            fontWeight: 600,
-          },
-          axisLine: {
-            lineStyle: {
-              color: "#000000",
-            },
-          },
-        },
-        series: allSatelliteSeriesData,
-      };
+      summaryChartOption.legend.data = legendData;
+      summaryChartOption.series = allSatelliteSeriesData;
 
-      this.chartInstance.setOption(option);
-
+      this.chartInstance.setOption(summaryChartOption);
       this.chartInstance.on("mousedown", (event) => {
         const e = event.event;
 
@@ -503,6 +347,11 @@ export default {
           startPos = [e.offsetX, e.offsetY];
           startOffset = draggedLabelOffsets[dragIndex] || { dx: 0, dy: 0 };
         }
+      });
+
+      // 处理双击隐藏label事件
+      this.chartInstance.on("dblclick", (event) => {
+        console.log("dbclick", event);
       });
 
       this.chartInstance.getZr().on("mousemove", (e) => {
