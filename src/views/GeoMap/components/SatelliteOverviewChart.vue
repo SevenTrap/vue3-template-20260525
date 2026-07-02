@@ -61,7 +61,7 @@
             <el-button class="aircas-el-button" type="primary" @click="handleSearch" size="small">查询</el-button>
           </div>
 
-          <div class="config-item">
+          <!-- <div class="config-item">
             <el-checkbox-group class="aircas-el-checkbox-group" v-model="checkedChartConfig" size="small" @change="handleChangeChartConfig">
               <el-checkbox label="时间" value="labelDateTime" />
               <el-checkbox label="名字" value="labelName" />
@@ -70,7 +70,7 @@
               <el-checkbox label="漂移率" value="labelDriftRate" />
               <el-checkbox label="高度差" value="labelHeightDiff" />
             </el-checkbox-group>
-          </div>
+          </div> -->
         </div>
       </div>
     </template>
@@ -112,8 +112,6 @@ export default {
       dateRange: [],
       defaultTime: [new Date(0, 0, 0, 0, 0, 0), new Date(0, 0, 0, 23, 59, 59)],
       checkedChartConfig: [],
-      displayMode: "allPoint",
-      range: 0,
     };
   },
   computed: {
@@ -187,21 +185,6 @@ export default {
     },
 
     handleSearch() {
-      switch (this.displayMode) {
-        case "allPoint":
-          break;
-        case "nonePoint":
-          this.chartInstance.clear();
-          break;
-        case "firstLastPoint":
-          break;
-        case "changePoint":
-          break;
-        case "intervalPoint":
-          break;
-        case "currentTimePoint":
-          break;
-      }
       this.initChartData();
       this.updateChart();
     },
@@ -216,7 +199,7 @@ export default {
       const satelliteNoradIDs = this.selectedSatellite;
       const startTime = this.dateRange[0];
       const endTime = this.dateRange[1];
-      const allChartData = calculateOverviewChartData(satelliteNoradIDs, satelliteTles);
+      const allChartData = calculateOverviewChartData(satelliteNoradIDs, satelliteTles, startTime, endTime);
       this.allChartData = allChartData;
     },
 
@@ -229,36 +212,37 @@ export default {
       for (let si = 0; si < allChartData.length; si++) {
         const currentSeriesData = [];
         const currentSatelliteData = allChartData[si];
+        const currentSatelliteDataLength = currentSatelliteData.length;
         const legendName = currentSatelliteData[0].name;
         legendData.push(legendName);
 
-        for (let di = 0; di < currentSatelliteData.length; di++) {
-          let symbolUrl = null;
-          let symbolSize = null;
+        for (let di = 0; di < currentSatelliteDataLength; di++) {
+          let symbolUrl = "emptyCircle";
+          let symbolSize = 5;
           const currentTimeTrack = currentSatelliteData[di];
 
-          if (currentTimeTrack.isChangePoint) {
-            symbolUrl = "path://M512 108.7L634.3 373.5L928 401.3L710.3 589.7L761.7 883.3L512 737.5L262.3 883.3L313.7 589.7L96 401.3L389.7 373.5L512 108.7Z";
-            symbolSize = 25;
-          } else {
-            symbolUrl = "circle";
-            symbolSize = 15;
-          }
+          // if (currentTimeTrack.isChangePoint) {
+          //   symbolUrl = "path://M512 108.7L634.3 373.5L928 401.3L710.3 589.7L761.7 883.3L512 737.5L262.3 883.3L313.7 589.7L96 401.3L389.7 373.5L512 108.7Z";
+          //   symbolSize = 25;
+          // } else {
+          //   symbolUrl = "circle";
+          //   symbolSize = 15;
+          // }
 
-          if (checkedChartConfig.includes("labelChangePoint")) {
-            if (checkedChartConfig.length > 1) {
-              currentTimeTrack.labelShow = true;
-            } else {
-              currentTimeTrack.labelShow = false;
-            }
-          } else {
-            if (currentTimeTrack.isChangePoint) continue;
-            if (checkedChartConfig.length > 0) {
-              currentTimeTrack.labelShow = true;
-            } else {
-              currentTimeTrack.labelShow = false;
-            }
-          }
+          // if (checkedChartConfig.includes("labelChangePoint")) {
+          //   if (checkedChartConfig.length > 1) {
+          //     currentTimeTrack.labelShow = true;
+          //   } else {
+          //     currentTimeTrack.labelShow = false;
+          //   }
+          // } else {
+          //   if (currentTimeTrack.isChangePoint) continue;
+          //   if (checkedChartConfig.length > 0) {
+          //     currentTimeTrack.labelShow = true;
+          //   } else {
+          //     currentTimeTrack.labelShow = false;
+          //   }
+          // }
           const offsetMap = [
             [0, 60],
             [0, -60],
@@ -270,60 +254,65 @@ export default {
             symbol: symbolUrl,
             symbolSize: symbolSize,
             label: {
-              show: currentTimeTrack.labelShow || currentTimeTrack.isChangePoint,
-              color: "#000000",
-              position: positionMap[di % 2],
-              offset: offsetMap[di % 2],
-              fontSize: 16,
-              formatter: function (params) {
-                let result = "";
-                if (checkedChartConfig.includes("labelName")) result += `${params.data.value[2].name} \r\n`;
-                if (checkedChartConfig.includes("labelDateTime")) result += `${params.data.value[2].timeShow} \r\n`;
-                if (checkedChartConfig.includes("labelDriftRate")) result += `${params.data.value[2].degOneDay.toFixed(3)}°/天 \r\n`;
-                if (checkedChartConfig.includes("labelHeightDiff")) result += `${params.data.value[2].currentHeightDiff.toFixed(1)}km \r\n`;
-                if (checkedChartConfig.includes("labelLongitude")) result += `${params.data.value[2].currentLon.toFixed(4)}° \r\n`;
-                if (checkedChartConfig.includes("labelInclination")) result += `${params.data.value[2].inclination.toFixed(3)}° \r\n`;
-                if (checkedChartConfig.includes("labelChangePoint") && currentTimeTrack.isChangePoint) result += `${params.data.value[2].isChangePoint} \r\n`;
-                if (result.length) result = result.slice(0, -2);
+              show: false,
+              // color: "#000000",
+              // position: positionMap[di % 2],
+              // offset: offsetMap[di % 2],
+              // fontSize: 16,
+              // formatter: function (params) {
+              //   let result = "";
+              //   if (checkedChartConfig.includes("labelName")) result += `${params.data.value[2].name} \r\n`;
+              //   if (checkedChartConfig.includes("labelDateTime")) result += `${params.data.value[2].timeShow} \r\n`;
+              //   if (checkedChartConfig.includes("labelDriftRate")) result += `${params.data.value[2].degOneDay.toFixed(3)}°/天 \r\n`;
+              //   if (checkedChartConfig.includes("labelHeightDiff")) result += `${params.data.value[2].currentHeightDiff.toFixed(1)}km \r\n`;
+              //   if (checkedChartConfig.includes("labelLongitude")) result += `${params.data.value[2].currentLon.toFixed(4)}° \r\n`;
+              //   if (checkedChartConfig.includes("labelInclination")) result += `${params.data.value[2].inclination.toFixed(3)}° \r\n`;
+              //   if (checkedChartConfig.includes("labelChangePoint") && currentTimeTrack.isChangePoint) result += `${params.data.value[2].isChangePoint} \r\n`;
+              //   if (result.length) result = result.slice(0, -2);
 
-                return result;
-              },
+              //   return result;
+              // },
             },
             labelLine: {
-              show: currentTimeTrack.labelShow || currentTimeTrack.isChangePoint,
-              showAbove: true,
-              lineStyle: {
-                color: "#000000",
-              },
+              show: false,
+              // showAbove: true,
+              // lineStyle: {
+              //   color: "#000000",
+              // },
             },
           };
 
           currentSeriesData.push(currentTimeSeries);
         }
 
+        currentSeriesData[0].symbol = "circle";
+        currentSeriesData[0].symbolSize = 15;
+        currentSeriesData[currentSatelliteDataLength - 1].symbol = "triangle";
+        currentSeriesData[currentSatelliteDataLength - 1].symbolSize = 15;
+
         const seriesData = {
           name: legendName,
           type: "line",
           showSymbol: true,
-          labelLayout: (params) => {
-            const key = params.seriesIndex + "-" + params.dataIndex;
-            const offset = draggedLabelOffsets[key];
+          // labelLayout: (params) => {
+          //   const key = params.seriesIndex + "-" + params.dataIndex;
+          //   const offset = draggedLabelOffsets[key];
 
-            if (offset) {
-              return {
-                hideOverlap: false,
-                draggable: true,
-                x: params.labelRect.x + params.labelRect.width * 0.5 + offset.dx,
-                y: params.labelRect.y + offset.dy,
-              };
-            }
-            return {
-              hideOverlap: false,
-              draggable: true,
-              x: params.labelRect.x,
-              y: params.labelRect.y,
-            };
-          },
+          //   if (offset) {
+          //     return {
+          //       hideOverlap: false,
+          //       draggable: true,
+          //       x: params.labelRect.x + params.labelRect.width * 0.5 + offset.dx,
+          //       y: params.labelRect.y + offset.dy,
+          //     };
+          //   }
+          //   return {
+          //     hideOverlap: false,
+          //     draggable: true,
+          //     x: params.labelRect.x,
+          //     y: params.labelRect.y,
+          //   };
+          // },
           data: currentSeriesData,
         };
 
@@ -413,11 +402,17 @@ export default {
           name: "经度",
           min: function (value) {
             const halfValue = (value.max - value.min) / 2;
-            return Number(Number(value.min - halfValue).toFixed(2));
+            const result = Number(Number(value.min - halfValue).toFixed(2));
+            if (result > 180) return 180;
+            if (result < -180) return -180;
+            return result;
           },
           max: function (value) {
             const halfValue = (value.max - value.min) / 2;
-            return Number(Number(value.max + halfValue).toFixed(2));
+            const result = Number(Number(value.max + halfValue).toFixed(2));
+            if (result > 180) return 180;
+            if (result < -180) return -180;
+            return result;
           },
           minInterval: 0.001,
           nameLocation: "middle",

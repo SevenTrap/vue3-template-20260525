@@ -4,7 +4,7 @@ import { calculateDegOneDay } from "@/utils/mars3d";
 import { buildSatelliteClassEpochMap, pickSatByTime } from "./satelliteCalculate";
 
 // 计算总览图的数据
-export function calculateOverviewChartData(satelliteNoradIDs, satelliteTles) {
+export function calculateOverviewChartData(satelliteNoradIDs, satelliteTles, startTime, endTime) {
   const overviewChartData = [];
 
   for (let si = 0; si < satelliteNoradIDs.length; si++) {

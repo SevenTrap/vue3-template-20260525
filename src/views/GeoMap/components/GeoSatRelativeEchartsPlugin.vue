@@ -10,7 +10,33 @@
   >
     <div class="echarts-header">
       <div class="satellite-configs">
-        <label>卫星：</label>
+        <div class="satellite-config">
+          <label>卫星：</label>
+          <el-select v-model="currentSceneConfig.sceneName" size="small" style="width: 150px" multiple collapse-tags collapse-tags-tooltip placeholder="Select">
+            <el-option
+              v-for="item in selectedSatellites"
+              :key="`${item.threatSatelliteNoradID}TO${item.importSatelliteNoradID}`"
+              :label="`${item.threatSatelliteNoradID}TO${item.importSatelliteNoradID}`"
+              :value="item.sceneName"
+            />
+          </el-select>
+        </div>
+
+        <div class="satellite-config">
+          <label>主动星：</label>
+          <el-select v-model="currentSceneConfig.threatSatelliteNoradID" size="small" placeholder="请选择主动卫星" style="width: 150px">
+            <el-option v-for="(satellite, noradID) in satelliteTracks" :key="noradID" :label="satellite[0].name" :value="noradID" />
+          </el-select>
+        </div>
+
+        <div class="satellite-config">
+          <label>从动星：</label>
+          <el-select v-model="currentSceneConfig.importSatelliteNoradID" size="small" placeholder="请选择从动卫星" style="width: 150px">
+            <el-option v-for="(satellite, noradID) in satelliteTracks" :key="noradID" :label="satellite[0].name" :value="noradID" />
+          </el-select>
+        </div>
+
+        <el-button size="small" @click="handleAddSatellite">添加</el-button>
       </div>
 
       <div class="echarts-configs">
@@ -44,6 +70,7 @@ import * as echarts from "echarts";
 import { mapState } from "pinia";
 import { useGeoMapStore } from "@/store/useGeoMapStore";
 import { calculateDistanceAndSunAngleDeg, substringArrByTimeRange, getCurrentTimeMsTrack, buildRiskRanges } from "../utils/satelliteCalculate";
+import { el } from "element-plus/es/locale/index.mjs";
 
 const geoMapStore = useGeoMapStore();
 const DISTANCE_COLOR = "#2f6bff";
@@ -53,6 +80,16 @@ export default {
   name: "GeoSatRelativeEchartsPlugin",
   data() {
     return {
+      selectedSatellites: [
+        {
+          threatSatelliteNoradID: "主动卫星NoradID",
+          importSatelliteNoradID: "从动卫星NoradID",
+        },
+        {
+          threatSatelliteNoradID: "主动卫星NoradI1",
+          importSatelliteNoradID: "从动卫星NoradI2",
+        },
+      ],
       distanceThreshold: 7200,
       sunAngleThreshold: 90,
     };
@@ -98,10 +135,11 @@ export default {
     initChart(currentSceneTime = "") {
       if (!this.chartInstanceSunAngle) return;
 
-      const { threatSatelliteNoradID, importSatelliteNoradID } = this.currentSceneConfig;
+      const { threatSatelliteNoradID, importSatelliteNoradID, threatSatelliteName, importSatelliteName } = this.currentSceneConfig;
       const threatTracks = this.satelliteTracks.get(threatSatelliteNoradID);
       const importTracks = this.satelliteTracks.get(importSatelliteNoradID);
       if (!threatTracks || !importTracks) return;
+      const legendData = [`${threatSatelliteName}>${importSatelliteName} 相对距离`, `${threatSatelliteName}>${importSatelliteName} 太阳角`];
 
       // 计算两颗卫星的距离和太阳角（threatTracks看向importTracks）
       const distanceAndSunAngleDeg = calculateDistanceAndSunAngleDeg(threatTracks, importTracks);
@@ -118,7 +156,7 @@ export default {
 
       const option = {
         legend: {
-          data: ["两星距离", "太阳光照角"],
+          data: legendData,
           top: 4,
           itemStyle: {
             color: "#ffffff",
@@ -274,7 +312,7 @@ export default {
             },
           },
           {
-            name: "两星距离",
+            name: legendData[0],
             type: "line",
             yAxisIndex: 0,
             showSymbol: false,
@@ -283,7 +321,7 @@ export default {
             data: distanceData,
           },
           {
-            name: "太阳光照角",
+            name: legendData[1],
             type: "line",
             yAxisIndex: 1,
             showSymbol: false,
@@ -331,7 +369,6 @@ export default {
         `从动卫星：${this.currentSceneConfig.importSatelliteName}`,
         `两星距离：${track.distanceKm} km`,
         `太阳光照角：${track.sunAngleDeg} °`,
-        `阈值：距离 < ${this.distanceThreshold} km，光照角 < ${this.sunAngleThreshold}°`,
       ].join("<br/>");
     },
 
@@ -374,6 +411,18 @@ export default {
     display: flex;
     align-items: center;
     justify-content: flex-start;
+
+    .satellite-config {
+      display: flex;
+      align-items: center;
+      margin-right: 20px;
+
+      label {
+        width: 60px;
+        text-align: right;
+        margin-right: 5px;
+      }
+    }
   }
 
   .echarts-configs {

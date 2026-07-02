@@ -428,11 +428,17 @@ export default {
           name: "经度",
           min: function (value) {
             const halfValue = (value.max - value.min) / 2;
-            return Number(Number(value.min - halfValue).toFixed(2));
+            const result = Number(Number(value.min - halfValue).toFixed(2));
+            if (result > 180) return 180;
+            if (result < -180) return -180;
+            return result;
           },
           max: function (value) {
             const halfValue = (value.max - value.min) / 2;
-            return Number(Number(value.max + halfValue).toFixed(2));
+            const result = Number(Number(value.max + halfValue).toFixed(2));
+            if (result > 180) return 180;
+            if (result < -180) return -180;
+            return result;
           },
           minInterval: 0.001,
           nameLocation: "middle",
